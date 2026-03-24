@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "display interfaces": {
+      "commandName": "Project",
+      "commandLineArgs": "-d"
+    },
+    "Start": {
+      "commandName": "Project",
+      "commandLineArgs": "-S Ethernet"
+    }
+  }
+}

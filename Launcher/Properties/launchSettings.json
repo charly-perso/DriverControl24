@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Display interfaces": {
+      "commandName": "Project",
+      "commandLineArgs": "-d"
+    },
+    "Start driver": {
+      "commandName": "Project",
+      "commandLineArgs": "-s \"Ethernet 2\""
+    }
+  }
+}

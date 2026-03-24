@@ -25,7 +25,7 @@ Namespace Reacontrol24
         Private _socket As Socket
         Private _log As Logger
         Private _isCapturing As Boolean
-        Private _captureHandler As Action(Of Double, Byte())
+        Private _captureHandler As Action(Of Byte())
         Private _captureThread As Thread
         Private _selectedInterface As NetworkInterface
         Private _localAddress As IPAddress
@@ -137,7 +137,7 @@ Namespace Reacontrol24
         ''' <summary>
         ''' Start capture
         ''' </summary>
-        Public Sub StartCapture(handler As Action(Of Double, Byte())) Implements INetworkCapture.StartCapture
+        Public Sub StartCapture(handler As Action(Of Byte())) Implements INetworkCapture.StartCapture
             _captureHandler = handler
             _isCapturing = True
 
@@ -167,7 +167,7 @@ Namespace Reacontrol24
                         Dim timestamp = Utils.Tick()
 
                         ' Call handler
-                        _captureHandler?.Invoke(timestamp, packet)
+                        _captureHandler?.Invoke(packet)
 
                         ' Raise event
                         RaiseEvent PacketReceived(Me, New GenericPacketEventArgs(timestamp, packet))
@@ -241,6 +241,9 @@ Namespace Reacontrol24
             GC.SuppressFinalize(Me)
         End Sub
 
+        Public Function SendAckPacket(data() As Byte) As Integer Implements INetworkCapture.SendAckPacket
+            Throw New NotImplementedException()
+        End Function
     End Class
 
 End Namespace

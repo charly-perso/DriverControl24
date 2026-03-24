@@ -28,7 +28,7 @@ Namespace Reacontrol24
         Private _log As Logger
         Private _isCapturing As Boolean
         Private _captureThread As Thread
-        Private _captureHandler As Action(Of Double, Byte())
+        Private _captureHandler As Action(Of Byte())
         Private _selectedDeviceName As String
 
         ''' <summary>
@@ -185,7 +185,7 @@ Namespace Reacontrol24
         ''' <summary>
         ''' Start packet capture
         ''' </summary>
-        Public Sub StartCapture(handler As Action(Of Double, Byte())) Implements INetworkCapture.StartCapture
+        Public Sub StartCapture(handler As Action(Of Byte())) Implements INetworkCapture.StartCapture
             If _communicator Is Nothing Then
                 Throw New InvalidOperationException("Device not opened")
             End If
@@ -242,7 +242,7 @@ Namespace Reacontrol24
                 packet.CopyTo(data, 0)
 
                 ' Call registered handler
-                _captureHandler?.Invoke(timestamp, data)
+                _captureHandler?.Invoke(data)
 
                 ' Raise event
                 RaiseEvent PacketReceived(Me, New GenericPacketEventArgs(timestamp, data))
@@ -290,7 +290,7 @@ Namespace Reacontrol24
                 ' Pcap.Net requires creating a Packet object from bytes
                 ' Use PacketBuilder to create packet from raw bytes
                 Dim packet As New PcapDotNet.Packets.Packet(data, DateTime.Now, DataLinkKind.Ethernet)
-                
+
                 _communicator.SendPacket(packet)
 
                 Return data.Length
@@ -331,6 +331,9 @@ Namespace Reacontrol24
             GC.SuppressFinalize(Me)
         End Sub
 
+        Public Function SendAckPacket(data() As Byte) As Integer Implements INetworkCapture.SendAckPacket
+            Throw New NotImplementedException()
+        End Function
     End Class
 
 End Namespace

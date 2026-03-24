@@ -22,11 +22,13 @@ Namespace Reacontrol24
     Public Class NativePcapAdapter
         Implements INetworkCapture
 
-        Private _handle As IntPtr = IntPtr.Zero
+        Private _handle As IntPtr = IntPtr.Zero       ' RX capture + CMD TX
+        Private _handleAck As IntPtr = IntPtr.Zero    ' ✅ ACK TX dédié
         Private _log As Logger
         Private _isCapturing As Boolean
         Private _captureThread As Thread
-        Private _captureHandler As Action(Of Double, Byte())
+        Private _captureHandler As Action(Of Byte())
+        Private disposedValue As Boolean
 
         ' bpf_program structure (for filter compilation)
         <StructLayout(LayoutKind.Sequential)>
@@ -59,6 +61,12 @@ Namespace Reacontrol24
         ' Npcap flags for pcap_open
         Private Const PCAP_OPENFLAG_PROMISCUOUS As Integer = 1         ' Promiscuous mode
         Private Const PCAP_OPENFLAG_NOCAPTURE_LOCAL As Integer = 8     ' Don't capture packets sent by this machine
+
+        Public ReadOnly Property IsCapturing As Boolean Implements INetworkCapture.IsCapturing
+            Get
+                Return _isCapturing   ' ✅
+            End Get
+        End Property
 
         <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
         Private Shared Sub pcap_close(handle As IntPtr)
@@ -130,14 +138,7 @@ Namespace Reacontrol24
         Public Sub New()
 
         End Sub
-        ''' <summary>
-        ''' Set test mode - BLOCKS all incoming broadcast packets during LED tests
-        ''' ✅ CRITICAL: This prevents Control24 broadcasts from interrupting test sequences
-        ''' </summary>
-        Public Sub SetTestMode(enabled As Boolean)
-            _isTestMode = enabled
-            _log?.Info("Native Pcap: Test mode {0}", If(enabled, "ENABLED (broadcasts BLOCKED)", "DISABLED (broadcasts processed)"))
-        End Sub
+
 
         ''' <summary>
         ''' Get available network devices
@@ -257,27 +258,28 @@ Namespace Reacontrol24
                     ' ✅ ULTIMATE FIX: Use pcap_open with PCAP_OPENFLAG_NOCAPTURE_LOCAL
                     ' This flag tells Npcap to NOT capture packets sent by this machine
                     ' Format: rpcap://\Device\NPF_{GUID} for local device
-                    Dim source = $"rpcap://{targetDevice}"
                     Dim flags = PCAP_OPENFLAG_PROMISCUOUS Or PCAP_OPENFLAG_NOCAPTURE_LOCAL
-                    
+
                     _log?.Info("Native Pcap: Opening device with NOCAPTURE_LOCAL flag: {0}", targetDevice)
                     _log?.Info("Native Pcap: This will prevent capturing our own TX packets (no duplicates!)")
-                    
-                    _handle = pcap_open(source, 65535, flags, 50, IntPtr.Zero, errbuf)
-                    
+
+                    ' ✅ Handle principal — accès direct driver, sans rpcap://
+                    _handle = pcap_open(targetDevice, 65535, flags, 1, IntPtr.Zero, errbuf)   ' ✅ 1ms au lieu de 50ms
                     If _handle = IntPtr.Zero Then
-                        ' Fallback to pcap_open_live if pcap_open fails
-                        _log?.Warn("Native Pcap: pcap_open failed: {0}, falling back to pcap_open_live", errbuf.ToString())
+                        ' ⚠️ Fallback : pcap_open_live sans NOCAPTURE_LOCAL
+                        ' Les TX loopbacks sont filtrés par BPF ("not ether src {mac}")
                         errbuf.Clear()
-                        _handle = pcap_open_live(targetDevice, 65535, 1, 50, errbuf)
-                        
+                        _handle = pcap_open_live(targetDevice, 65535, 1, 1, errbuf)   ' ✅ 1ms
                         If _handle = IntPtr.Zero Then
                             Throw New Exception($"Failed to open device: {errbuf}")
                         End If
-                        
-                        _log?.Warn("Native Pcap: Opened with pcap_open_live (TX duplicates may occur)")
-                    Else
-                        _log?.Info("Native Pcap: Device opened successfully with NOCAPTURE_LOCAL flag ✅")
+                        _log?.Warn("Native Pcap: Fallback pcap_open_live — BPF filter handles TX loopback")
+                    End If
+
+                    ' ✅ Handle ACK dédié (même flags → NOCAPTURE_LOCAL)
+                    _handleAck = pcap_open(targetDevice, 65535, flags, 1, IntPtr.Zero, errbuf)
+                    If _handleAck = IntPtr.Zero Then
+                        _log?.Warn("Native Pcap: ACK handle failed, fallback to shared _handle (may add ~0.1ms latency)")
                     End If
 
                 Finally
@@ -358,7 +360,7 @@ Namespace Reacontrol24
         ''' <summary>
         ''' Start packet capture
         ''' </summary>
-        Public Sub StartCapture(handler As Action(Of Double, Byte())) Implements INetworkCapture.StartCapture
+        Public Sub StartCapture(handler As Action(Of Byte())) Implements INetworkCapture.StartCapture
             If _handle = IntPtr.Zero Then
                 Throw New InvalidOperationException("Device not opened")
             End If
@@ -376,85 +378,51 @@ Namespace Reacontrol24
             _log?.Info("Native Pcap: Packet capture started (High Priority)")
         End Sub
 
+        ' ✅ Buffer ACK pré-alloué partagé — écrit et lu uniquement depuis CaptureLoop (1 seul thread)
+        Private _ackBuffer As Byte() = Nothing
+        Private Const CMDTYPE_COMMAND As Byte = &H0
+
+        ''' <summary>
+        ''' Fournit le buffer ACK pré-alloué (appelé après init session).
+        ''' CaptureLoop l'utilise directement pour 0 allocation.
+        ''' </summary>
+        Public Sub SetAckBuffer(ackBuffer As Byte())
+            _ackBuffer = ackBuffer
+        End Sub
+
         ''' <summary>
         ''' Capture loop
         ''' </summary>
         Private Sub CaptureLoop()
-            Try
-                _log?.Debug("Native Pcap: Capture loop started")
+            While _isCapturing
+                Dim header As IntPtr = IntPtr.Zero
+                Dim rawPktData As IntPtr = IntPtr.Zero
 
-                Dim packetCount As Integer = 0
-                Dim lastLogTime As DateTime = DateTime.Now
+                If pcap_next_ex(_handle, header, rawPktData) <= 0 Then Continue While
+                If header = IntPtr.Zero OrElse rawPktData = IntPtr.Zero Then Continue While
 
-                While _isCapturing
-                    Dim header As IntPtr = IntPtr.Zero
-                    Dim pktData As IntPtr = IntPtr.Zero
+                ' ✅ ACK ULTRA-RAPIDE — lecture directe depuis la mémoire non-managée
+                ' 0 Marshal.Copy, 0 allocation, 0 appel managé → ~0.01ms
+                If _ackBuffer IsNot Nothing AndAlso
+                   Marshal.ReadByte(rawPktData, 28) = CMDTYPE_COMMAND Then
 
-                    Dim result = pcap_next_ex(_handle, header, pktData)
+                    ' Copie SendCounter (offset 18-21) → ReceivedCounter dans l'ACK (offset 22-25)
+                    _ackBuffer(22) = Marshal.ReadByte(rawPktData, 18)
+                    _ackBuffer(23) = Marshal.ReadByte(rawPktData, 19)
+                    _ackBuffer(24) = Marshal.ReadByte(rawPktData, 20)
+                    _ackBuffer(25) = Marshal.ReadByte(rawPktData, 21)
 
-                    ' Log every 5 seconds to show we're still alive
-                    If (DateTime.Now - lastLogTime).TotalSeconds >= 5 Then
-                        _log?.Debug("Native Pcap: Capture loop alive, {0} packets captured, last result: {1}", packetCount, result)
-                        lastLogTime = DateTime.Now
-                    End If
+                    ' ✅ pcap_inject directement — avant toute allocation managée !
+                    Dim h = If(_handleAck <> IntPtr.Zero, _handleAck, _handle)
+                    pcap_inject(h, _ackBuffer, _ackBuffer.Length)
+                End If
 
-                    If result = 1 Then ' Packet captured
-                        packetCount += 1
-                        _log?.Debug("Native Pcap: Packet #{0} captured", packetCount)
-
-                        If header <> IntPtr.Zero AndAlso pktData <> IntPtr.Zero Then
-                            Dim pkthdr = Marshal.PtrToStructure(Of PcapPkthdr)(header)
-
-                            _log?.Debug("Native Pcap: Packet size: {0} bytes, caplen: {1}", pkthdr.len, pkthdr.caplen)
-
-                            ' Convert timestamp to seconds
-                            Dim timestamp = CDbl(pkthdr.ts_sec) + (CDbl(pkthdr.ts_usec) / 1000000.0)
-
-                            ' Copy packet data
-                            Dim data(CInt(pkthdr.caplen) - 1) As Byte
-                            Marshal.Copy(pktData, data, 0, CInt(pkthdr.caplen))
-
-                            ' ✅ CRITICAL FIX: Block ALL broadcast packets (64 bytes) during test mode
-                            ' Control24 sends broadcasts (0xE1) every ~5-6 seconds
-                            ' These broadcasts MUST be ignored during LED tests to prevent interruption
-                            If _isTestMode AndAlso data.Length = 64 Then
-                                ' Check if this is a broadcast (dst = ff:ff:ff:ff:ff:ff)
-                                If data(0) = &HFF AndAlso data(1) = &HFF AndAlso data(2) = &HFF AndAlso 
-                                   data(3) = &HFF AndAlso data(4) = &HFF AndAlso data(5) = &HFF Then
-                                    _log?.Debug("Native Pcap: TEST MODE - Broadcast packet BLOCKED (64 bytes, dst=ff:ff:ff:ff:ff:ff)")
-                                    Continue While  ' ✅ Skip this packet completely - do NOT call handler
-                                End If
-                            End If
-
-                            _log?.Debug("Native Pcap: Calling handler with {0} bytes", data.Length)
-
-                            ' Call handler
-                            _captureHandler?.Invoke(timestamp, data)
-                            RaiseEvent PacketReceived(Me, New GenericPacketEventArgs(timestamp, data))
-                        Else
-                            _log?.Warn("Native Pcap: Packet captured but header or data is NULL")
-                        End If
-                    ElseIf result = -1 Then ' Error
-                        Dim errPtr = pcap_geterr(_handle)
-                        Dim errMsg = If(errPtr <> IntPtr.Zero, Marshal.PtrToStringAnsi(errPtr), "Unknown error")
-                        _log?.Error("Native Pcap: Capture error: {0}", errMsg)
-                        Thread.Sleep(10)
-                    ElseIf result = 0 Then ' Timeout
-                        ' This is normal, continue
-                    ElseIf result = -2 Then ' Breakloop called
-                        _log?.Info("Native Pcap: Breakloop detected")
-                        Exit While
-                    End If
-                End While
-
-                _log?.Debug("Native Pcap: Capture loop ended, total packets: {0}", packetCount)
-
-            Catch ex As ThreadAbortException
-                _log?.Debug("Native Pcap: Capture thread aborted")
-            Catch ex As Exception
-                _log?.Error("Native Pcap: Capture loop error: {0}", ex.Message)
-                _log?.Error("Native Pcap: Stack trace: {0}", ex.StackTrace)
-            End Try
+                ' ✅ Traitement différé — allocation acceptable (chemin asynchrone)
+                Dim pkthdr = Marshal.PtrToStructure(Of PcapPkthdr)(header)
+                Dim data(CInt(pkthdr.caplen) - 1) As Byte
+                Marshal.Copy(rawPktData, data, 0, CInt(pkthdr.caplen))
+                _captureHandler?.Invoke(data)
+            End While
         End Sub
 
         ''' <summary>
@@ -473,74 +441,53 @@ Namespace Reacontrol24
             _log?.Info("Native Pcap: Capture stopped")
         End Sub
 
-        ''' <summary>
-        ''' Send packet
-        ''' </summary>
-        Public Function SendPacket(data As Byte()) As Integer Implements INetworkCapture.SendPacket
-            If _handle = IntPtr.Zero Then
-                Throw New InvalidOperationException("Device not opened")
-            End If
 
-            Try
-                ' ✅ FIX: Use pcap_inject instead of pcap_sendpacket
-                ' pcap_inject returns number of bytes sent (positive) or -1 on error
-                ' This prevents Windows from creating loopback duplicate packets
-                Dim bytesSent = pcap_inject(_handle, data, data.Length)
 
-                If bytesSent > 0 Then
-                    ' Success - packet sent once without loopback
-                    Return data.Length
-                Else
-                    ' Error occurred
-                    Dim errPtr = pcap_geterr(_handle)
-                    Dim errMsg = If(errPtr <> IntPtr.Zero, Marshal.PtrToStringAnsi(errPtr), "Unknown error")
-                    _log?.Error("Native Pcap: pcap_inject failed: {0}", errMsg)
-                    Return -1
-                End If
-            Catch ex As Exception
-                _log?.Error("Native Pcap: Send error: {0}", ex.Message)
-                Return -1
-            End Try
+        ''' ✅ ACK urgent — handle dédié, 0 contention, 0 lock, 0 spin
+        Public Function SendAckPacket(data As Byte()) As Integer Implements INetworkCapture.SendAckPacket
+            Dim h = If(_handleAck <> IntPtr.Zero, _handleAck, _handle)
+            Return If(pcap_inject(h, data, data.Length) > 0, data.Length, -1)
         End Function
 
-        ' ✅ NEW: Test mode flag - blocks ALL incoming broadcasts during LED tests
-        Private _isTestMode As Boolean = False
+        ''' CMD normal — handle principal, 0 lock (un seul thread CMD actif)
+        Public Function SendPacket(data As Byte()) As Integer Implements INetworkCapture.SendPacket
+            If _handle = IntPtr.Zero Then Throw New InvalidOperationException("Device not opened")
+            Return If(pcap_inject(_handle, data, data.Length) > 0, data.Length, -1)
+        End Function
 
-        ''' <summary>
-        ''' Enable or disable test mode
-        ''' </summary>
-        Public Property TestMode As Boolean
-            Get
-                Return _isTestMode
-            End Get
-            Set(value As Boolean)
-                _isTestMode = value
-
-                If _isTestMode Then
-                    _log?.Info("Native Pcap: Test mode ENABLED - incoming broadcasts will be blocked")
-                Else
-                    _log?.Info("Native Pcap: Test mode DISABLED - normal operation")
+        Protected Overridable Sub Dispose(disposing As Boolean)
+            If Not disposedValue Then
+                If disposing Then
+                    ' TODO: supprimer l'état managé (objets managés)
                 End If
-            End Set
-        End Property
 
-        Public ReadOnly Property IsCapturing As Boolean Implements INetworkCapture.IsCapturing
-            Get
-                Return _isCapturing
-            End Get
-        End Property
-
-        Public Sub Dispose() Implements IDisposable.Dispose
-            StopCapture()
-
-            If _handle <> IntPtr.Zero Then
-                pcap_close(_handle)
-                _handle = IntPtr.Zero
+                ' TODO: libérer les ressources non managées (objets non managés) et substituer le finaliseur
+                ' TODO: affecter aux grands champs une valeur null
+                If _handleAck <> IntPtr.Zero Then
+                    pcap_close(_handleAck)
+                    _handleAck = IntPtr.Zero
+                End If
+                If _handle <> IntPtr.Zero Then
+                    pcap_close(_handle)
+                    _handle = IntPtr.Zero
+                End If
+                disposedValue = True
             End If
-
-            GC.SuppressFinalize(Me)
         End Sub
 
+        ' ' TODO: substituer le finaliseur uniquement si 'Dispose(disposing As Boolean)' a du code pour libérer les ressources non managées
+        ' Protected Overrides Sub Finalize()
+        '     ' Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(disposing As Boolean)'
+        '     Dispose(disposing:=False)
+        '     MyBase.Finalize()
+        ' End Sub
+
+        Public Sub Dispose() Implements IDisposable.Dispose
+            ' Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(disposing As Boolean)'
+            Dispose(disposing:=True)
+            GC.SuppressFinalize(Me)
+        End Sub
     End Class
 
 End Namespace
+

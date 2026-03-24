@@ -595,15 +595,7 @@ Namespace Reacontrol24
             End SyncLock
         End Sub
 
-        ''' <summary>
-        ''' Set test mode on adapter (blocks incoming broadcasts during LED tests)
-        ''' ✅ CRITICAL: Prevents Control24 broadcasts from interrupting test sequences
-        ''' </summary>
-        Public Sub SetAdapterTestMode(enabled As Boolean)
-            If TypeOf _packetCapture Is NativePcapAdapter Then
-                DirectCast(_packetCapture, NativePcapAdapter).SetTestMode(enabled)
-            End If
-        End Sub
+
 
         ''' <summary>
         ''' Get statistics monitor for UI updates
@@ -731,7 +723,7 @@ Namespace Reacontrol24
         ''' <summary>
         ''' Packet handler callback from capture
         ''' </summary>
-        Private Sub PacketHandler(timestamp As Double, pktData As Byte())
+        Private Sub PacketHandler(pktData As Byte())
             Try
                 ' _log.Debug("PCAP Captured: {0} bytes", pktData.Length) ' DISABLED FOR PERFORMANCE
 

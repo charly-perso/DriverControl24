@@ -1,4 +1,6 @@
-﻿Namespace Utility
+﻿Imports System.IO
+
+Namespace Utility
     Module Utility
 
         ''' <summary>
@@ -15,7 +17,70 @@
             Return OutputDic
         End Function
 
+        ''' <summary>
+        ''' Mappe une valeur dans [Min, Max] vers un index LED dans [0, Led_Number - 1].
+        ''' </summary>
+        Public Function GetLedIndex(Value As Double, Min As Double, Max As Double, Led_Number As Integer) As Integer
+            If Led_Number < 2 OrElse Max <= Min Then Return 0          ' ✅ garde-fous
+
+            Value = Math.Max(Min, Math.Min(Max, Value))                ' ✅ clamp → élimine <Min et >Max
+
+            If Value <= Min Then Return 0                              ' ✅ borne basse
+            If Value >= Max Then Return Led_Number - 1                 ' ✅ borne haute
+
+            ' ✅ O(1) : index direct sans boucle
+            Dim ratio As Double = (Value - Min) / (Max - Min)          ' 0.0 < ratio < 1.0
+            Return CInt(Math.Floor(ratio * (Led_Number - 1)))          ' ✅ [1, Led_Number-2]
+        End Function
     End Module
+    Public Module ReaperFxList
+
+        ''' <summary>
+        ''' Lit la liste de tous les plugins installés dans Reaper
+        ''' directement depuis les fichiers de cache Reaper (%APPDATA%\REAPER).
+        ''' </summary>
+        ''' <returns>Liste de noms de plugins (format "VST3: ReaComp (Cockos)")</returns>
+        Public Function GetInstalledPlugins() As List(Of String)
+            Dim plugins As New List(Of String)
+
+            Dim reaperDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "REAPER")
+
+            ' ✅ Reaper scinde les plugins par type dans plusieurs fichiers
+            Dim cacheFiles = {
+                "reaper-vstplugins64.ini",   ' VST2 / VST3
+                "reaper-fxplugins.ini"       ' JSFX + autres
+            }
+
+            For Each cacheFile In cacheFiles
+                Dim fullPath = Path.Combine(reaperDataPath, cacheFile)
+                If Not IO.File.Exists(fullPath) Then Continue For
+
+                For Each line In IO.File.ReadAllLines(fullPath)
+                    ' ✅ Les sections [VST3: ReaComp (Cockos)] = noms utilisables directement
+                    If line.StartsWith("[") AndAlso line.EndsWith("]") Then
+                        Dim name = line.Substring(1, line.Length - 2).Trim()
+                        ' Exclure les sections techniques (contiennent "=" ou sont vides)
+                        If name.Length > 0 AndAlso Not name.Contains("=") Then
+                            plugins.Add(name)
+                        End If
+                    End If
+                Next
+            Next
+
+            Return plugins.Distinct().OrderBy(Function(p) p).ToList()
+        End Function
+
+        ''' <summary>Filtre les plugins par type (VST, VST3, JS, AU...).</summary>
+        Public Function GetInstalledPluginsByType(FilterType As String) As List(Of String)
+            Return GetInstalledPlugins() _
+                .Where(Function(p) p.StartsWith(FilterType, StringComparison.OrdinalIgnoreCase)) _
+                .ToList()
+        End Function
+
+    End Module
+
 
     Namespace Bit
         Module BitManager
@@ -46,6 +111,17 @@
                 Return Bits_indexes.ToArray
             End Function
 
+            ''' <summary>
+            ''' Retourne un nouveau BitArray avec les bits dans l'ordre inverse.
+            ''' </summary>
+            Public Function ReverseBitArray(source As BitArray) As BitArray
+                Dim n = source.Count
+                Dim result As New BitArray(n)
+                For i = 0 To n - 1
+                    result(i) = source(n - 1 - i)   ' ✅ swap direct, 0 allocation intermédiaire
+                Next
+                Return result
+            End Function
         End Module
 
         Module ByteManager
@@ -137,7 +213,12 @@
             Public Function AndBytes(source As Byte(), mask As Byte()) As Byte()
                 Dim result(source.Length - 1) As Byte
                 For i = 0 To source.Length - 1
-                    result(i) = CByte(source(i) And mask(i))
+                    If i >= mask.Count Then
+                        result(i) = CByte(source(i))
+                    Else
+                        result(i) = CByte(source(i) And mask(i))
+                    End If
+
                 Next
                 Return result
             End Function
@@ -190,6 +271,27 @@
                 Return result
             End Function
         End Module
+    End Namespace
+    Namespace OSC
+        Module AdressManager
+            ''' <summary>
+            ''' Remplace la partie à l'index donné dans une chaîne séparable.
+            ''' Ex : ReplaceSegment("/track/1/fader/gain", "/", 2, "3") → "/track/3/fader/gain"
+            ''' </summary>
+            Public Function ReplaceSegment(source As String, separator As String, index As Integer, newValue As String) As String
+                If String.IsNullOrEmpty(source) Then Return source
+
+                Dim parts = source.Split(separator)
+                If index < 0 OrElse index >= parts.Length Then Return source
+
+                parts(index) = newValue
+                Return String.Join(separator, parts)
+            End Function
+            Public Function ReplaceSegment(source As String, separator As String, index As Integer, newValue As Integer) As String
+                Return ReplaceSegment(source, separator, index, newValue.ToString())
+            End Function
+        End Module
+
     End Namespace
 End Namespace
 

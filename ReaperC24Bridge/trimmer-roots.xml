@@ -1,0 +1,5 @@
+<linker>
+  <assembly fullname="System.IO.Pipes" preserve="all" />
+  <assembly fullname="System.Threading.Tasks" preserve="all" />
+  <assembly fullname="DriverControl24.Extension" preserve="all" />
+</linker>

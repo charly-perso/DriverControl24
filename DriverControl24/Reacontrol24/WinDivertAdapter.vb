@@ -25,7 +25,7 @@ Namespace Reacontrol24
         Private _log As Logger
         Private _isCapturing As Boolean
         Private _captureThread As Thread
-        Private _captureHandler As Action(Of Double, Byte())
+        Private _captureHandler As Action(Of Byte())
         Private _selectedInterface As String
 
         ' WinDivert constants
@@ -135,26 +135,26 @@ Namespace Reacontrol24
         Public Sub OpenDevice(deviceName As String, macAddress As String) Implements INetworkCapture.OpenDevice
             Try
                 _selectedInterface = deviceName
-                
+
                 ' Clean MAC address (remove separators)
                 Dim macClean = macAddress.Replace(":", "").Replace("-", "").ToUpper()
-                
+
                 ' ?? IMPORTANT LIMITATION:
                 ' WinDivert operates at IP layer and CANNOT capture non-IP Ethernet protocols like 0x885F
                 ' Control24 uses custom Ethernet protocol (0x885F) which bypasses IP stack
                 ' This means WinDivert CANNOT capture Control24 packets!
-                
+
                 _log?.Warn("?? WinDivert LIMITATION: Cannot capture Ethernet protocol 0x885F (Control24)")
                 _log?.Warn("?? WinDivert only works with IP-based protocols")
                 _log?.Warn("?? This adapter will NOT receive Control24 packets!")
                 _log?.Info("?? Recommendation: Use SharpPcap (with Npcap) for Control24")
-                
+
                 ' Get interface index
                 Dim ifIndex = GetInterfaceIndex(deviceName)
-                
+
                 ' Filter: Capture all IP traffic on specific interface (for diagnostic only)
                 Dim filter = $"ifIdx == {ifIndex}"
-                
+
                 _log?.Info("WinDivert: Opening with filter: {0}", filter)
                 _log?.Info("WinDivert: Target MAC: {0}", macClean)
                 _log?.Info("WinDivert: Interface index: {0}", ifIndex)
@@ -199,7 +199,7 @@ Namespace Reacontrol24
             Catch ex As Exception
                 _log?.Error("Failed to get interface index: {0}", ex.Message)
             End Try
-            
+
             ' Default to 0 (all interfaces)
             Return 0
         End Function
@@ -215,7 +215,7 @@ Namespace Reacontrol24
         ''' <summary>
         ''' Start packet capture
         ''' </summary>
-        Public Sub StartCapture(handler As Action(Of Double, Byte())) Implements INetworkCapture.StartCapture
+        Public Sub StartCapture(handler As Action(Of Byte())) Implements INetworkCapture.StartCapture
             If _handle = IntPtr.Zero Then
                 Throw New InvalidOperationException("Device not opened")
             End If
@@ -260,13 +260,13 @@ Namespace Reacontrol24
                             ' Ethernet header: [6 bytes dest MAC][6 bytes src MAC][2 bytes protocol]
                             If readLen >= 14 Then
                                 Dim protocol = (CUShort(packet(12)) << 8) Or packet(13)
-                                
+
                                 ' Only process Control24 packets (0x885F)
                                 If protocol = &H885F Then
                                     Dim timestamp = Utils.Tick()
 
                                     ' Call handler
-                                    _captureHandler?.Invoke(timestamp, packet)
+                                    _captureHandler?.Invoke(packet)
 
                                     ' Raise event
                                     RaiseEvent PacketReceived(Me, New GenericPacketEventArgs(timestamp, packet))
@@ -371,6 +371,9 @@ Namespace Reacontrol24
             GC.SuppressFinalize(Me)
         End Sub
 
+        Public Function SendAckPacket(data() As Byte) As Integer Implements INetworkCapture.SendAckPacket
+            Throw New NotImplementedException()
+        End Function
     End Class
 
 End Namespace

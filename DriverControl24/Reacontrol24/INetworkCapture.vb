@@ -43,7 +43,7 @@ Namespace Reacontrol24
         ''' <summary>
         ''' Start capturing packets
         ''' </summary>
-        Sub StartCapture(handler As Action(Of Double, Byte()))
+        Sub StartCapture(handler As Action(Of Byte()))
 
         ''' <summary>
         ''' Stop capturing packets
@@ -51,9 +51,14 @@ Namespace Reacontrol24
         Sub StopCapture()
 
         ''' <summary>
-        ''' Send a packet
+        ''' Send a packet (normal priority - CMD channel)
         ''' </summary>
         Function SendPacket(data As Byte()) As Integer
+
+        ''' <summary>
+        ''' Send an ACK packet (urgent - dedicated handle, zero contention with CMD sends)
+        ''' </summary>
+        Function SendAckPacket(data As Byte()) As Integer
 
         ''' <summary>
         ''' Event raised when packet received

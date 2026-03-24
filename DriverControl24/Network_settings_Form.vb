@@ -295,12 +295,7 @@ Public Class Network_settings_Form
         Button1.Enabled = False
 
         Try
-            ' ✅ ÉTAPE 1: Activer le mode test complet (keep-alive STOP + broadcasts BLOCKED)
-            _c24Session.SetTestingMode(True)
 
-            ' ✅ ÉTAPE 2: Bloquer TOUS les broadcasts au niveau du NativePcapAdapter
-            ' Cela empêche les broadcasts (0xE1) du Control24 d'interrompre les tests
-            _c24Session.SetAdapterTestMode(True)
             TextBox1.Text &= "✅ Native Pcap: Broadcast blocking ENABLED" & vbCrLf
 
             TextBox1.Text &= "=== LED TEST STARTED (Keep-alive + broadcasts disabled) ===" & vbCrLf
@@ -335,8 +330,7 @@ Public Class Network_settings_Form
             ' ✅ RESTAURATION: Réactiver le keep-alive + broadcasts
             _c24Session.SetTestingMode(False)
 
-            ' ✅ Réactiver le traitement des broadcasts
-            _c24Session.SetAdapterTestMode(False)
+
             TextBox1.Text &= "✅ Native Pcap: Broadcast blocking DISABLED" & vbCrLf
 
             TextBox1.Text &= "=== LED TEST ENDED (Keep-alive + broadcasts re-enabled) ===" & vbCrLf

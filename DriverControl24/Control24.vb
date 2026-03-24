@@ -2,14 +2,18 @@
 Imports System.Diagnostics.CodeAnalysis
 Imports System.Net
 Imports System.Net.NetworkInformation
+Imports System.Security.Cryptography
 Imports System.Threading
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar
 Imports DriverControl24.Control24.Commands
+Imports DriverControl24.Control24.OSC
 Imports DriverControl24.Reacontrol24
 Imports DriverControl24.Reacontrol24.C24Clock
 Imports DriverControl24.Utility.Bit
+Imports DriverControl24.Utility.OSC
 Imports Microsoft.VisualBasic.Devices
 Imports Microsoft.VisualBasic.Logging
+Imports Rug
 Imports SharpPcap
 
 Namespace Control24
@@ -21,6 +25,9 @@ Namespace Control24
             Private ReadOnly _AutoRefresh_C24_Components As List(Of C24_Component) = New List(Of C24_Component)
             Private ReadOnly _CmdToSendQueue As ConcurrentQueue(Of Byte()) = New ConcurrentQueue(Of Byte())
             Private ReadOnly _GroupComponents As Dictionary(Of String, List(Of C24_Component)) = New Dictionary(Of String, List(Of C24_Component))
+            Public Event BlinkStateChange(State As Boolean)
+            Public Event NeedToRegsiterOSC(OSC_Component As OSC.OSC_Component)
+
 
             Public ReadOnly Property IdsToC24Components As Concurrent.ConcurrentDictionary(Of String, C24_Component)
                 Get
@@ -55,8 +62,23 @@ Namespace Control24
             Sub Add_C24_Component(C24_Component As C24_Component, Optional GroupName As String = Nothing)
                 IdsToC24Components(C24_Component.Component_Id) = C24_Component
                 NameToC24Components.Add(C24_Component.Name, C24_Component)
-                AddHandler C24_Component.Cmd.NeedToSendCmd, AddressOf EnqueueCmd
+                For Each C24_Command In C24_Component.C24_SendingCommands
+                    AddHandler C24_Command.NeedToSendCmd, AddressOf EnqueueCmd
+                Next
+
                 AddTogroupName(GroupName, C24_Component)
+
+                'Register Blinking buttons
+                Dim C24_button As C24_LedButton = TryCast(C24_Component, C24_LedButton)
+                If C24_button IsNot Nothing Then
+                    AddHandler Me.BlinkStateChange, AddressOf C24_button.BlinkingLed
+                End If
+
+                'Register OSC components
+                For Each OSC_component In C24_Component.OSC_Components
+                    RaiseEvent NeedToRegsiterOSC(OSC_component)
+                Next
+
             End Sub
             ''' <summary>
             ''' Components which are refreshed on C24 only with the Desk SendingTimingQueueThread you can set on the Desk component.
@@ -67,6 +89,10 @@ Namespace Control24
                 NameToC24Components.Add(C24_Component.Name, C24_Component)
                 AutoRefresh_C24_Components.Add(C24_Component)
                 AddTogroupName(GroupName, C24_Component)
+                'Register OSC components
+                For Each OSC_component In C24_Component.OSC_Components
+                    RaiseEvent NeedToRegsiterOSC(OSC_component)
+                Next
             End Sub
             Private Sub EnqueueCmd(Cmd As Commands.Cmd)
                 Dim _bytes(Cmd.Cmd.Length - 1) As Byte
@@ -83,12 +109,17 @@ Namespace Control24
                 End If
             End Sub
 
+            Public Sub OnBlinkStateChange(state As Boolean)
+                RaiseEvent BlinkStateChange(state)
+            End Sub
+
         End Class
         Public MustInherit Class C24_Component
+            Private _OSC_Components As New List(Of OSC_Component)
             Public _Component_Id As String
-            Public _Cmd As Commands.Cmd
+            Public _C24_SendingCommands As New List(Of Commands.Cmd)
             Public _Name As String
-
+            Public _C24_ReceivingCommand As Cmd
 
             Public ReadOnly Property Name As String
                 Get
@@ -104,18 +135,39 @@ Namespace Control24
 
             End Property
 
-            Public ReadOnly Property Cmd As Commands.Cmd
+            Public ReadOnly Property C24_ReceivingCommand As Commands.Cmd
                 Get
-                    Return _Cmd
+                    Return _C24_ReceivingCommand
+                End Get
+            End Property
+
+            Public ReadOnly Property C24_SendingCommands As List(Of Commands.Cmd)
+                Get
+                    Return _C24_SendingCommands
+                End Get
+            End Property
+
+            Public ReadOnly Property OSC_Components As List(Of OSC.OSC_Component)
+                Get
+                    Return _OSC_Components
                 End Get
             End Property
         End Class
-
         Public Class C24_LedButton
             Inherits C24_Component
 
             Private _ButtonCmd As Commands.Button_Cmd = Nothing
             Private _Status As Boolean
+            Private _IsBlinking As Boolean
+
+            Public Property IsBlinking As Boolean
+                Get
+                    Return _IsBlinking
+                End Get
+                Set
+                    _IsBlinking = Value
+                End Set
+            End Property
 
             ReadOnly Property ButtonCmd As Commands.Button_Cmd
                 Get
@@ -126,14 +178,14 @@ Namespace Control24
             Sub New(Name As String, Button_Nb As Byte, Track_Nb As Integer)
                 _Name = Name
                 _ButtonCmd = New Commands.Track_Button_Cmd(Button_Nb, Track_Nb)
-                _Cmd = _ButtonCmd
+                C24_SendingCommands.Add(_ButtonCmd)
                 Me._Component_Id = _ButtonCmd.Cmd_Id
             End Sub
 
             Sub New(Name As String, Region As Commands.Btn_Region, Button_Nb As Byte)
                 _Name = Name
                 _ButtonCmd = New Commands.Region_Button_Cmd(Region, Button_Nb)
-                _Cmd = _ButtonCmd
+                C24_SendingCommands.Add(_ButtonCmd)
                 Me._Component_Id = _ButtonCmd.Cmd_Id
             End Sub
 
@@ -148,25 +200,43 @@ Namespace Control24
                     _ButtonCmd.SendCmd()
                 End Set
             End Property
-        End Class
 
+            Public Sub BlinkingLed(Blink_State As Boolean)
+                If IsBlinking Then
+                    Status = Blink_State
+                End If
+            End Sub
+        End Class
         Public Class C24_ScribbleStrip
             Inherits C24_Component
 
             Private _Text As String
             Private _ScribbleStripCmd As ScribbleStrip_Cmd
+            Private _Value As Double
 
             Public Property Text As String
                 Get
-                    _Text = _ScribbleStripCmd.ScribbleValue
+                    _Text = _ScribbleStripCmd.Text
                     Return _Text
                 End Get
                 Set
                     _Text = Value
-                    _ScribbleStripCmd.ScribbleValue = _Text
-                    _ScribbleStripCmd.SendCmd()
+                    _ScribbleStripCmd.Text = _Text
+
                 End Set
             End Property
+            Public Property Value As Double
+                Get
+                    _Value = _ScribbleStripCmd.Value
+                    Return _Value
+                End Get
+                Set
+                    _Value = Value
+                    _ScribbleStripCmd.Value = _Value
+
+                End Set
+            End Property
+
             Public ReadOnly Property ScribbleStripCmd As ScribbleStrip_Cmd
                 Get
                     Return _ScribbleStripCmd
@@ -176,38 +246,43 @@ Namespace Control24
             Sub New(Name As String, Track_Nb As Integer)
                 _Name = Name
                 _ScribbleStripCmd = New ScribbleStrip_Cmd(Track_Nb)
-                _Cmd = _ScribbleStripCmd
+                C24_SendingCommands.Add(_ScribbleStripCmd)
                 Me._Component_Id = _ScribbleStripCmd.Cmd_Id
             End Sub
         End Class
-
         Public Class C24_Vpot
             Inherits C24_Component
-
+            Const Large_Step As Integer = 32
+            Const Fine_Step As Integer = 200
             Const LedNumber As Integer = 15
             Private WithEvents _VpotCmd As Commands.Vpot_Cmd
             Private WithEvents _VpotLedCmd As Commands.VpotLed_Cmd
             Private _ScribbleStrip As C24_ScribbleStrip
-            Private _Min_Value As Double? = Nothing
-            Private _Max_Value As Double? = Nothing
-            Private _Step_Value As Double? = Nothing
-            Private _Value As Double? = Nothing
+            Private _Min_Value As Double = 0
+            Private _Max_Value As Double = 1
+            Private _Step_Value As Double
+            Private _Value As Double = 0
             Private _Velocity_sensible As Boolean = False
             Private _LedMode As LedModeType
             Private _Value2 As Double? = Nothing
+            Private _VpotMode As VpotModeType = VpotModeType.Value
+            Private _Adjust_Value2 As Boolean = False
+            Private _Value_Text As String
+            Private _Value_TextList As List(Of (item As String, Checked As Boolean))
+            Private _SelectedItem_Index As Integer = 0
 
-            ReadOnly Property VpotCmd As Commands.Vpot_Cmd
+            Public ReadOnly Property VpotCmd As Commands.Vpot_Cmd
                 Get
                     Return _VpotCmd
                 End Get
             End Property
 
-            ReadOnly Property VpotLedCmd As Commands.VpotLed_Cmd
+            Public ReadOnly Property VpotLedCmd As Commands.VpotLed_Cmd
                 Get
                     Return _VpotLedCmd
                 End Get
             End Property
-            ReadOnly Property ScribbleStrip As C24_ScribbleStrip
+            Public ReadOnly Property ScribbleStrip As C24_ScribbleStrip
                 Get
                     Return _ScribbleStrip
                 End Get
@@ -216,73 +291,118 @@ Namespace Control24
             Sub New(Name As String, Track_Nb As Integer, ScribbleStrip As C24_ScribbleStrip)
                 _Name = Name
                 _VpotCmd = New Vpot_Cmd(Track_Nb)
+                _C24_ReceivingCommand = VpotCmd
                 _VpotLedCmd = New VpotLed_Cmd(Track_Nb)
+                C24_SendingCommands.Add(VpotLedCmd)
                 _ScribbleStrip = ScribbleStrip
-                _Cmd = _VpotCmd
                 Me._Component_Id = _VpotCmd.Cmd_Id
             End Sub
 
-            Property Min_Value As Double?
+            Public Enum VpotModeType
+                Pan
+                Value
+                TextList
+            End Enum
+            Public Property Adjust_Value2 As Boolean
+                Get
+                    Return _Adjust_Value2
+                End Get
+                Set
+                    _Adjust_Value2 = Value
+                End Set
+            End Property
+
+            Public Property VpotMode As VpotModeType
+                Get
+                    Return _VpotMode
+                End Get
+                Set
+                    _VpotMode = Value
+                End Set
+            End Property
+
+            Public Property Min_Value As Double
                 Get
                     Return _Min_Value
                 End Get
                 Set
-                    If Value IsNot Nothing Then
-                        _Min_Value = Math.Round(CDbl(Value), 1)
-                    End If
+
+                    _Min_Value = Math.Round(Value, 1)
+
                 End Set
             End Property
 
-            Property Max_Value As Double?
+            Public Property Max_Value As Double
                 Get
                     Return _Max_Value
                 End Get
                 Set
-                    If Value IsNot Nothing Then
-                        _Max_Value = Math.Round(CDbl(Value), 1)
-                    End If
+
+                    _Max_Value = Math.Round(Value, 1)
+
                 End Set
             End Property
 
-            Property Step_Value As Double?
+            Public ReadOnly Property Step_Value As Double
                 Get
+                    If Velocity_sensible Then
+                        _Step_Value = 1 / Fine_Step
+                    Else
+                        _Step_Value = 1 / Large_Step
+                    End If
                     Return _Step_Value
                 End Get
-                Set
-                    If Value IsNot Nothing Then
-                        _Step_Value = Math.Round(CDbl(Value), 1)
-                    End If
-                End Set
+
             End Property
-            Property Value As Double?
+            Public Property Value As Double
                 Get
                     Return _Value
                 End Get
                 Set
-                    If Value IsNot Nothing Then
-                        _Value = Math.Round(CDbl(Value), 1)
-                    End If
+                    _Value += Value
+                    _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 1)
+
                     RefreshLedStatus()
                 End Set
             End Property
-            Property Value2 As Double?
+            Public Property Value2 As Double?
                 Get
                     Return _Value2
                 End Get
                 Set
                     If Value IsNot Nothing Then
-                        _Value2 = Math.Round(CDbl(Value), 1)
+                        _Value2 += CDbl(Value)
+                        _Value2 = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 1)
                     End If
                     RefreshLedStatus()
                 End Set
             End Property
 
-            Property Velocity_sensible As Boolean
+            Public Property Velocity_sensible As Boolean
                 Get
                     Return _Velocity_sensible
                 End Get
                 Set
                     _Velocity_sensible = Value
+                End Set
+            End Property
+            Public Property Value_Text As String
+                Get
+                    Return _Value_Text
+                End Get
+                Set
+                    _Value_Text = Value
+                    RefreshValueText()
+
+                End Set
+            End Property
+            Public Property Value_TextList As List(Of (item As String, Checked As Boolean))
+                Get
+                    Return _Value_TextList
+                End Get
+                Set
+                    _Value_TextList = Value
+
                 End Set
             End Property
 
@@ -294,7 +414,7 @@ Namespace Control24
                 Q
             End Enum
 
-            Property LedMode As LedModeType
+            Public Property LedMode As LedModeType
                 Get
                     Return _LedMode
                 End Get
@@ -302,44 +422,109 @@ Namespace Control24
                     _LedMode = Value
                 End Set
             End Property
-
-#Region "Led"
-            Private Sub RefreshLedStatus()
-                If Value IsNot Nothing AndAlso Min_Value IsNot Nothing AndAlso Max_Value IsNot Nothing Then
-                    Dim ValueLedStatus As BitArray = GetLedsStatus(Value)
-                    If Value2 IsNot Nothing Then
-                        Dim Value2LedStatus As BitArray = GetLedsStatus(Value2)
-                        ValueLedStatus = ValueLedStatus.Or(Value2LedStatus)
+            Public Property SelectedItem_Index As Integer
+                Get
+                    Return _SelectedItem_Index
+                End Get
+                Set
+                    _SelectedItem_Index = Value
+                    RefreshSelectedItem()
+                End Set
+            End Property
+            Private Sub RefreshSelectedItem()
+                'display SelectedItem on scribble
+                If Value_TextList IsNot Nothing AndAlso SelectedItem_Index < Value_TextList.Count Then
+                    Dim item_text = Value_TextList.Item(SelectedItem_Index).item
+                    Dim item_checked = Value_TextList.Item(SelectedItem_Index).Checked
+                    If item_checked Then
+                        ScribbleStrip.Text = ">" & item_text.Substring(0, 3)
+                    Else
+                        ScribbleStrip.Text = item_text
                     End If
-                    VpotLedCmd.Leds_Status = ValueLedStatus
                 End If
+            End Sub
+            Public Sub CheckSelectedItem(Status As Boolean)
+                Dim item = Value_TextList.Item(SelectedItem_Index)
+                item.Checked = Status
+                Value_TextList.Item(SelectedItem_Index) = item
+                RefreshSelectedItem()
+            End Sub
+            Public Sub CheckAllItems(Status As Boolean)
+                For i = 0 To Value_TextList.Count - 1
+                    Dim item = Value_TextList.Item(i)
+                    item.Checked = Status
+                    Value_TextList.Item(i) = item
+                Next
+            End Sub
+
+
+
+            Private Sub RefreshValueText()
+
+                'display value from text received from OSC string on scribble
+                If VpotMode = VpotModeType.Value Then
+                    ScribbleStrip.Value = CDbl(Value_Text)
+                ElseIf VpotMode = VpotModeType.Pan Then
+                    LedMode = LedModeType.Central_Dot
+                    Dim Value As Integer = CInt(Value_Text.Split("%")(0))
+                    If Value = 0 Then
+                        ScribbleStrip.Text = "<0>"
+                    ElseIf Value > 0 Then
+                        ScribbleStrip.Text = Value & ">"
+                    ElseIf Value < 0 Then
+                        ScribbleStrip.Text = "<" & Math.Abs(Value)
+                    End If
+                End If
+            End Sub
+
+            Private Sub UpdateValueFromCmd() Handles _VpotCmd.OnCmdChange
+
+                If VpotMode = VpotModeType.Value Or VpotMode = VpotModeType.Pan Then
+                    Min_Value = 0
+                    Max_Value = 1
+                    If Adjust_Value2 Then
+                        Value2 = _VpotCmd.Rotate_Velocity * Step_Value
+                    Else
+                        Value = _VpotCmd.Rotate_Velocity * Step_Value
+                    End If
+
+                ElseIf VpotMode = VpotModeType.TextList Then
+                    LedMode = LedModeType.Dot
+                    If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                        Min_Value = 0
+                        Max_Value = Value_TextList.Count - 1
+
+                        Value = _VpotCmd.Rotate_Velocity
+                        SelectedItem_Index = Value
+                    End If
+                End If
+
 
             End Sub
 
-            ''' <summary>
-            ''' Mappe une valeur dans [Min, Max] vers un index LED dans [0, Led_Number - 1].
-            ''' </summary>
-            Private Function GetLedIndex(Value As Double, Min As Double, Max As Double, Led_Number As Integer) As Integer
-                If Led_Number < 2 OrElse Max <= Min Then Return 0          ' ✅ garde-fous
+#Region "Led"
+            Private Sub RefreshLedStatus()
 
-                Value = Math.Max(Min, Math.Min(Max, Value))                ' ✅ clamp → élimine <Min et >Max
+                Dim ValueLedStatus As BitArray = GetLedsStatus(Value)
+                If Value2 IsNot Nothing Then
+                    Dim Value2LedStatus As BitArray = GetLedsStatus(Value2)
+                    ValueLedStatus = ValueLedStatus.Or(Value2LedStatus)
+                End If
+                VpotLedCmd.Leds_Status = ValueLedStatus
 
-                If Value <= Min Then Return 0                              ' ✅ borne basse
-                If Value >= Max Then Return Led_Number - 1                 ' ✅ borne haute
 
-                ' ✅ O(1) : index direct sans boucle
-                Dim ratio As Double = (Value - Min) / (Max - Min)          ' 0.0 < ratio < 1.0
-                Return CInt(Math.Floor(ratio * (Led_Number - 1)))          ' ✅ [1, Led_Number-2]
-            End Function
+            End Sub
+
+
             Private Function GetLedsStatus(Value As Double) As BitArray
                 Dim LedsStatus As New BitArray(LedNumber)
 
                 If LedMode = LedModeType.Dot Then
 
-                    LedsStatus.Item(GetLedIndex(Value, Min_Value, Max_Value, LedNumber)) = True
+                    LedsStatus.Item(Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)) = True
 
                 ElseIf LedMode = LedModeType.Gauge Then
-                    Dim LedIndex As Integer = GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
+                    Dim LedIndex As Integer = Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
                     For i = 0 To LedIndex - 1
                         LedsStatus.Item(i) = True
                     Next
@@ -348,9 +533,9 @@ Namespace Control24
                     Dim LedIndex As Integer = 0
                     Dim Middle = (Min_Value + Max_Value) / 2
                     If Value <= Middle Then
-                        LedIndex = GetLedIndex(Value, Min_Value, Middle, 8)
+                        LedIndex = Utility.GetLedIndex(Value, Min_Value, Middle, 8)
                     Else
-                        LedIndex = GetLedIndex(Value, Middle, Max_Value, 8)
+                        LedIndex = Utility.GetLedIndex(Value, Middle, Max_Value, 8)
                     End If
 
                     LedsStatus.Item(LedIndex) = True
@@ -359,9 +544,9 @@ Namespace Control24
                     Dim LedIndex As Integer = 0
                     Dim Middle = (Min_Value + Max_Value) / 2
                     If Value <= Middle Then
-                        LedIndex = GetLedIndex(Value, Min_Value, Middle, 8)
+                        LedIndex = Utility.GetLedIndex(Value, Min_Value, Middle, 8)
                     Else
-                        LedIndex = GetLedIndex(Value, Middle, Max_Value, 8)
+                        LedIndex = Utility.GetLedIndex(Value, Middle, Max_Value, 8)
                     End If
 
                     For i = 0 To LedIndex - 1
@@ -373,7 +558,7 @@ Namespace Control24
                     Next
 
                 ElseIf LedMode = LedModeType.Q Then
-                    Dim LedIndex As Integer = GetLedIndex(Value, Min_Value, Max_Value, 8)
+                    Dim LedIndex As Integer = Utility.GetLedIndex(Value, Min_Value, Max_Value, 8)
                     For i = 0 To LedIndex - 1
                         LedsStatus.Item(7 + i) = True
                         LedsStatus.Item(7 - i) = True
@@ -386,27 +571,282 @@ Namespace Control24
 #End Region
 
         End Class
+        Public Class C24_VueMeter
+            Inherits C24_Component
+            Const LedNumber As Integer = 14
+            Private _VueMeterCmdLeft As VueMeter_Cmd    ' ✅ cmd dédiée canal gauche
+            Private _VueMeterCmdRight As VueMeter_Cmd   ' ✅ cmd dédiée canal droit
+            Private _Value_Left As Double
+            Private _Min_Value As Double = 0
+            Private _Max_Value As Double = 1
 
+            Private _Reverse As Boolean = False
+            Private _Value_Right As Double
+            Private _Peak_Left As Boolean = False
+            Private _Peak_Right As Boolean = False
+            Private WithEvents _OSCVueMeterLeft As OSC_VueMeter
+            Private WithEvents _OSCVueMeterRight As OSC_VueMeter
+
+            ReadOnly Property OSCVueMeterLeft As OSC.OSC_VueMeter
+                Get
+                    Return _OSCVueMeterLeft
+                End Get
+            End Property
+            ReadOnly Property OSCVueMeterRight As OSC.OSC_VueMeter
+                Get
+                    Return _OSCVueMeterRight
+                End Get
+            End Property
+
+            ReadOnly Property VueMeterCmdLeft As VueMeter_Cmd
+                Get
+                    Return _VueMeterCmdLeft
+                End Get
+            End Property
+            ReadOnly Property VueMeterCmdRight As VueMeter_Cmd
+                Get
+                    Return _VueMeterCmdRight
+                End Get
+            End Property
+
+            Sub New(Name As String, Track_Nb As Integer)
+                _Name = Name
+                'C24
+                ' ✅ Canal gauche — cmd indépendante
+                _VueMeterCmdLeft = New VueMeter_Cmd(Track_Nb)
+                _VueMeterCmdLeft.Channel = StereoChannel.Left
+                C24_SendingCommands.Add(_VueMeterCmdLeft)
+
+                ' ✅ Canal droit — cmd indépendante
+                _VueMeterCmdRight = New VueMeter_Cmd(Track_Nb)
+                _VueMeterCmdRight.Channel = StereoChannel.Right
+                C24_SendingCommands.Add(_VueMeterCmdRight)
+
+                Me._Component_Id = _VueMeterCmdLeft.Cmd_Id
+
+                'OSC
+                _OSCVueMeterLeft = New OSC.OSC_VueMeter(Track_Nb, StereoChannel.Left)
+                OSC_Components.Add(_OSCVueMeterLeft)
+                _OSCVueMeterRight = New OSC.OSC_VueMeter(Track_Nb, StereoChannel.Right)
+                OSC_Components.Add(_OSCVueMeterRight)
+
+
+            End Sub
+
+
+            Public Property Value_Left As Double
+                Get
+                    Return _Value_Left
+                End Get
+                Set
+                    _Value_Left = Value
+                    RefreshLedStatus(_Value_Left, StereoChannel.Left)
+                    If _Value_Left = Max_Value Then
+                        _Peak_Left = True
+                    End If
+                End Set
+            End Property
+            Public Property Value_Right As Double
+                Get
+                    Return _Value_Right
+                End Get
+                Set
+                    _Value_Right = Value
+                    RefreshLedStatus(_Value_Right, StereoChannel.Right)
+                    If _Value_Left = Max_Value Then
+                        _Peak_Right = True
+                    End If
+                End Set
+            End Property
+            Public Property Peak_Left As Boolean
+                Get
+                    Return _Peak_Left
+                End Get
+                Set
+                    _Peak_Left = Value
+
+                End Set
+            End Property
+            Public Property Peak_Right As Boolean
+                Get
+                    Return _Peak_Right
+                End Get
+                Set
+                    _Peak_Right = Value
+                End Set
+            End Property
+
+            Public Property Min_Value As Double
+                Get
+                    Return _Min_Value
+                End Get
+                Set
+                    _Min_Value = Value
+                End Set
+            End Property
+
+            Public Property Max_Value As Double
+                Get
+                    Return _Max_Value
+                End Get
+                Set
+                    _Max_Value = Value
+                End Set
+            End Property
+
+            Public Property Reverse As Boolean
+                Get
+                    Return _Reverse
+                End Get
+                Set
+                    _Reverse = Value
+                End Set
+            End Property
+
+            Public Sub ResetPeaks()
+                Peak_Left = False
+                Peak_Right = False
+                Value_Left = _Value_Left
+                Value_Right = _Value_Right
+            End Sub
+            Private Sub RefreshLedStatus(Value As Double, Channel As StereoChannel)
+                Dim Leds_Status = GetLedsStatus(Value)
+                If Reverse Then
+                    Leds_Status = Utility.Bit.ReverseBitArray(Leds_Status)
+                End If
+                If Peak_Left OrElse Peak_Right Then
+                    Leds_Status.Item(LedNumber - 1) = True
+                End If
+
+                ' ✅ Chaque canal met à jour sa propre cmd — aucune interférence
+                If Channel = StereoChannel.Left Then
+                    _VueMeterCmdLeft.Leds_Status = Leds_Status
+                Else
+                    _VueMeterCmdRight.Leds_Status = Leds_Status
+                End If
+            End Sub
+
+            Private Function GetLedsStatus(Value As Double) As BitArray
+                Dim LedsStatus As New BitArray(LedNumber)
+
+                Dim LedIndex As Integer = Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
+                For i = 0 To LedIndex - 1
+                    LedsStatus.Item(i) = True
+                Next
+                Return LedsStatus
+
+            End Function
+
+            'OSC management
+            Private Sub _OSCVueMeterLeft_OnNumValueReceived(NumValue As Double) Handles _OSCVueMeterLeft.OnNumValueReceived
+                Value_Left = NumValue
+            End Sub
+            Private Sub _OSCVueMeterRight_OnNumValueReceived(NumValue As Double) Handles _OSCVueMeterRight.OnNumValueReceived
+                Value_Right = NumValue
+            End Sub
+        End Class
         Public Class C24_Desk
             Inherits C24_Components
 
             Const C24_port As Integer = 9123
             Private _NetworkInterface As NetworkInterface
 
+            Private _BlinkTimer As System.Threading.Timer
+            Private _BlinkInterval As Integer = 500   ' ms — modifiable avant/après démarrage
 
-            Private SendPacketsQueues As Dictionary(Of String, Concurrent.ConcurrentQueue(Of Byte()))
 
-            Private ReceivedCmdQueue As Concurrent.ConcurrentQueue(Of Byte())
+
+
             Private _isCapturing As Boolean = False
             Private _IsRunning As Boolean
-            Private SendingThread As Threading.Thread
-            Dim _packetCapture As NativePcapAdapter
-            Private _TimingQueue As Integer = 50
+            Private SendingInstantQueueThread As Threading.Thread
+            Private ReceivedC24PacketThread As Thread
+            Private _packetCapture As NativePcapAdapter
+            Private _TimingQueueTimeout As Integer = 50
             Private SendingTimingQueueThread As Threading.Thread
+            Private SendingAllCmdBytesQueueThread As Threading.Thread
+            Private _OSCreceiveThread As Thread
             Private _ComputerMacAddr As Byte()
-
-            Private _ReceivedPacketsQueue As ConcurrentQueue(Of Byte())
             Private _PacketManager As Packet.PacketManager
+            Private _ReceivedC24PacketQueue As ConcurrentQueue(Of Packet.C24_Packet)
+            Private _AllCmdBytesQueue As ConcurrentQueue(Of List(Of Byte()))
+            Private _OSC_Receiver As Rug.Osc.OscReceiver
+            Private _OSC_Sender As Rug.Osc.OscSender
+            Private _OSCReceiverPort As Integer = 9124
+            Private _OSCSenderPort As Integer = 9125
+            Private _OSC_IPAddress As IPAddress = IPAddress.Any
+            Private _OSCAddressManager As Rug.Osc.OscAddressManager
+            Private _IsOSCRunning As Boolean
+            Private _BlinkState As Boolean = False
+            Private _InstantQueueTimeout As Integer = 5
+
+            ''' <summary>Intervalle de clignotement en ms (défaut : 500ms).</summary>
+            Public Property BlinkInterval As Integer
+                Get
+                    Return _BlinkInterval
+                End Get
+                Set
+                    _BlinkInterval = Value
+                    _BlinkTimer?.Change(0, _BlinkInterval)   ' ✅ appliqué à chaud
+                End Set
+            End Property
+
+            Public Property OSC_IPAddress As IPAddress
+                Get
+                    Return _OSC_IPAddress
+                End Get
+                Set
+                    _OSC_IPAddress = Value
+                End Set
+            End Property
+
+            Public Property OSCSenderPort As Integer
+                Get
+                    Return _OSCSenderPort
+                End Get
+                Set
+                    _OSCSenderPort = Value
+                End Set
+            End Property
+
+            Public Property OSCReceiverPort As Integer
+                Get
+                    Return _OSCReceiverPort
+                End Get
+                Set
+                    _OSCReceiverPort = Value
+                End Set
+            End Property
+
+            ReadOnly Property OSCAddressManager As Rug.Osc.OscAddressManager
+                Get
+                    Return _OSCAddressManager
+                End Get
+            End Property
+
+            ReadOnly Property OSC_Sender As Rug.Osc.OscSender
+                Get
+                    Return _OSC_Sender
+                End Get
+            End Property
+
+            ReadOnly Property OSC_Receiver As Rug.Osc.OscReceiver
+                Get
+                    Return _OSC_Receiver
+                End Get
+            End Property
+
+            ReadOnly Property ReceivedC24PacketQueue As Concurrent.ConcurrentQueue(Of Packet.C24_Packet)
+                Get
+                    Return _ReceivedC24PacketQueue
+                End Get
+            End Property
+
+            ReadOnly Property PacketCapture As NativePcapAdapter
+                Get
+                    Return _packetCapture
+                End Get
+            End Property
 
             ReadOnly Property ComputerMacAddr As Byte()
                 Get
@@ -420,44 +860,135 @@ Namespace Control24
                 End Get
             End Property
 
+            Public ReadOnly Property IsOSCRunning As Boolean
+                Get
+                    Return Threading.Volatile.Read(_IsOSCRunning)
+                End Get
+            End Property
+
             Public ReadOnly Property IsRunning As Boolean
                 Get
                     Return Threading.Volatile.Read(_IsRunning)
                 End Get
             End Property
 
-            Public Property TimingQueue As Integer
+            Public Property TimingQueueTimeout As Integer
                 Get
-                    Return _TimingQueue
+                    Return _TimingQueueTimeout
                 End Get
                 Set
-                    _TimingQueue = Value
+                    _TimingQueueTimeout = Value
                 End Set
             End Property
 
-            Public Property ReceivedPacketsQueue As Concurrent.ConcurrentQueue(Of Byte())
+            Public Property InstantQueueTimeout As Integer
                 Get
-                    Return _ReceivedPacketsQueue
+                    Return _InstantQueueTimeout
                 End Get
                 Set
-                    _ReceivedPacketsQueue = Value
+                    _InstantQueueTimeout = Value
                 End Set
             End Property
 
             Sub New(NetworkInterface As Net.NetworkInformation.NetworkInterface)
                 _NetworkInterface = NetworkInterface
                 'initialize C24desk Components
-                InitializeComponents()
+
             End Sub
 
 
             Sub InitializeComponents()
 
+                Dim vuemeter1 = New Hardware.C24_VueMeter("VueMeter_1", 1)
+                Me.Add_AutoRefresh_C24_Component(vuemeter1, "VueMeters")
+
+                ' vuemeter1.Value_Left = 0.5
+                'vuemeter1.Value_Right = 0.8
+
                 Me.Add_C24_Component(New Hardware.C24_LedButton("F01", Commands.Btn_Region.Left_Strip, &H1), "Function")
+                Me.Add_C24_Component(New Hardware.C24_ScribbleStrip("ScribbleStrip_1", 1), "Scribbles")
+                Me.Add_C24_Component(New Hardware.C24_Vpot("Vpot_1", 1, Me.NameToC24Components("ScribbleStrip_1")), "Vpots")
+
+                Dim Vpot1 As C24_Vpot = Me.NameToC24Components("Vpot_1")
+                Dim itemlist As New List(Of (item As String, checked As Boolean)) From {
+                ("ded", False),
+                ("frfr", False),
+                ("sza", True)
+                }
+
+                Vpot1.Value_TextList = itemlist
+                Vpot1.VpotMode = C24_Vpot.VpotModeType.TextList
+
+            End Sub
+
+            Private Sub NewChannelStrip(Tack_Number As Integer)
+
+
 
 
             End Sub
             Sub StartNetworkCommunication()
+                ' ✅ Réduit les pauses GC Gen2 (10-80ms → < 2ms)
+                System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency
+
+                'Initialize OSC
+
+                '   ->OSC AddressManager
+                _OSCAddressManager = New Rug.Osc.OscAddressManager()
+
+                ''   ->OSC receiver
+                '_OSC_Receiver = New Rug.Osc.OscReceiver(OSCReceiverPort)
+                '_OSC_Receiver.Connect()
+                '   ->OSC sender
+
+                'Dim ip As New IPAddress(192.168.1.53)
+                _OSC_Sender = New Rug.Osc.OscSender(IPAddress.Parse("192.168.1.53"), 0, OSCSenderPort)
+                _OSC_Sender.Connect()
+                '"192.168.1.53"
+                '"10.144.22.3"
+                _IsOSCRunning = True
+
+                ''Test OSC
+                'Dim de = ""
+                '_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fxparam/count", {CInt(16)}))
+                '_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fx/count", {CInt(8)}))
+                'Dim Address = $"/track/1/name"
+                '',{Uri.EscapeDataString("ReaComp (Cockos)")}"
+                'Dim ad2 = "/track/1/select" '"/track/1/select"
+                'Dim message As New Rug.Osc.OscMessage(Address, {"FX_INSERT:ReaTune (Cockos)"})
+                '_OSC_Sender.Send(New Rug.Osc.OscMessage(ad2, {})) 'CInt(1)}))
+                'ad2 = "/device/fx/select/1"
+                ''_OSC_Sender.Send(New Rug.Osc.OscMessage(ad2, {}))
+
+                ''_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fx/select", {CSng(1)}))
+
+                ''' ✅ Annonces device
+                ''_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fxparam/count", {CInt(16)}))
+                ''_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fx/count", {CInt(8)}))
+                ''Thread.Sleep(30)
+
+                '' ✅ Sélection track 1
+                ''_OSC_Sender.Send(New Rug.Osc.OscMessage("/track/1/fx/1/name", {}))
+                ''Thread.Sleep(50)
+
+                ''' ✅ Test A — forme trigger (recommandé en premier)
+                ''_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fx/select/1", {}))
+                ''Thread.Sleep(100)
+                '' ✅ Séquence correcte — Reaper envoie FX_NAME automatiquement après track+FX select
+                '_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/track/select/1", {CInt(1)}))
+                'Thread.Sleep(50)
+                '_OSC_Sender.Send(New Rug.Osc.OscMessage("/device/fx/+", {CInt(1)}))
+                '' → Reaper répond : /fx/name "ReaTune"  +  /fx/1/name "ReaTune"
+
+
+                'Thread de réception (boucle bloquante)
+                _OSCreceiveThread = New Thread(AddressOf OSCReceiveLoop) With {
+                    .Name = "OSC_ReceiveLoop",
+                    .IsBackground = True,
+                    .Priority = ThreadPriority.Normal
+                }
+                _OSCreceiveThread.Start()
+
                 'init packet handler
                 ' Get IP address
                 Dim firstIp As IPAddress = If(NetworkInterface.GetIPProperties.UnicastAddresses?.Count > 0, NetworkInterface.GetIPProperties.UnicastAddresses(0).Address, New IPAddress({&H7F, &H0, &H0, &H1}))
@@ -469,10 +1000,14 @@ Namespace Control24
                 'Set is running
                 _IsRunning = True
 
-                'init queues 
-                SendPacketsQueues = New Dictionary(Of String, Concurrent.ConcurrentQueue(Of Byte()))
-                SendPacketsQueues.Add("ACK", New Concurrent.ConcurrentQueue(Of Byte()))
-                SendPacketsQueues.Add("CMD", New Concurrent.ConcurrentQueue(Of Byte()))
+                'Set Blinking timer
+                _BlinkTimer = New System.Threading.Timer(
+        AddressOf OnBlinkTimer,
+        Nothing,
+        _BlinkInterval,
+        _BlinkInterval)
+
+
 
                 'init Packet Manager 
                 _PacketManager = New Packet.PacketManager(Me)
@@ -490,18 +1025,31 @@ Namespace Control24
                     _packetCapture.SetFilter(mac_addr_str)
 
                     ' Start C24packet Capture process thread
-                    ReceivedPacketsQueue = New Concurrent.ConcurrentQueue(Of Byte())
+                    ' 1:Capture de tous les bytes
+                    ' 2:Orientation vers le bon traitement
+                    '       Commandes -> Envois Ultra fast d'un Ack de réception puis Queue de traitement de commandes
+                    '       Broadcast -> Init Procédure
+                    '       Ack       -> Déblocage de Ackreceived pour permettre de nouveau des envois
+                    _ReceivedC24PacketQueue = New Concurrent.ConcurrentQueue(Of Packet.C24_Packet)
                     _packetCapture.StartCapture(AddressOf PacketHandler)
                     _isCapturing = True
 
-                    'Start C24packet Sending process thread
-
-                    SendingThread = New Thread(AddressOf SendingLoop) With {
-                        .Name = "NativePcapSend",
+                    'Start C24ReceivedCmd process
+                    ReceivedC24PacketThread = New Thread(AddressOf ReceivedC24PacketLoop) With {
+                        .Name = "ReceivedC24Packet",
                         .IsBackground = True,
                         .Priority = ThreadPriority.Highest
                     }
-                    SendingThread.Start()
+                    ReceivedC24PacketThread.Start()
+
+
+                    'Start C24packet Sending process thread
+                    SendingInstantQueueThread = New Thread(AddressOf SendingInstantQueueLoop) With {
+                        .Name = "SendingInstantQueue",
+                        .IsBackground = True,
+                        .Priority = ThreadPriority.Normal
+                    }
+                    SendingInstantQueueThread.Start()
 
 
                     'Start Sending Timing Queue Thread
@@ -513,6 +1061,15 @@ Namespace Control24
                     }
                     SendingTimingQueueThread.Start()
 
+                    'Start Sending All Commands bytes Queue Thread
+                    _AllCmdBytesQueue = New ConcurrentQueue(Of List(Of Byte()))
+                    SendingAllCmdBytesQueueThread = New Thread(AddressOf SendingAllCmdBytesQueueLoop) With {
+                        .Name = "SendingAllCmdBytesQueue",
+                .IsBackground = True,
+                .Priority = ThreadPriority.Normal
+                    }
+                    SendingAllCmdBytesQueueThread.Start()
+
 
 
                 Catch ex As Exception
@@ -523,82 +1080,130 @@ Namespace Control24
                 End Try
 
 
-
             End Sub
 
 
-            Private Sub PacketHandler(timestamp As Double, pktData As Byte())
-                Try
-                    _PacketManager.ReceiveBytes(pktData)
-                Catch ex As Exception
+            Private Sub OnBlinkTimer(state As Object)
+                _BlinkState = Not _BlinkState
+                MyBase.OnBlinkStateChange(_BlinkState)
+            End Sub
 
-                End Try
+            ''' <summary>Boucle de réception — tourne sur _receiveThread.</summary>
+            Private Sub OSCReceiveLoop()
+                While _IsOSCRunning AndAlso OSC_Receiver.State = Rug.Osc.OscSocketState.Connected
+                    'Try
+                    ' Receive() est bloquant jusqu'à l'arrivée d'un paquet
+                    Dim packet = OSC_Receiver.Receive()
+
+                    ' Dispatcher le paquet vers l'AddressManager
+                    If TypeOf packet Is Rug.Osc.OscMessage Then
+                        Dim msg = DirectCast(packet, Rug.Osc.OscMessage)
+                        _OSCAddressManager.Invoke(msg)                   ' ✅ route vers le bon handler
+
+                        ' Événement générique si besoin
+                        'Dim firstArg = If(msg.Count > 0, msg(0), Nothing)
+                        'RaiseEvent MessageReceived(msg.Address, firstArg)
+
+                    ElseIf TypeOf packet Is Rug.Osc.OscBundle Then
+                        Dim bundle = DirectCast(packet, Rug.Osc.OscBundle)
+                        _OSCAddressManager.Invoke(bundle)                ' ✅ route tout le bundle
+                    End If
+
+                    'Catch ex As Exception When _IsOSCRunning
+                    '    Debug.WriteLine($"OSC receive error: {ex.Message}")
+                    'End Try
+                End While
+            End Sub
+            Private Sub PacketHandler(pktData As Byte())
+                _PacketManager._ReceiveBytes(pktData)   ' ✅ version optimisée : ACK avant parse
             End Sub
 
             Private Sub SendingTimingQueueLoop()
                 While IsRunning
                     Dim SendCmdBytes As New List(Of Byte())
                     For Each _AutoRefresh_C24_Component In Me.AutoRefresh_C24_Components
-                        SendCmdBytes.Add(DirectCast(_AutoRefresh_C24_Component.Cmd.Cmd.Clone(), Byte()))
+                        For Each C24_Command In _AutoRefresh_C24_Component.C24_SendingCommands
+                            SendCmdBytes.Add(DirectCast(C24_Command.Cmd.Clone(), Byte()))
+                        Next
+
                     Next
-                    Dim CmdToSendQueue_size As Integer = CmdToSendQueue.Count
-                    For i = 0 To CmdToSendQueue_size - 1
-                        Dim BytesToSend As Byte() = Nothing
-                        If CmdToSendQueue.TryDequeue(BytesToSend) Then
-                            SendCmdBytes.Add(DirectCast(BytesToSend.Clone(), Byte()))
-                        End If
-                    Next
-
-                    _PacketManager.SendCmdBytes(SendCmdBytes)
-
-
-                    Thread.Sleep(_TimingQueue)
+                    _AllCmdBytesQueue.Enqueue(SendCmdBytes)
+                    Thread.Sleep(TimingQueueTimeout)
                 End While
             End Sub
 
 
-            Private Sub SendingLoop()
-
+            Private Sub SendingInstantQueueLoop()
                 While IsRunning
+                    Dim SendCmdBytes As New List(Of Byte())
+                    Dim BytesToSend As Byte() = Nothing
+
+                    ' ✅ TryDequeue en boucle : thread-safe, évite le TOCTOU de .Count
+                    While CmdToSendQueue.TryDequeue(BytesToSend)
+                        SendCmdBytes.Add(BytesToSend)
+                    End While
+
+                    If SendCmdBytes.Count > 0 Then
+                        _AllCmdBytesQueue.Enqueue(SendCmdBytes)
+                        ' Pas de Sleep → reboucle immédiatement si la queue se remplit vite
+                    Else
+                        Thread.Sleep(InstantQueueTimeout)   ' ✅ attente uniquement si la queue est vide
+                    End If
+                End While
+            End Sub
+
+            Private Sub SendingAllCmdBytesQueueLoop()
+                While IsRunning
+                    Dim cmdBatch As List(Of Byte()) = Nothing
                     Dim hasSent As Boolean = False
 
-                    While Not SendPacketsQueues("ACK").IsEmpty
-                        Dim packet As Byte() = Nothing
-                        If SendPacketsQueues("ACK").TryDequeue(packet) Then
-                            _packetCapture.SendPacket(packet)
-                            hasSent = True   ' ✅
+                    ' ✅ TryDequeue en boucle : vide toute la queue accumulée en un seul passage
+                    While _AllCmdBytesQueue.TryDequeue(cmdBatch)
+                        If cmdBatch IsNot Nothing AndAlso cmdBatch.Count > 0 Then
+                            _PacketManager.SendCmdBytes(cmdBatch)
+                            hasSent = True
                         End If
                     End While
 
-                    While Not SendPacketsQueues("CMD").IsEmpty
-                        Dim packet As Byte() = Nothing
-                        If SendPacketsQueues("CMD").TryDequeue(packet) Then
-                            _packetCapture.SendPacket(packet)
-                            hasSent = True   ' ✅
+                    If Not hasSent Then
+                        Thread.Sleep(1)   ' ✅ cède le CPU uniquement si rien à envoyer
+                    End If
+                End While
+            End Sub
+
+            Private Sub ReceivedC24PacketLoop()
+                While IsRunning
+                    Dim hasReceived As Boolean = False
+                    While Not ReceivedC24PacketQueue.IsEmpty
+                        Dim packet As Packet.C24_Packet = Nothing
+                        If ReceivedC24PacketQueue.TryDequeue(packet) Then
+                            _PacketManager.ReceivedC24Packet(packet)
+                            hasReceived = True   ' ✅
                         End If
                     End While
-                    If Not hasSent Then Thread.Sleep(1)   ' ✅ évite le spin à 100% CPU
+                    If Not hasReceived Then Thread.Sleep(1)   ' ✅ évite le spin à 100% CPU
                 End While
             End Sub
 
             Public Sub Send_Cmd_C24Packet(CmdC24Packet As Byte())
-                SendPacketsQueues("CMD").Enqueue(CmdC24Packet)
-            End Sub
-            Public Sub Send_Ack_C24Packet(AckC24Packet As Byte())
-                SendPacketsQueues("ACK").Enqueue(AckC24Packet)
+                _packetCapture.SendPacket(CmdC24Packet)
             End Sub
 
+            Public Sub RegisterOSC_Component(_OSC_Component As OSC_Component) Handles MyBase.NeedToRegsiterOSC
+                'Add OSC received message to C24_component
+                OSCAddressManager.Attach(_OSC_Component.Address, New Rug.Osc.OscMessageEvent(AddressOf _OSC_Component.On_ReceivedMessage))
+                'Send OSC message when C24 component need
+                AddHandler _OSC_Component.OnNumValueChange, AddressOf Send_OSC_Message
+                AddHandler _OSC_Component.OnTextValueChange, AddressOf Send_OSC_Message
+            End Sub
+            Public Sub Send_OSC_Message(Message As Rug.Osc.OscMessage)
+                OSC_Sender.Send(Message)
+            End Sub
 
 
         End Class
 
 
-
-        Public Class test
-            Sub creat_desk()
-
-            End Sub
-        End Class
     End Namespace
 
     Namespace Packet
@@ -606,7 +1211,7 @@ Namespace Control24
         Public Class Eth_Header
             Private _Source_MacAddress As Byte()
             Private _Destination_MacAddress As Byte()
-            Dim Protocol As Byte() = {&H88, &HEF}
+            Dim Protocol As Byte() = {&H88, &H5F}
             Private _IsBroadcast As Boolean = False
             Private _EthHeader As Byte()
 
@@ -654,7 +1259,6 @@ Namespace Control24
             End Sub
 
         End Class
-
         Public Class C24_Header
             Private _NbBytes As Byte() = {&H0, &H0}
             Private _CheckSum As Byte() = {&H0, &H0}
@@ -823,14 +1427,14 @@ Namespace Control24
                 _C24Header.SendCounter = ByteManager.UInt32ToBytesLErev(C24Header_SendCounter)
 
                 If Cmds Is Nothing OrElse Cmds.Count = 0 Then
-                    _C24Header.NbBytes = {CByte(16)}
+                    _C24Header.NbBytes = {&H0, CByte(16)}
                     _C24Header.CmdNb = {&H0}
                 Else
 
                     _Cmd_Packet = ByteManager.ConcatBytes(Cmds.ToArray)
                     _C24Header.NbBytes = ByteManager.UInt16ToBytesLErev(16 + _Cmd_Packet.Count)
                     _C24Header.CmdNb = {CByte(Cmds.Count)}   ' ✅ 1 byte
-                    _C24Header.CheckSum = ByteManager.CalcChecksum(_Cmd_Packet)
+                    _C24Header.CheckSum = {&H0, &H0} 'ByteManager.CalcChecksum(_Cmd_Packet)
 
                 End If
                 RebuildPacket()
@@ -847,21 +1451,35 @@ Namespace Control24
 
         End Class
         Public Class AckC24_Packet
-            Private _EthHeader As Byte()
-            Private _C24Header As Byte() = {&H0, &H10, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &HA0, &H0}
+            Private ReadOnly _C24Header As Byte() = {&H0, &H10, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &HA0, &H0}
+            Private ReadOnly _AckPacket As Byte()
 
-            ' ✅ Initialiser l'header Ethernet au moment de l'init du bureau
+            Public ReadOnly Property AckPacket As Byte()
+                Get
+                    Return _AckPacket
+                End Get
+            End Property
+
             Public Sub New(EthHeader As Byte())
-                _EthHeader = EthHeader
-            End Sub
-            Public Function Get_Ack(ReceivedCounter As Byte()) As Byte()
-                _C24Header(8) = ReceivedCounter(0)
-                _C24Header(9) = ReceivedCounter(1)
-                _C24Header(10) = ReceivedCounter(2)
-                _C24Header(11) = ReceivedCounter(3)
-                Return ByteManager.ConcatBytes(_EthHeader, _C24Header)
-            End Function
+                ' ✅ Minimum Ethernet : 14 (header) + 46 (payload) = 60 bytes
+                ' Le C24 pad aussi ses ACKs à 60 bytes (visible frame 452 du log)
+                Const MinEthernetPayload As Integer = 46
+                Dim payloadSize As Integer = Math.Max(MinEthernetPayload, _C24Header.Length)   ' = 46
 
+                _AckPacket = New Byte(EthHeader.Length + payloadSize - 1) {}   ' 60 bytes, zéro-paddé par default
+                Buffer.BlockCopy(EthHeader, 0, _AckPacket, 0, EthHeader.Length)
+                Buffer.BlockCopy(_C24Header, 0, _AckPacket, EthHeader.Length, _C24Header.Length)
+                ' Bytes 30-59 : padding zéro automatique (New Byte) ✅
+            End Sub
+
+            Public Function Get_Ack(pktData As Byte(), sendCounterOffset As Integer) As Byte()
+                ' ReceivedCounter toujours aux offsets 22-25 ✅ (dans les 16 premiers bytes de payload)
+                _AckPacket(22) = pktData(sendCounterOffset)
+                _AckPacket(23) = pktData(sendCounterOffset + 1)
+                _AckPacket(24) = pktData(sendCounterOffset + 2)
+                _AckPacket(25) = pktData(sendCounterOffset + 3)
+                Return _AckPacket
+            End Function
         End Class
         Public Class PacketManager
             Private _Sending_Eth_Header As Byte() = Nothing
@@ -870,7 +1488,7 @@ Namespace Control24
             Private _IsInit As Boolean = False
             Private _AckReceived As Boolean = True
             Private _C24Header_SendCounter As Integer = 0
-            Private _AckTimeoutBeforeRetry As Integer = 10
+            Private _AckTimeoutBeforeRetry As Integer = 1000
             Private _Retry_Counter As Integer = 0
             Private _Max_Retry As Integer = 10
             Private _Send_Cmd_Bytes As List(Of Byte())
@@ -879,6 +1497,8 @@ Namespace Control24
             Private Pending_C24_PacketsThread As Thread
             Private Pending_C24_Packet As C24_Packet = Nothing
             Private _AckC24_Packet As AckC24_Packet = Nothing
+            Private _AckEvent As New AutoResetEvent(False)   ' ← signal d'ACK reçu
+            Private _PendingPacketCounter As Integer = 0   ' ✅ counter du paquet EN ATTENTE d'ACK
 
 
             Property Max_PacketData_Length As Integer
@@ -926,10 +1546,15 @@ Namespace Control24
                 End Get
             End Property
 
-            ReadOnly Property IsInit As Boolean
+            Public Property IsInit As Boolean
                 Get
-                    Return _IsInit
+                    Return Threading.Volatile.Read(_IsInit)
+
                 End Get
+                Set
+                    Threading.Volatile.Write(_IsInit, Value)
+                End Set
+
             End Property
 
             ReadOnly Property Received_C24Packet As C24_Packet
@@ -963,6 +1588,7 @@ Namespace Control24
                 End Get
                 Set
                     Threading.Volatile.Write(_AckReceived, Value)
+                    If Value Then _AckEvent.Set()   ' ✅ réveille immédiatement la boucle
                 End Set
             End Property
 
@@ -981,39 +1607,72 @@ Namespace Control24
 
             End Sub
 
-
+            'Gestion des retry
             Private Sub Pending_C24_Packets_QueueLoop()
                 While Desk.IsRunning
 
                     If AckReceived AndAlso _Pending_C24_Packets.TryDequeue(Pending_C24_Packet) Then
                         Retry_Counter = 0
-                        Desk.Send_Cmd_C24Packet(Pending_C24_Packet.C24Packet)
+                        _PendingPacketCounter = Pending_C24_Packet.C24Header.SendCounterInt   ' ✅ sauvegarde AVANT envoi
+                        _AckEvent.Reset()   ' ✅ reset AVANT envoi → élimine la race condition
                         AckReceived = False
+                        Desk.Send_Cmd_C24Packet(Pending_C24_Packet.C24Packet)
+
                     ElseIf Pending_C24_Packet IsNot Nothing AndAlso Retry_Counter <= Max_Retry Then
-                        Thread.Sleep(AckTimeoutBeforeRetry)
-                        If Not AckReceived Then   ' ✅ re-vérifier après le sleep
-                            Interlocked.Increment(_Retry_Counter)
-                            Pending_C24_Packet.C24Header.Retry = ByteManager.UInt16ToBytesLErev(Retry_Counter)
-                            Pending_C24_Packet.RebuildPacket()
-                            Desk.Send_Cmd_C24Packet(Pending_C24_Packet.C24Packet)
-                        Else
-                            ' ✅ ACK reçu pendant le sleep → libérer le paquet
+                        Dim ackInTime As Boolean = _AckEvent.WaitOne(AckTimeoutBeforeRetry)
+
+                        If ackInTime Then
                             Pending_C24_Packet = Nothing
                             Retry_Counter = 0
+                        Else
+                            If Pending_C24_Packet.C24Header.CmdType(0) <> CByte(Packet.CmdType.Init) Then
+                                Interlocked.Increment(_Retry_Counter)
+                                Pending_C24_Packet.C24Header.Retry = ByteManager.UInt16ToBytesLErev(Retry_Counter)
+                                Pending_C24_Packet.RebuildPacket()
+                            End If
+                            Desk.Send_Cmd_C24Packet(Pending_C24_Packet.C24Packet)
                         End If
 
                     ElseIf Retry_Counter > Max_Retry Then
-                            ' ✅ Abandon du paquet → déblocage
-                            Pending_C24_Packet = Nothing
+                        Pending_C24_Packet = Nothing
                         AckReceived = True
                         Retry_Counter = 0
                     End If
 
-                    Thread.Sleep(1)
-
+                    Thread.Sleep(0)
                 End While
             End Sub
+            Public Sub _ReceiveBytes(ReceivedBytes As Byte())
+                If ReceivedBytes Is Nothing OrElse ReceivedBytes.Length < 30 Then Return
 
+                Dim cmdType As Byte = ReceivedBytes(28)
+
+                If cmdType = CByte(Packet.CmdType.Command) AndAlso _AckC24_Packet IsNot Nothing Then
+                    _Desk.ReceivedC24PacketQueue.Enqueue(New C24_Packet(ReceivedBytes))
+
+                ElseIf cmdType = CByte(Packet.CmdType.Ack) Then
+                    Dim receivedCounter = CInt(ByteManager.BytesLEToUInt32(ReceivedBytes.AsSpan(22, 4).ToArray()))
+                    If receivedCounter = _PendingPacketCounter Then   ' ✅ compare contre le paquet ENVOYÉ, pas le counter global
+                        AckReceived = True
+                        Retry_Counter = 0
+                        If Not IsInit Then
+                            IsInit = True
+                            Task.Run(Sub() _Desk.InitializeComponents())
+                        End If
+                    End If
+
+                ElseIf ReceivedBytes(0) = &HFF AndAlso ReceivedBytes(1) = &HFF AndAlso
+               ReceivedBytes(2) = &HFF AndAlso ReceivedBytes(3) = &HFF AndAlso
+               ReceivedBytes(4) = &HFF AndAlso ReceivedBytes(5) = &HFF AndAlso
+               Not IsInit Then
+                    Dim ethHdr = New Eth_Header(_Desk.ComputerMacAddr, ReceivedBytes.AsSpan(6, 6).ToArray())
+                    _Sending_Eth_Header = ethHdr.Get_Header_Copy()
+                    _AckC24_Packet = New AckC24_Packet(_Sending_Eth_Header)
+                    _Desk.PacketCapture.SetAckBuffer(_AckC24_Packet.AckPacket)
+                    Dim initPacket As New C24_Packet(_Sending_Eth_Header, C24Header_SendCounter, Packet.CmdType.Init, Nothing)
+                    Send_Cmd_C24Packet(initPacket)
+                End If
+            End Sub
 
             ''' <summary>
             ''' Entering point for all received C24 Packets
@@ -1021,29 +1680,37 @@ Namespace Control24
             ''' <param name="Received_C24Packet"></param>
             Public Sub ReceiveBytes(ReceivedBytes As Byte())
                 _Received_C24Packet = New C24_Packet(ReceivedBytes)
-                'Cmd received from C24 --> ultra fast ACK send then send cmds to CmdsPacketqueue
+
+                'Commands
                 If _Received_C24Packet.C24Header.CmdType(0) = CByte(CmdType.Command) AndAlso _AckC24_Packet IsNot Nothing Then
-                    Send_Ack_C24Packet(_AckC24_Packet.Get_Ack(_Received_C24Packet.C24Header.SendCounter))
-                    'manage Commandes received ****** POINT d'entrée de tous les messages reçus *********
-                    ReceivedC24Packet(_Received_C24Packet)
-                    ' Init sequence
+                    'Cmd received from C24 --> ultra fast ACK send directinject via PcapCapture
+                    Send_Ack_C24Packet(_AckC24_Packet.Get_Ack(ReceivedBytes, 18))
+
+                    'Envois de toutes les commandes vers la queue qui va gérer le parsing et l'envois vers les components  
+                    _Desk.ReceivedC24PacketQueue.Enqueue(_Received_C24Packet)
+
+
+                    'Broadcast --> init sequence
                 ElseIf _Received_C24Packet.EthHeader.IsBroadcast AndAlso _IsInit = False Then
                     Dim _Eth_Header = New Eth_Header(_Desk.ComputerMacAddr, _Received_C24Packet.EthHeader.Source_MacAddress)
                     _Sending_Eth_Header = _Eth_Header.Get_Header_Copy()
                     _AckC24_Packet = New AckC24_Packet(_Sending_Eth_Header)
-                    Dim Cmds As New List(Of Byte())
-                    Cmds.Add({&H0})
-                    Dim init_C24Packet As New C24_Packet(Sending_Eth_Header, C24Header_SendCounter, CmdType.Init, Cmds)
+
+                    Dim init_C24Packet As New C24_Packet(Sending_Eth_Header, C24Header_SendCounter, CmdType.Init, Nothing)
+                    Dim init_str = BitConverter.ToString(init_C24Packet.C24Packet)
                     Send_Cmd_C24Packet(init_C24Packet)
+                    Interlocked.Exchange(_C24Header_SendCounter, 1)
 
                     ' ACK reçu
-                ElseIf _Received_C24Packet.C24Header.CmdType(0) = CByte(CmdType.Ack) AndAlso ByteManager.BytesLEToUInt32(_Received_C24Packet.C24Header.ReceivedCounter) = C24Header_SendCounter Then
-                    If C24Header_SendCounter = 1 Then
+                ElseIf _Received_C24Packet.C24Header.CmdType(0) = CByte(CmdType.Ack) Then
+                    If Not _IsInit Then              ' ✅ garde-fou supplémentaire
                         _IsInit = True
+                        Task.Run(Sub() _Desk.InitializeComponents())   ' ✅ hors thread capture
                     End If
+
                     AckReceived = True
                     Retry_Counter = 0
-
+                    'ByteManager.BytesLEToUInt32(_Received_C24Packet.C24Header.ReceivedCounter) = C24Header_SendCounter
                 End If
             End Sub
             ''' <summary>
@@ -1089,24 +1756,22 @@ Namespace Control24
                 _Pending_C24_Packets.Enqueue(Cmd_C24Packet)
             End Sub
 
-            Private Sub Send_Ack_C24Packet(Ack_Packet As Byte())
-                _Desk.Send_Ack_C24Packet(Ack_Packet)
-            End Sub
+
+            Public Sub Send_Ack_C24Packet(AckC24Packet As Byte())
+                _Desk.PacketCapture.SendAckPacket(AckC24Packet)  ' ✅ handle dédié → 0 attente
+            End Sub                                       '    0 queue, 0 context switch → ~0.1ms
             ''' <summary>
             ''' Entering Point for receiving packets
             ''' </summary>
             ''' <param name="_C24_Packet"></param>
-            Private Sub ReceivedC24Packet(_C24_Packet As C24_Packet)
-                'parse Packet into commands
+            Public Sub ReceivedC24Packet(_C24_Packet As C24_Packet)
                 Dim ParsedCmds = Control24.Commands.CmdParser.Parse(_C24_Packet.Cmd_Packet)
-                'give and set commands to components
                 For Each Kv In ParsedCmds
                     Dim component As Hardware.C24_Component = Nothing
-                    If Desk.IdsToC24Components.TryGetValue(Kv.Key, component) Then  ' ✅ 1 seul lookup
-                        component.Cmd.Cmd = Kv.Value
+                    If Desk.IdsToC24Components.TryGetValue(Kv.Key, component) Then
+                        component._C24_ReceivingCommand.Cmd = Kv.Cmd   ' ✅ Kv.Cmd au lieu de Kv.Value
                     End If
                 Next
-
             End Sub
 
 
@@ -1155,8 +1820,6 @@ Namespace Control24
             Public Sub SendCmd()
                 RaiseEvent NeedToSendCmd(Me)
             End Sub
-
-
         End Class
         Public MustInherit Class Button_Cmd
             Inherits Cmd
@@ -1216,11 +1879,12 @@ Namespace Control24
                 If Is_On Then
                     Cmd(2) = Cmd(2) Or &H40
                 Else
-                    Cmd(2) = Cmd(2) Or &H0
+                    Cmd(2) = Cmd(2) And Not CByte(&H40)
                 End If
             End Sub
             Private Sub SetButtonNb()
                 Cmd(1) = ButtonNb
+                SendCmd()
             End Sub
             Private Sub ReadButtonId() Handles MyBase.OnCmdChange
                 _ButtonNb = Cmd(1)
@@ -1262,7 +1926,7 @@ Namespace Control24
             End Sub
 
             Private Sub Set_TrackNb()
-                MyBase.Cmd(2) = Cmd(2) Or (CByte(_Track_Number - 1) And TrackMask(2))
+                Cmd(2) = CByte((Cmd(2) And Not TrackMask(2)) Or (CByte(_Track_Number - 1) And TrackMask(2)))
             End Sub
 
             Sub New(Button_Nb As Byte, Track_Nb As Integer)
@@ -1315,7 +1979,7 @@ Namespace Control24
                 _Region = Cmd(2) And RegionMask(2)
             End Sub
             Private Sub SetRegion()
-                Cmd(2) = Cmd(2) Or (Region And RegionMask(2))
+                Cmd(2) = CByte((Cmd(2) And Not RegionMask(2)) Or (Region And RegionMask(2)))
             End Sub
             Sub New(Button_Region As Btn_Region, Button_Nb As Byte)
                 Cmd = Button
@@ -1329,7 +1993,6 @@ Namespace Control24
 
 
         End Class
-
         Public Enum DisplayCommands
             VpotLed = &H0
             VueMeter = &H10
@@ -1343,18 +2006,9 @@ Namespace Control24
             Private ReadOnly _Display_Header As Byte() = {&HF0, &H13, &H1}
             Private ReadOnly _Display_Ender As Byte = &HF7
             Private _DisplayCommand As DisplayCommands
-            Private _DisplayDatas As Byte()
             Private _Track_Number As Integer
 
-            Public Property DisplayDatas As Byte()
-                Get
-                    Return _DisplayDatas
-                End Get
-                Set
-                    _DisplayDatas = Value
-                    SetDisplayDatas()
-                End Set
-            End Property
+
 
             Public Property DisplayCommand As DisplayCommands
                 Get
@@ -1393,7 +2047,7 @@ Namespace Control24
             End Sub
 
             Private Sub Set_TrackNb()
-                MyBase.Cmd(4) = Cmd(4) Or (CByte(_Track_Number - 1) And &H1F)
+                Cmd(4) = CByte((Cmd(4) And Not CByte(&H1F)) Or (CByte(_Track_Number - 1) And &H1F))
             End Sub
 
             Private Sub ReadDisplayCommand() Handles MyBase.OnCmdChange
@@ -1402,12 +2056,8 @@ Namespace Control24
             Private Sub SetDisplayCommand()
                 Cmd(3) = _DisplayCommand
             End Sub
-            Private Sub ReadDisplayDatas() Handles MyBase.OnCmdChange
-                _DisplayDatas = ByteManager.SliceBytes(Cmd, 5, Cmd.Length - 6)
-            End Sub
-            Private Sub SetDisplayDatas()
-                Cmd = ByteManager.ConcatBytes(Display_Header, {Cmd(3), Cmd(4)}, DisplayDatas, {Display_Ender})
-            End Sub
+
+
         End Class
         Public Class VpotLed_Cmd
             Inherits Track_Display_Cmd
@@ -1471,7 +2121,7 @@ Namespace Control24
                 })
             End Sub
             Private Sub SetLeds_Status()
-                Dim d0 As Byte = Cmd(4)   ' Conserve les bits du numéro de piste
+                Dim d0 As Byte = CByte(Cmd(4) And &H1F) ' Conserve les bits du numéro de piste
                 Dim d1 As Byte = 0
                 Dim d2 As Byte = 0
 
@@ -1492,7 +2142,10 @@ Namespace Control24
                     End If
                 Next
 
-                DisplayDatas = {d0, d1, d2}
+                Cmd(4) = d0
+                Cmd(5) = d1
+                Cmd(6) = d2
+                SendCmd()
             End Sub
 
 
@@ -1578,7 +2231,12 @@ Namespace Control24
                     End If
                 Next
 
-                DisplayDatas = {d0, d1, d2}
+                Cmd(4) = d0
+                Cmd(5) = d1
+                Cmd(6) = d2
+
+                SendCmd()
+
             End Sub
             Public Property Channel As StereoChannel
                 Get
@@ -1594,7 +2252,7 @@ Namespace Control24
                 Channel = Cmd(4) And &H20
             End Sub
             Private Sub SetChannel()
-                Cmd(4) = Cmd(4) Or Channel
+                Cmd(4) = CByte((Cmd(4) And Not &H20) Or Channel)   ' ✅ clear + set
             End Sub
         End Class
         Public Enum AutoMode
@@ -1643,6 +2301,7 @@ Namespace Control24
 
             Private Sub SetAutomodeLed()
                 Cmd(5) = AutoModeLed
+                SendCmd()
             End Sub
         End Class
         Public Enum ClockModes
@@ -1671,7 +2330,7 @@ Namespace Control24
             Sub New()
 
                 'set defaut cmd
-                Cmd = ByteManager.ConcatBytes(Display_Header, {&H0, &H0}, {&H0}, {Display_Ender})
+                Cmd = ByteManager.ConcatBytes(Display_Header, {&H0}, {&H0}, {&H0}, {Display_Ender})
                 DisplayCommand = DisplayCommands.AutoModeLed
                 Track_Number = 25
                 ClockMode = ClockModes.Time
@@ -1695,6 +2354,7 @@ Namespace Control24
             End Sub
             Private Sub SetClockMode()
                 Cmd(5) = ClockLedBytes(ClockMode)
+                SendCmd()
             End Sub
         End Class
         Public Class Clock_Cmd
@@ -1739,7 +2399,7 @@ Namespace Control24
             Private ReadOnly SevenSegRev As Dictionary(Of Byte, Char) = Utility.ReverseDictionary(Of Char, Byte)(SevenSeg)
             Private _ClockMode As ClockModes
             Private _Clock_Value As String
-            Shared _Mask_Id As Byte()
+            Shared _Mask_Id As Byte() = {&HFF, &HFF, &HFF, &HFF, &HFF, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &HFF}
 
             Shared ReadOnly Property Mask_Id As Byte()
                 Get
@@ -1750,11 +2410,9 @@ Namespace Control24
 
                 'set defaut cmd
                 Cmd = ByteManager.ConcatBytes(Display_Header, {&H0, &H0}, {&H0}, {&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0}, {Display_Ender})
-                DisplayCommand = DisplayCommands.Clock
                 Track_Number = 25
                 ClockMode = ClockModes.Time
-                'set Id                          
-                _Mask_Id = {&HFF, &HFF, &HFF, &HFF, &HFF, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &HFF}
+                'set Id             
                 SetCmdId(Mask_Id)
             End Sub
 
@@ -1774,6 +2432,8 @@ Namespace Control24
             End Sub
             Private Sub SetClockMode()
                 Cmd(5) = ClockModesDots(ClockMode)
+                SendCmd()
+
             End Sub
 
             Public Property Clock_Value As String
@@ -1813,14 +2473,16 @@ Namespace Control24
                 Cmd(11) = SevenSeg(Char_Values(5))
                 Cmd(12) = SevenSeg(Char_Values(6))
                 Cmd(13) = SevenSeg(Char_Values(7))
+                SendCmd()
 
             End Sub
         End Class
         Public Class ScribbleStrip_Cmd
             Inherits Track_Display_Cmd
 
-            Private _ScribbleValue As String
+            Private _Text As String
             Shared _Mask_Id As Byte() = {&HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &H0, &H0, &H0, &H0, &HFF}
+            Private _Value As Double
 
             Shared ReadOnly Property Mask_Id As Byte()
                 Get
@@ -1840,52 +2502,75 @@ Namespace Control24
                 SetCmdId(Mask_Id)
             End Sub
 
-            Public Property ScribbleValue As String
+            Public Property Text As String
                 Get
-                    Return _ScribbleValue
+                    Return _Text
                 End Get
                 Set
-                    _ScribbleValue = Value
-                    SetScribbleValue()
+                    _Text = Value
+                    SetTextValue()
+                End Set
+            End Property
+            Public Property Value As Double
+                Get
+                    Return _Value
+                End Get
+                Set
+                    _Value = Value
+                    SetDoubleValue()
                 End Set
             End Property
 
             Private Sub ReadScribbleValue() Handles MyBase.OnCmdChange
-                _ScribbleValue = New String(System.Text.ASCIIEncoding.ASCII.GetChars({Cmd(6), Cmd(7), Cmd(8), Cmd(9)}))
+                _Text = New String(System.Text.ASCIIEncoding.ASCII.GetChars({Cmd(6), Cmd(7), Cmd(8), Cmd(9)}))
             End Sub
 
-            Private Sub SetScribbleValue()
+            Private Sub SetTextValue()
+                _Text = _Text.PadRight(4).Substring(0, 4)
 
-
-                If ScribbleValue.Contains(".") Then
-                    Try
-                        Dim sing = CSng(ScribbleValue)
-                        _ScribbleValue = SingleToString(_ScribbleValue)
-                    Catch ex As Exception
-
-                    End Try
-                Else
-                    _ScribbleValue = _ScribbleValue.PadRight(4).Substring(0, 4)
-                End If
-
-
-                Dim _Scribble_Bytes = System.Text.ASCIIEncoding.ASCII.GetBytes(_ScribbleValue)
+                Dim _Scribble_Bytes = System.Text.ASCIIEncoding.ASCII.GetBytes(_Text)
                 Cmd(6) = _Scribble_Bytes(0)
                 Cmd(7) = _Scribble_Bytes(1)
                 Cmd(8) = _Scribble_Bytes(2)
                 Cmd(9) = _Scribble_Bytes(3)
+                SendCmd()
+            End Sub
+            Private Sub SetDoubleValue()
+                'value should be set as 1 decimal number
+                Dim ValueAbs = Math.Abs(Value)
+                'nb >=100 <1000 --> no decimals
+                If ValueAbs >= 100 AndAlso ValueAbs < 1000 Then
+                    Text = Value.ToString.Split(".")(0)
+
+                    'nb >=1000 < 1 000 000 --> use k
+                ElseIf ValueAbs >= 1000 AndAlso ValueAbs < 1000000 Then
+                    Dim NewValue As Double = Math.Round(Value / 10000, 1)
+                    Text = NewValue.ToString.Split(".")(0) & "k" & GetCombineGlyph(NewValue)
+
+                    'nb >=1 000 000 <1 000 000 000 --> use m
+                ElseIf ValueAbs >= 1000000 AndAlso ValueAbs < 1000000000 Then
+                    Dim NewValue As Double = Math.Round(Value / 10000000, 1)
+                    Text = NewValue.ToString.Split(".")(0) & "m" & GetCombineGlyph(NewValue)
+
+                ElseIf ValueAbs >= 1000000000 Then
+                    If Value < 0 Then
+                        Text = "-inf"
+                    Else
+                        Text = "+inf"
+                    End If
+
+                Else
+                    Text = Value.ToString.Split(".")(0) & GetCombineGlyph(Value)
+                End If
+
+
+
 
             End Sub
 
-            ''' <summary>
-            ''' Transforme le texte du scribble strip en 4 caractères.
-            ''' Le bureau C24 possède des caractères combinés "point + chiffre" en un seul glyphe
-            ''' (ex: "12.3" → "12" + chr spécial), sauf pour '0' (ASCII 48) qui reste un point.
-            ''' </summary>
-            Private Function SingleToString(Number As Single) As String
 
-                Number = Math.Round(Number, 1)
-                Dim Left = Number.ToString.Split(".")(0).PadLeft(3).Substring(0, 3)
+            Private Function GetCombineGlyph(Number As Double) As String
+
                 Dim Right = Number.ToString.Split(".")(1)
 
                 Dim nco As Integer = AscW(Right)
@@ -1895,7 +2580,7 @@ Namespace Control24
                     Right = "."
                 End If
 
-                Return Left & Right
+                Return Right
 
             End Function
         End Class
@@ -1926,7 +2611,7 @@ Namespace Control24
             End Sub
 
             Public Overridable Sub SetTrackNumber()
-                Cmd(1) = Cmd(1) Or (CByte(_Track_Number - 1) And &H1F)
+                Cmd(1) = CByte((Cmd(1) And Not CByte(&H1F)) Or (CByte(_Track_Number - 1) And &H1F))   ' ✅
             End Sub
         End Class
         Public Enum Direction
@@ -1952,7 +2637,8 @@ Namespace Control24
                 _Rotate_Direction = Cmd(2) And &HC0
             End Sub
             Private Sub SetRotateDirection()
-                Cmd(2) = Cmd(2) Or (_Rotate_Direction And &HC0)
+                Cmd(2) = CByte((Cmd(2) And Not CByte(&HC0)) Or (_Rotate_Direction And &HC0))   ' ✅
+                SendCmd()
             End Sub
 
             Public Property Rotate_Velocity As Integer
@@ -1970,6 +2656,7 @@ Namespace Control24
             End Sub
             Private Sub SetRotateVelocity()
                 Cmd(2) = CByte(_Rotate_Velocity) + &H40
+                SendCmd()
             End Sub
         End Class
         Public Class Vpot_Cmd
@@ -2063,6 +2750,7 @@ Namespace Control24
             Private Sub SetFaderValue()
                 Cmd(2) = _FaderValue >> 3
                 Cmd(4) = (_FaderValue And 7) << 4
+                SendCmd()
             End Sub
 
         End Class
@@ -2100,48 +2788,48 @@ Namespace Control24
             Public Function MaskedKey(cmd As Byte(), mask As Byte()) As String
                 Return BitConverter.ToString(ByteManager.AndBytes(cmd, mask))
             End Function
-            Public Function Parse(CmdPacket As Byte()) As Dictionary(Of String, Byte())
-                Dim result As New Dictionary(Of String, Byte())
+            Public Function Parse(CmdPacket As Byte()) As List(Of (Key As String, Cmd As Byte()))
+                Dim result As New List(Of (Key As String, Cmd As Byte()))
                 If CmdPacket Is Nothing OrElse CmdPacket.Length = 0 Then Return result
 
                 Dim i As Integer = 0
-                While i < CmdPacket.Length   ' ✅ While explicite : évite la confusion avec Next +1
+                While i < CmdPacket.Length
 
-                    Select Case CmdPacket(i)   ' ✅ Select Case : plus rapide que If/ElseIf
+                    Select Case CmdPacket(i)
 
                         Case CByte(CmdType.ButtonType)
-                            If i + 3 > CmdPacket.Length Then Exit While   ' ✅ garde-fou
+                            If i + 3 > CmdPacket.Length Then Exit While
                             Dim Cmd = CmdPacket.AsSpan(i, 3).ToArray()
-                            result.Add(MaskedKey(Cmd, Commands.Track_Button_Cmd.Mask_Id), Cmd)  ' ✅ AsSpan : pas d'allocation LINQ
+                            result.Add((MaskedKey(Cmd, Commands.Track_Button_Cmd.Mask_Id), Cmd))
                             i += 4
 
                         Case CByte(CmdType.DisplayType)
                             If i + 4 > CmdPacket.Length Then Exit While
                             Dim sz As (Slice As Integer, Advance As Integer)
-                            If Not DisplaySizes.TryGetValue(CmdPacket(i + 3), sz) Then  ' ✅ O(1)
+                            If Not DisplaySizes.TryGetValue(CmdPacket(i + 3), sz) Then
                                 i += 1 : Continue While
                             End If
                             If i + sz.Slice > CmdPacket.Length Then Exit While
                             Dim Cmd = CmdPacket.AsSpan(i, sz.Slice).ToArray()
-                            result.Add(MaskedKey(Cmd, DisplayMasks(CmdPacket(i + 3))), Cmd)
+                            result.Add((MaskedKey(Cmd, DisplayMasks(CmdPacket(i + 3))), Cmd))
                             i += sz.Advance
 
                         Case CByte(CmdType.ActuatorType)
                             If i + 3 > CmdPacket.Length Then Exit While
-                            If CmdTypeSet.Contains(CmdPacket(i + 2)) Then
-                                Dim Cmd = CmdPacket.AsSpan(i, 3).ToArray()   ' ✅ 3 bytes = longueur réelle de Vpot_Cmd
-                                result.Add(MaskedKey(Cmd, Commands.Vpot_Cmd.Mask_Id), Cmd)
+                            If CmdTypeSet.Contains(CmdPacket(i + 3)) OrElse CmdPacket(i + 3) = &H0 OrElse CmdPacket(i + 3) = CmdPacket.Length Then
+                                Dim Cmd = CmdPacket.AsSpan(i, 3).ToArray()
+                                result.Add((MaskedKey(Cmd, Commands.Vpot_Cmd.Mask_Id), Cmd))
                                 i += 4
-                            ElseIf i + 5 <= CmdPacket.Length AndAlso CmdTypeSet.Contains(CmdPacket(i + 4)) Then
-                                Dim Cmd = CmdPacket.AsSpan(i, 5).ToArray()   ' ✅ 5 bytes = longueur réelle de Fader_Cmd
-                                result.Add(MaskedKey(Cmd, Commands.Fader_Cmd.Mask_Id), Cmd)
+                            ElseIf i + 5 <= CmdPacket.Length AndAlso (CmdTypeSet.Contains(CmdPacket(i + 4)) OrElse CmdPacket(i + 4) = &H0 OrElse CmdPacket(i + 4) = CmdPacket.Length) Then
+                                Dim Cmd = CmdPacket.AsSpan(i, 5).ToArray()
+                                result.Add((MaskedKey(Cmd, Commands.Fader_Cmd.Mask_Id), Cmd))
                                 i += 6
                             Else
                                 i += 1
                             End If
 
                         Case Else
-                            i += 1   ' ✅ récupération sur octet inconnu
+                            i += 1
 
                     End Select
                 End While
@@ -2155,5 +2843,199 @@ Namespace Control24
 
     End Namespace
 
+    Namespace OSC
+        Public MustInherit Class OSC_Component
+
+            Private _Num_Value As Double
+            Private _Text_Value As String
+            Private _Address As String
+            Private _Received_Message As Rug.Osc.OscMessage
+
+            Public Event OnNumValueReceived(NumValue As Double)
+            Public Event OnTextValueReceived(TextValue As String)
+            Public Event OnNumValueChange(Message As Rug.Osc.OscMessage)
+            Public Event OnTextValueChange(Message As Rug.Osc.OscMessage)
+
+
+            Public ReadOnly Property Received_Message As Rug.Osc.OscMessage
+                Get
+                    Return _Received_Message
+                End Get
+            End Property
+
+            Public Property Num_Value As Double
+                Get
+                    Return _Num_Value
+                End Get
+                Set
+                    _Num_Value = Value
+                    RaiseEvent OnNumValueChange(New Rug.Osc.OscMessage(Address, {_Num_Value}))
+                End Set
+            End Property
+            Public Property Text_Value As String
+                Get
+                    Return _Text_Value
+                End Get
+                Set
+                    _Text_Value = Value
+                    RaiseEvent OnTextValueChange(New Rug.Osc.OscMessage(Address, {_Text_Value}))
+                End Set
+            End Property
+            Public Property Address As String
+                Get
+                    Return _Address
+                End Get
+                Set
+                    _Address = Value
+
+                End Set
+            End Property
+
+            Public Sub On_ReceivedMessage(Message As Rug.Osc.OscMessage)
+                _Received_Message = Message
+                Address = Message.Address
+                For i = 0 To Message.Count - 1
+                    Dim value_text As String = TryCast(Message.Item(i), String)
+                    If value_text IsNot Nothing Then
+                        RaiseEvent OnTextValueReceived(value_text)
+                    End If
+                    If TypeOf Message.Item(i) Is Double Then           ' ✅ TypeOf pour les value types
+                        RaiseEvent OnNumValueReceived(DirectCast(Message.Item(i), Double))
+                    ElseIf TypeOf Message.Item(i) Is Single Then       ' OSC utilise souvent Single (float32)
+                        RaiseEvent OnNumValueReceived(CDbl(DirectCast(Message.Item(i), Single)))
+                    End If
+                Next
+            End Sub
+
+        End Class
+        Public MustInherit Class OSC_Track
+            Inherits OSC.OSC_Component
+            Private _Track_Nb As Integer
+
+            Public ReadOnly Property Track_Nb As Integer
+                Get
+                    Return _Track_Nb
+                End Get
+
+            End Property
+
+            Sub New(Track_Nb As Integer)
+                Address = "/track/" & Track_Nb
+            End Sub
+
+        End Class
+        Public Class OSC_VueMeter
+            Inherits OSC.OSC_Track
+
+            Private _Channel As StereoChannel
+
+            Public ReadOnly Property Channel As Commands.StereoChannel
+                Get
+                    Return _Channel
+                End Get
+
+            End Property
+
+
+
+            Sub New(Track_Nb As Integer, Channel As Commands.StereoChannel)
+                MyBase.New(Track_Nb)
+                _Channel = Channel
+                If Channel = StereoChannel.Left Then
+                    Address &= "/vu/L"
+                Else
+                    Address &= "/vu/R"
+                End If
+
+            End Sub
+
+
+        End Class
+        Public Class OSC_Track_Toogle_Button
+            Inherits OSC.OSC_Track
+
+            Private _State As Boolean
+
+            Property State As Boolean
+                Get
+                    If MyBase.Num_Value = 1 Then
+                        _State = True
+                    Else
+                        _State = False
+                    End If
+                    Return _State
+                End Get
+                Set
+                    _State = Value
+                    If _State = True Then
+                        Num_Value = 1
+                    Else
+                        Num_Value = 0
+                    End If
+                End Set
+            End Property
+
+            Sub New(Track_Nb As Integer, OSC_Button_Name As String)
+                MyBase.New(Track_Nb)
+                Address &= "/" & OSC_Button_Name & "/toggle"
+            End Sub
+        End Class
+        Public Class OSC_Track_VariableParamValue
+            Inherits OSC.OSC_Track
+            Sub New(Track_Nb As Integer, Param_Name As String)
+                MyBase.New(Track_Nb)
+                Address &= "/" & Param_Name
+            End Sub
+        End Class
+        Public Class OSC_Track_StringParamValue
+            Inherits OSC.OSC_Track
+            Sub New(Track_Nb As Integer, Param_Name As String)
+                MyBase.New(Track_Nb)
+                Address &= "/" & Param_Name & "/str"
+            End Sub
+        End Class
+        Public Class OSC_VariableParamValue
+            Inherits OSC_Component
+
+            Sub New(Param_Name As String)
+                Address &= "/" & Param_Name
+            End Sub
+        End Class
+        Public Class OSC_StringParamValue
+            Inherits OSC_Component
+
+            Sub New(Param_Name As String)
+                Address &= "/" & Param_Name & "/str"
+            End Sub
+        End Class
+
+
+    End Namespace
+
+    Namespace Reaper
+        Public Module utility
+            ' Dans C24_Desk — test de connexion au bridge Reaper
+            Private Function CallReaperBridge(request As String) As String
+                Try
+                    Using pipe As New IO.Pipes.NamedPipeClientStream(
+            ".", "c24_reaper_bridge",
+            IO.Pipes.PipeDirection.InOut)
+
+                        pipe.Connect(timeout:=200)
+                        Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
+                        Dim reader As New IO.StreamReader(pipe)
+                        writer.WriteLine(request)
+                        Return reader.ReadLine()
+                    End Using
+                Catch
+                    Return String.Empty   ' Bridge non démarré (Reaper fermé / plugin absent)
+                End Try
+            End Function
+
+            ' Utilisation :
+            ' Dim result = CallReaperBridge("PING")          → "PONG"
+            ' Dim result = CallReaperBridge("GET_TRACK_COUNT") → "24"
+        End Module
+    End Namespace
 End Namespace
 

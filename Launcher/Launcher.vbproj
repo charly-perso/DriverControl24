@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Launcher</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputPath>C:\Users\chcolin\AppData\Roaming\REAPER\UserPlugins</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DriverReaperControl24\DriverReaperControl24.vbproj" />
+  </ItemGroup>
+
+</Project>
