@@ -6,6 +6,7 @@
 - `CultureInfo.InvariantCulture` obligatoire pour tout `Double.ToString` / `Double.Parse` sur le pipe
 - Pas de `StringBuilder` (NativeAOT — utiliser `String.Join` ou interpolation)
 - Pas de réflexion (`System.Reflection`) — NativeAOT-safe uniquement
+- Pas de ?? 
 
 ## Architecture pipe
 - Commandes pipe : format `COMMANDE|param1|param2|...` en ANSI, terminées par `\n`

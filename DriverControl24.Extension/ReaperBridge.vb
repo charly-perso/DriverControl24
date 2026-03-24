@@ -534,13 +534,13 @@ Public Class ReaperBridge
                     Dim presBuf = Marshal.AllocHGlobal(512)
                     Try
                         ReaperAPI.TrackFX_GetFXName(tr, fx, nameBuf, 512)
-                        Dim fxName = Marshal.PtrToStringAnsi(nameBuf) ?? String.Empty
+                        Dim fxName = If(Marshal.PtrToStringAnsi(nameBuf), String.Empty)
                         Dim enabled = If(ReaperAPI.TrackFX_GetEnabled IsNot Nothing AndAlso
                                          ReaperAPI.TrackFX_GetEnabled(tr, fx), "1", "0")
                         Dim paramCount = If(ReaperAPI.TrackFX_GetNumParams IsNot Nothing,
                                             ReaperAPI.TrackFX_GetNumParams(tr, fx), 0)
                         ReaperAPI.TrackFX_GetPreset?(tr, fx, presBuf, 512)
-                        Dim preset = Marshal.PtrToStringAnsi(presBuf) ?? String.Empty
+                        Dim preset = If(Marshal.PtrToStringAnsi(presBuf), String.Empty)
                         Return $"{fxName}|{enabled}|{paramCount}|{preset}"
                     Finally
                         Marshal.FreeHGlobal(nameBuf)
@@ -565,7 +565,7 @@ Public Class ReaperBridge
                     Dim buf = Marshal.AllocHGlobal(256)
                     Try
                         ReaperAPI.TrackFX_GetParamName(tr, Integer.Parse(parts(2)), Integer.Parse(parts(3)), buf, 256)
-                        Return Marshal.PtrToStringAnsi(buf) ?? String.Empty
+                        Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
                     Finally
                         Marshal.FreeHGlobal(buf)
                     End Try
@@ -601,7 +601,7 @@ Public Class ReaperBridge
                     Dim buf = Marshal.AllocHGlobal(256)
                     Try
                         ReaperAPI.TrackFX_GetFormattedParamValue(tr, Integer.Parse(parts(2)), Integer.Parse(parts(3)), buf, 256)
-                        Return Marshal.PtrToStringAnsi(buf) ?? String.Empty
+                        Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
                     Finally
                         Marshal.FreeHGlobal(buf)
                     End Try
@@ -615,7 +615,7 @@ Public Class ReaperBridge
                     Dim buf = Marshal.AllocHGlobal(512)
                     Try
                         ReaperAPI.TrackFX_GetPreset(tr, Integer.Parse(parts(2)), buf, 512)
-                        Return Marshal.PtrToStringAnsi(buf) ?? String.Empty
+                        Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
                     Finally
                         Marshal.FreeHGlobal(buf)
                     End Try
@@ -659,13 +659,40 @@ Public Class ReaperBridge
                         Dim tokens(count * 2 - 1) As String
                         For i = 0 To count - 1
                             ReaperAPI.TrackFX_GetParamName(tr, fx, i, nameBuf, 256)
-                            tokens(i * 2) = Marshal.PtrToStringAnsi(nameBuf) ?? String.Empty
+                            tokens(i * 2) = If(Marshal.PtrToStringAnsi(nameBuf), String.Empty)
                             tokens(i * 2 + 1) = ReaperAPI.TrackFX_GetParamNormalized(tr, fx, i).ToString("G", ic)
                         Next
                         Return String.Join("|", tokens)
                     Finally
                         Marshal.FreeHGlobal(nameBuf)
                     End Try
+
+                                    ' ── GET_LAST_TOUCHED_FX ───────────────────────────────────────
+                ' Réponse : "trackIndex|fxIndex|paramIndex"
+                '   trackIndex : 0-based (-1 = master)
+                '   fxIndex    : 0-based
+                '   paramIndex : 0-based
+                ' Réponse "-1|-1|-1" si aucun FX n'a encore été touché.
+                Case "GET_LAST_TOUCHED_FX"
+                    If ReaperAPI.GetLastTouchedFX Is Nothing Then Return "ERROR:API unavailable"
+                    Dim trackNum As Integer = 0
+                    Dim fxNum As Integer = 0
+                    Dim paramNum As Integer = 0
+                    If Not ReaperAPI.GetLastTouchedFX(trackNum, fxNum, paramNum) Then
+                        Return "-1|-1|-1"
+                    End If
+                    ' ✅ Reaper : tracknumber 0=master 1=première piste → on-based → driver 0-based
+                    Dim trackIdx = If(trackNum = 0, -1, trackNum - 1)
+                    Return $"{trackIdx}|{fxNum}|{paramNum}"
+
+                                    ' ── COUNT_TRACKS ──────────────────────────────────────────────
+                ' Utilise CountTracks (accepte un projet) vs GetNumTracks (projet actif).
+                ' Réponse : nombre de pistes du projet actif (entier)
+                Case "COUNT_TRACKS"
+                    If ReaperAPI.CountTracks Is Nothing Then Return "ERROR:API unavailable"
+                    Return ReaperAPI.CountTracks(IntPtr.Zero).ToString()
+
+
                 Case Else
                     Return $"ERROR:Unknown {parts(0)}"
 

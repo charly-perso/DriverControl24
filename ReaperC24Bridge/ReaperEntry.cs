@@ -142,6 +142,8 @@ public static unsafe class ReaperEntry
             ReaperAPI.TrackFX_NavigatePresets       = GetDel<ReaperAPI.TrackFX_NavigatePresetsDel>(getFn, "TrackFX_NavigatePresets");
             ReaperAPI.TrackFX_Delete                = GetDel<ReaperAPI.TrackFX_DeleteDel>(getFn, "TrackFX_Delete");
             ReaperAPI.TrackFX_AddByName             = GetDel<ReaperAPI.TrackFX_AddByNameDel>(getFn, "TrackFX_AddByName");
+            ReaperAPI.GetLastTouchedFX = GetDel<ReaperAPI.GetLastTouchedFXDel>(getFn, "GetLastTouchedFX");
+            ReaperAPI.GetLastTouchedTrack = GetDel<ReaperAPI.GetLastTouchedTrackDel>(getFn, "GetLastTouchedTrack");
 
             // Items / Takes
             ReaperAPI.GetTrackNumMediaItems     = GetDel<ReaperAPI.GetTrackNumMediaItemsDel>(getFn, "GetTrackNumMediaItems");

@@ -32,6 +32,75 @@ Namespace Reaper
             Return idx
         End Function
 
+        ''' <summary>
+        ''' Retourne les coordonnées du dernier paramètre FX touché.
+        ''' Retourne (-1, -1, -1) si aucun FX n'a été touché.
+        ''' trackIndex = -1 pour la piste maître.
+        ''' </summary>
+        Public Function GetLastTouchedFXInfo() As (trackIndex As Integer, fxIndex As Integer, paramIndex As Integer)
+            Dim raw = CallReaperBridge("GET_LAST_TOUCHED_FX")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return (-1, -1, -1)
+            Dim p = raw.Split("|"c)
+            If p.Length < 3 Then Return (-1, -1, -1)
+            Dim t As Integer = -1, f As Integer = -1, pm As Integer = -1
+            Integer.TryParse(p(0), t)
+            Integer.TryParse(p(1), f)
+            Integer.TryParse(p(2), pm)
+            Return (t, f, pm)
+        End Function
+
+        ''' <summary>
+        ''' Retourne un <see cref="ReaperFXParam"/> chargé pour le dernier paramètre FX touché.
+        ''' Retourne Nothing si aucun FX n'a été touché ou si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetLastTouchedFXParam() As ReaperFXParam
+            Dim info = GetLastTouchedFXInfo()
+            If info.trackIndex = -1 AndAlso info.fxIndex = -1 Then Return Nothing
+            Dim param As New ReaperFXParam(info.trackIndex, info.fxIndex, info.paramIndex)
+            param.Refresh()
+            Return param
+        End Function
+
+        ''' <summary>
+        ''' Retourne le <see cref="ReaperFX"/> complet du dernier FX touché.
+        ''' Retourne Nothing si aucun FX n'a été touché.
+        ''' </summary>
+        Public Function GetLastTouchedFX() As ReaperFX
+            Dim info = GetLastTouchedFXInfo()
+            If info.trackIndex = -1 AndAlso info.fxIndex = -1 Then Return Nothing
+            Dim fx As New ReaperFX(info.trackIndex, info.fxIndex)
+            fx.Refresh()
+            Return fx
+        End Function
+        ''' <summary>
+        ''' Retourne le nombre de pistes du projet actif.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function CountTracks() As Integer
+            Dim raw = CallReaperBridge("COUNT_TRACKS")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim count As Integer = -1
+            Integer.TryParse(raw, count)
+            Return count
+        End Function
+
+        ''' <summary>
+        ''' Retourne la liste de toutes les pistes du projet actif sous forme de
+        ''' <see cref="ReaperTrack"/> chargées (Refresh appelé sur chacune).
+        ''' </summary>
+        Public Function GetAllTracks() As IReadOnlyList(Of ReaperTrack)
+            Dim count = CountTracks()
+            If count <= 0 Then Return Array.Empty(Of ReaperTrack)()
+            Dim result(count - 1) As ReaperTrack
+            For i = 0 To count - 1
+                result(i) = New ReaperTrack(i)
+                result(i).Refresh()
+            Next
+            Return result
+        End Function
+
+
+
     End Module
 
 

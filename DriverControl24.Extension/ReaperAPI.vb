@@ -559,6 +559,18 @@ Public Class ReaperAPI
         recFX As Boolean,
         instantiate As Integer) As Integer
     Public Shared TrackFX_AddByName As TrackFX_AddByNameDel
+    ''' <summary>
+    ''' Retourne le dernier paramètre de FX touché par l'utilisateur.
+    ''' tracknumber : 0=master  1=première piste  etc. (1-based)
+    ''' fxnumber    : index du FX (0-based)
+    ''' paramnumber : index du paramètre (0-based)
+    ''' Retourne False si aucun FX n'a encore été touché.
+    ''' </summary>
+    Public Delegate Function GetLastTouchedFXDel(
+        ByRef tracknumber As Integer,
+        ByRef fxnumber As Integer,
+        ByRef paramnumber As Integer) As Boolean
+    Public Shared GetLastTouchedFX As GetLastTouchedFXDel
 
     ' ══════════════════════════════════════════════════════════════
     '  ENVELOPPES / AUTOMATION
