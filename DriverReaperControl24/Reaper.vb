@@ -99,12 +99,661 @@ Namespace Reaper
             Return result
         End Function
 
+        ''' <summary>
+        ''' Crée un envoi depuis <paramref name="srcTrackIndex"/> vers <paramref name="destTrackIndex"/>.
+        ''' <paramref name="destTrackIndex"/> = -2 pour une sortie matérielle.
+        ''' Retourne l'index 0-based du nouvel envoi, ou -1 en cas d'échec.
+        ''' </summary>
+        Public Function CreateTrackSend(srcTrackIndex As Integer,
+                                        destTrackIndex As Integer) As Integer
+            Dim raw = CallReaperBridge($"CREATE_TRACK_SEND|{srcTrackIndex}|{destTrackIndex}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim idx As Integer = -1
+            Integer.TryParse(raw, idx)
+            Return idx
+        End Function
+
+        ''' <summary>
+        ''' Crée un envoi depuis <paramref name="srcTrackIndex"/> vers <paramref name="destTrackIndex"/>
+        ''' et retourne un <see cref="ReaperSend"/> chargé pour cet envoi.
+        ''' Retourne Nothing en cas d'échec.
+        ''' </summary>
+        Public Function CreateTrackSendAndGet(srcTrackIndex As Integer,
+                                              destTrackIndex As Integer) As ReaperSend
+            Dim sendIdx = CreateTrackSend(srcTrackIndex, destTrackIndex)
+            If sendIdx < 0 Then Return Nothing
+            Dim send As New ReaperSend(srcTrackIndex, CInt(SendCategory.Sends), sendIdx)
+            send.Refresh()
+            Return send
+        End Function
+
+        ''' <summary>
+        ''' Supprime un envoi d'une piste.
+        ''' Retourne True si la suppression a réussi.
+        ''' </summary>
+        Public Function RemoveTrackSend(trackIndex As Integer,
+                                        category As SendCategory,
+                                        sendIndex As Integer) As Boolean
+            Dim raw = CallReaperBridge($"REMOVE_TRACK_SEND|{trackIndex}|{CInt(category)}|{sendIndex}")
+            Return raw = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Retourne True si au moins une piste du projet actif est en solo.
+        ''' Retourne False si le bridge est indisponible.
+        ''' </summary>
+        Public Function AnyTrackSolo() As Boolean
+            Dim raw = CallReaperBridge("ANY_TRACK_SOLO")
+            Return raw = "1"
+        End Function
+        ' ── VU-mètre / Peaks ──────────────────────────────────────────────────
+
+        ''' <summary>
+        ''' Retourne l'amplitude linéaire actuelle d'un canal de piste.
+        ''' channel : 0=L  1=R  2+=autres canaux
+        ''' Convertir en dB : 20 * Math.Log10(value)
+        ''' Retourne -1 si indisponible.
+        ''' </summary>
+        Public Function Track_GetPeakInfo(trackIndex As Integer, channel As Integer) As Double
+            Dim raw = CallReaperBridge($"GET_TRACK_PEAK|{trackIndex}|{channel}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Double = -1
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Retourne les amplitudes linéaires L et R d'une piste en un seul appel pipe.
+        ''' Evite deux appels séparés lors du rafraîchissement des VU-mètres.
+        ''' </summary>
+        Public Function Track_GetPeakStereo(trackIndex As Integer) As (L As Double, R As Double)
+            Dim raw = CallReaperBridge($"GET_TRACK_PEAK_STEREO|{trackIndex}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return (-1, -1)
+            Dim p = raw.Split("|"c)
+            If p.Length < 2 Then Return (-1, -1)
+            Dim ic = Globalization.CultureInfo.InvariantCulture
+            Dim l As Double = -1, r As Double = -1
+            Double.TryParse(p(0), Globalization.NumberStyles.Any, ic, l)
+            Double.TryParse(p(1), Globalization.NumberStyles.Any, ic, r)
+            Return (l, r)
+        End Function
+
+        ''' <summary>
+        ''' Retourne la valeur peak-hold en dB d'un canal de piste.
+        ''' channel : 0=L  1=R
+        ''' Retourne Double.MinValue si indisponible.
+        ''' </summary>
+        Public Function Track_GetPeakHoldDB(trackIndex As Integer, channel As Integer) As Double
+            Dim raw = CallReaperBridge($"GET_TRACK_PEAK_HOLD|{trackIndex}|{channel}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            Dim v As Double = Double.MinValue
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Lit et réinitialise simultanément le peak-hold d'un canal de piste.
+        ''' Retourne la valeur peak-hold en dB avant réinitialisation.
+        ''' </summary>
+        Public Function Track_ResetPeakHoldDB(trackIndex As Integer, channel As Integer) As Double
+            Dim raw = CallReaperBridge($"RESET_TRACK_PEAK_HOLD|{trackIndex}|{channel}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            Dim v As Double = Double.MinValue
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+
+
+        ''' <summary>
+        ''' Retourne la liste de tous les FX installés dans Reaper.
+        ''' Un seul appel pipe, quel que soit le nombre de plugins.
+        ''' Retourne une liste vide si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetInstalledFXList() As IReadOnlyList(Of InstalledFXInfo)
+            Dim raw = CallReaperBridge("GET_INSTALLED_FX_LIST")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return Array.Empty(Of InstalledFXInfo)()
+            End If
+            Dim p = raw.Split("|"c)
+            Dim count = p.Length \ 2
+            Dim result(count - 1) As InstalledFXInfo
+            For i = 0 To count - 1
+                result(i) = New InstalledFXInfo(p(i * 2), p(i * 2 + 1))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>
+        ''' Retourne uniquement les noms des FX d'un type donné (VST, VST3, JS, CLAP…).
+        ''' Filtre effectué côté bridge — réponse plus légère.
+        ''' </summary>
+        Public Function GetInstalledFXListByType(fxType As String) As IReadOnlyList(Of String)
+            Dim raw = CallReaperBridge($"GET_INSTALLED_FX_LIST_BYTYPE|{fxType}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return Array.Empty(Of String)()
+            End If
+            Return raw.Split("|"c)
+        End Function
+
+
+
+        ' ── Groupes de piste ──────────────────────────────────────────────────
+
+        ''' <summary>Convertit <see cref="TrackGroupType"/> en nom API Reaper (sans réflexion).</summary>
+        Public Function TrackGroupTypeName(groupType As TrackGroupType) As String
+            Select Case groupType
+                Case TrackGroupType.VolumeLead : Return "VOLUME_LEAD"
+                Case TrackGroupType.VolumeFollow : Return "VOLUME_FOLLOW"
+                Case TrackGroupType.VolumeVcaLead : Return "VOLUME_VCA_LEAD"
+                Case TrackGroupType.VolumeVcaFollow : Return "VOLUME_VCA_FOLLOW"
+                Case TrackGroupType.PanLead : Return "PAN_LEAD"
+                Case TrackGroupType.PanFollow : Return "PAN_FOLLOW"
+                Case TrackGroupType.PanVcaLead : Return "PAN_VCA_LEAD"
+                Case TrackGroupType.PanVcaFollow : Return "PAN_VCA_FOLLOW"
+                Case TrackGroupType.WidthLead : Return "WIDTH_LEAD"
+                Case TrackGroupType.WidthFollow : Return "WIDTH_FOLLOW"
+                Case TrackGroupType.MuteLead : Return "MUTE_LEAD"
+                Case TrackGroupType.MuteFollow : Return "MUTE_FOLLOW"
+                Case TrackGroupType.SoloLead : Return "SOLO_LEAD"
+                Case TrackGroupType.SoloFollow : Return "SOLO_FOLLOW"
+                Case TrackGroupType.RecArmLead : Return "RECARM_LEAD"
+                Case TrackGroupType.RecArmFollow : Return "RECARM_FOLLOW"
+                Case TrackGroupType.PolarityLead : Return "POLARITY_LEAD"
+                Case TrackGroupType.PolarityFollow : Return "POLARITY_FOLLOW"
+                Case TrackGroupType.AutoModeLead : Return "AUTOMODE_LEAD"
+                Case TrackGroupType.AutoModeFollow : Return "AUTOMODE_FOLLOW"
+                Case TrackGroupType.ReverseLead : Return "REVERSE_LEAD"
+                Case TrackGroupType.ReverseFollow : Return "REVERSE_FOLLOW"
+                Case TrackGroupType.SendVolLead : Return "SEND_VOL_LEAD"
+                Case TrackGroupType.SendVolFollow : Return "SEND_VOL_FOLLOW"
+                Case TrackGroupType.SendPanLead : Return "SEND_PAN_LEAD"
+                Case TrackGroupType.SendPanFollow : Return "SEND_PAN_FOLLOW"
+                Case TrackGroupType.SendMuteLead : Return "SEND_MUTE_LEAD"
+                Case Else : Return "SEND_MUTE_FOLLOW"
+            End Select
+        End Function
+
+        ''' <summary>
+        ''' Retourne le masque d'appartenance aux groupes pour un type donné.
+        ''' bits 0-31 correspondent aux groupes 1-32.
+        ''' Retourne 0 si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetTrackGroupMask(trackIndex As Integer,
+                                          groupType As TrackGroupType) As UInteger
+            Dim raw = CallReaperBridge(
+                $"GET_TRACK_GROUP|{trackIndex}|{TrackGroupTypeName(groupType)}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0UI
+            Dim v As Long = 0
+            Long.TryParse(raw, v)
+            Return CType(v, UInteger)
+        End Function
+
+        ''' <summary>
+        ''' Modifie l'appartenance à un groupe de piste et retourne le nouveau masque.
+        ''' setMask : bits à modifier  setVal : valeur des bits (1=rejoindre 0=quitter)
+        ''' </summary>
+        Public Function SetTrackGroupMask(trackIndex As Integer,
+                                          groupType As TrackGroupType,
+                                          setMask As UInteger,
+                                          setVal As UInteger) As UInteger
+            Dim raw = CallReaperBridge(
+                $"SET_TRACK_GROUP|{trackIndex}|{TrackGroupTypeName(groupType)}|{setMask}|{setVal}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0UI
+            Dim v As Long = 0
+            Long.TryParse(raw, v)
+            Return CType(v, UInteger)
+        End Function
+
+        ''' <summary>
+        ''' Vérifie si une piste appartient à un groupe donné (numéro 1-32).
+        ''' </summary>
+        Public Function IsTrackInGroup(trackIndex As Integer,
+                                       groupType As TrackGroupType,
+                                       groupNumber As Integer) As Boolean
+            If groupNumber < 1 OrElse groupNumber > 32 Then Return False
+            Dim mask = GetTrackGroupMask(trackIndex, groupType)
+            Return (mask And (1UI << (groupNumber - 1))) <> 0UI
+        End Function
+
+        ''' <summary>
+        ''' Ajoute ou retire une piste d'un groupe (numéro 1-32).
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function SetTrackGroupMembership(trackIndex As Integer,
+                                                groupType As TrackGroupType,
+                                                groupNumber As Integer,
+                                                isMember As Boolean) As Boolean
+            If groupNumber < 1 OrElse groupNumber > 32 Then Return False
+            Dim bit = 1UI << (groupNumber - 1)
+            Dim newMask = SetTrackGroupMask(trackIndex, groupType, bit,
+                                            If(isMember, bit, 0UI))
+            Return (newMask And bit) = If(isMember, bit, 0UI)
+        End Function
+
+
+
+        ' ── Canaux audio ──────────────────────────────────────────────────────
+
+        ''' <summary>
+        ''' Retourne le nombre d'entrées audio de l'interface active.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetNumAudioInputs() As Integer
+            Dim raw = CallReaperBridge("GET_NUM_AUDIO_INPUTS")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Integer = -1
+            Integer.TryParse(raw, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Retourne le nombre de sorties audio de l'interface active.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetNumAudioOutputs() As Integer
+            Dim raw = CallReaperBridge("GET_NUM_AUDIO_OUTPUTS")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Integer = -1
+            Integer.TryParse(raw, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Retourne le nom d'une entrée audio par index (0-based).
+        ''' Retourne une chaîne vide si l'index est hors limite.
+        ''' </summary>
+        Public Function GetAudioInputName(channelIndex As Integer) As String
+            Dim raw = CallReaperBridge($"GET_AUDIO_INPUT_NAME|{channelIndex}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            Return raw
+        End Function
+
+        ''' <summary>
+        ''' Retourne le nom d'une sortie audio par index (0-based).
+        ''' Retourne une chaîne vide si l'index est hors limite.
+        ''' </summary>
+        Public Function GetAudioOutputName(channelIndex As Integer) As String
+            Dim raw = CallReaperBridge($"GET_AUDIO_OUTPUT_NAME|{channelIndex}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            Return raw
+        End Function
+
+        ''' <summary>
+        ''' Retourne la liste de toutes les entrées audio en un seul appel pipe.
+        ''' </summary>
+        Public Function GetAllAudioInputs() As IReadOnlyList(Of AudioChannelInfo)
+            Dim raw = CallReaperBridge("GET_ALL_AUDIO_INPUTS")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return Array.Empty(Of AudioChannelInfo)()
+            End If
+            Dim names = raw.Split("|"c)
+            Dim result(names.Length - 1) As AudioChannelInfo
+            For i = 0 To names.Length - 1
+                result(i) = New AudioChannelInfo(i, names(i))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>
+        ''' Retourne la liste de toutes les sorties audio en un seul appel pipe.
+        ''' </summary>
+        Public Function GetAllAudioOutputs() As IReadOnlyList(Of AudioChannelInfo)
+            Dim raw = CallReaperBridge("GET_ALL_AUDIO_OUTPUTS")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return Array.Empty(Of AudioChannelInfo)()
+            End If
+            Dim names = raw.Split("|"c)
+            Dim result(names.Length - 1) As AudioChannelInfo
+            For i = 0 To names.Length - 1
+                result(i) = New AudioChannelInfo(i, names(i))
+            Next
+            Return result
+        End Function
+
+        ' Dans le module utility — section position / transport ───────────────────
+
+        ' ── Curseur d'édition ─────────────────────────────────────────────────
+
+        ''' <summary>
+        ''' Retourne la position du curseur d'édition en secondes.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetCursorPosition() As Double
+            Dim raw = CallReaperBridge("GET_CURSOR_POSITION")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Double = -1
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Déplace le curseur d'édition.
+        ''' moveView : déplace la vue si True.
+        ''' seekPlay : cherche la position en lecture si True.
+        ''' </summary>
+        Public Sub SetCursorPosition(time As Double,
+                                     Optional moveView As Boolean = False,
+                                     Optional seekPlay As Boolean = False)
+            Dim ic = Globalization.CultureInfo.InvariantCulture
+            CallReaperBridge(
+                $"SET_CURSOR_POSITION|{time.ToString("G", ic)}|{If(moveView, "1", "0")}|{If(seekPlay, "1", "0")}")
+        End Sub
+
+        ''' <summary>
+        ''' Formate une position temporelle selon le mode demandé.
+        ''' </summary>
+        Public Function FormatTimePosition(time As Double,
+                                           mode As TimePositionMode) As String
+            Dim raw = CallReaperBridge(
+                $"FORMAT_TIMEPOS|{time.ToString("G", Globalization.CultureInfo.InvariantCulture)}|{CInt(mode)}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            Return raw
+        End Function
+
+        ''' <summary>
+        ''' Convertit des secondes en Quarter Notes.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function TimePositionToQN(time As Double) As Double
+            Dim raw = CallReaperBridge(
+                $"TIMEPOS_TO_QN|{time.ToString("G", Globalization.CultureInfo.InvariantCulture)}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Double = -1
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Convertit des Quarter Notes en secondes.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function QNToTimePosition(qn As Double) As Double
+            Dim raw = CallReaperBridge(
+                $"QN_TO_TIMEPOS|{qn.ToString("G", Globalization.CultureInfo.InvariantCulture)}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Double = -1
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Retourne signature et tempo en vigueur à une position donnée.
+        ''' Retourne (0, 0, 0) si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetTimeSigAtTime(time As Double) As (Num As Integer, Den As Integer, BPM As Double)
+            Dim raw = CallReaperBridge(
+                $"GET_TIMESIG_AT_TIME|{time.ToString("G", Globalization.CultureInfo.InvariantCulture)}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return (0, 0, 0)
+            Dim p = raw.Split("|"c)
+            If p.Length < 3 Then Return (0, 0, 0)
+            Dim ic = Globalization.CultureInfo.InvariantCulture
+            Dim n As Integer = 0, d As Integer = 0
+            Dim bpm As Double = 0
+            Integer.TryParse(p(0), n)
+            Integer.TryParse(p(1), d)
+            Double.TryParse(p(2), Globalization.NumberStyles.Any, ic, bpm)
+            Return (n, d, bpm)
+        End Function
+
+        ''' <summary>
+        ''' Retourne l'état complet du curseur d'édition en un seul appel pipe.
+        ''' Préférer cette méthode pour rafraîchir l'affichage de la surface.
+        ''' </summary>
+        Public Function GetCursorInfo() As CursorInfo
+            Dim raw = CallReaperBridge("GET_CURSOR_INFO")
+            Dim ic = Globalization.CultureInfo.InvariantCulture
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return New CursorInfo(0, 0, 0, 0, 0, 4, 0, 4, 4, 120, String.Empty)
+            End If
+            Dim p = raw.Split("|"c)
+            If p.Length < 11 Then Return New CursorInfo(0, 0, 0, 0, 0, 4, 0, 4, 4, 120, String.Empty)
+            Dim t As Double = 0, qn As Double = 0
+            Dim fb As Double = 0, bp As Double = 0, bpm As Double = 0
+            Dim m As Integer = 0, cml As Integer = 0, cd As Integer = 0
+            Dim tsn As Integer = 0, tsd As Integer = 0
+            Double.TryParse(p(0), Globalization.NumberStyles.Any, ic, t)
+            Double.TryParse(p(1), Globalization.NumberStyles.Any, ic, qn)
+            Integer.TryParse(p(2), m)
+            Integer.TryParse(p(3), cml)
+            Double.TryParse(p(4), Globalization.NumberStyles.Any, ic, fb)
+            Integer.TryParse(p(5), cd)
+            Double.TryParse(p(6), Globalization.NumberStyles.Any, ic, bp)
+            Integer.TryParse(p(7), tsn)
+            Integer.TryParse(p(8), tsd)
+            Double.TryParse(p(9), Globalization.NumberStyles.Any, ic, bpm)
+            Return New CursorInfo(t, qn, m, cml, fb, cd, bp, tsn, tsd, bpm, p(10))
+        End Function
+
+        ''' <summary>
+        ''' Ajoute un FX sur une piste par nom et retourne son index 0-based.
+        ''' Utiliser <see cref="InstalledFXInfo.FullName"/> comme valeur de fxName.
+        ''' Retourne -1 en cas d'échec.
+        ''' </summary>
+        Public Function AddFXByName(trackIndex As Integer,
+                                    fxName As String,
+                                    Optional recFX As Boolean = False) As Integer
+            Dim raw = CallReaperBridge(
+                $"ADD_FX_BY_NAME|{trackIndex}|{fxName}|{If(recFX, "1", "0")}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim idx As Integer = -1
+            Integer.TryParse(raw, idx)
+            Return idx
+        End Function
+
+        ' Dans le module utility — section Undo ────────────────────────────────────
+
+        ' ── Undo / Redo ───────────────────────────────────────────────────────
+
+        ''' <summary>
+        ''' Exécute un Undo (Ctrl+Z).
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function Undo() As Boolean
+            Dim raw = CallReaperBridge("UNDO")
+            Return raw = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Exécute un Redo (Ctrl+Y).
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function Redo() As Boolean
+            Dim raw = CallReaperBridge("REDO")
+            Return raw = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Retourne la description de l'action annulable.
+        ''' Retourne String.Empty si la pile d'undo est vide.
+        ''' </summary>
+        Public Function CanUndo() As String
+            Dim raw = CallReaperBridge("CAN_UNDO")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            Return raw
+        End Function
+
+        ''' <summary>
+        ''' Retourne la description de l'action refaisable.
+        ''' Retourne String.Empty si la pile de redo est vide.
+        ''' </summary>
+        Public Function CanRedo() As String
+            Dim raw = CallReaperBridge("CAN_REDO")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            Return raw
+        End Function
+
+        ''' <summary>
+        ''' Ouvre un bloc d'annulation.
+        ''' Appeler avant toute modification, fermer avec <see cref="EndUndoBlock"/>.
+        ''' </summary>
+        Public Sub BeginUndoBlock()
+            CallReaperBridge("BEGIN_UNDO_BLOCK")
+        End Sub
+
+        ''' <summary>
+        ''' Ferme le bloc d'annulation ouvert par <see cref="BeginUndoBlock"/>.
+        ''' </summary>
+        Public Sub EndUndoBlock(description As String,
+                                Optional flags As UndoFlags = UndoFlags.All)
+            CallReaperBridge($"END_UNDO_BLOCK|{description}|{CInt(flags)}")
+        End Sub
+
+        ' Dans le module utility — section gestion de projet ─────────────────────
+
+        ' ── Projet ────────────────────────────────────────────────────────────
+
+        ''' <summary>
+        ''' Retourne toutes les informations du projet actif en un seul appel pipe.
+        ''' </summary>
+        Public Function GetProjectInfo() As ReaperProjectInfo
+            Dim raw = CallReaperBridge("GET_PROJECT_INFO")
+            Dim ic = Globalization.CultureInfo.InvariantCulture
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return New ReaperProjectInfo(String.Empty, String.Empty, False, 0, 0, 0)
+            End If
+            Dim p = raw.Split("|"c)
+            If p.Length < 6 Then Return New ReaperProjectInfo(String.Empty, String.Empty, False, 0, 0, 0)
+            Dim sc As Integer = 0, tc As Integer = 0
+            Dim len As Double = 0
+            Integer.TryParse(p(3), sc)
+            Integer.TryParse(p(4), tc)
+            Double.TryParse(p(5), Globalization.NumberStyles.Any, ic, len)
+            Return New ReaperProjectInfo(p(0), p(1), p(2) = "1", sc, tc, len)
+        End Function
+
+        ''' <summary>
+        ''' Retourne le compteur de changements d'état du projet.
+        ''' Comparer avec la valeur précédente pour détecter toute modification.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetProjectStateChangeCount() As Integer
+            Dim raw = CallReaperBridge("GET_PROJECT_STATE_COUNT")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Integer = -1
+            Integer.TryParse(raw, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Retourne True si le projet a des modifications non sauvegardées.
+        ''' </summary>
+        Public Function IsProjectDirty() As Boolean
+            Return CallReaperBridge("IS_PROJECT_DIRTY") = "1"
+        End Function
+
+        ''' <summary>
+        ''' Sauvegarde le projet actif.
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function SaveProject() As Boolean
+            Return CallReaperBridge("SAVE_PROJECT|0") = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Ouvre la boîte de dialogue "Enregistrer sous" de Reaper.
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function SaveProjectAs() As Boolean
+            Return CallReaperBridge("SAVE_PROJECT|1") = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Retourne le chemin complet du fichier .rpp du projet actif.
+        ''' Retourne String.Empty si le projet n'a jamais été sauvegardé.
+        ''' </summary>
+        Public Function GetProjectFilePath() As String
+            Dim raw = CallReaperBridge("GET_PROJECT_FILE_PATH")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            Return raw
+        End Function
+
+        ''' <summary>
+        ''' Retourne le nom du projet sans extension ex: "MySession".
+        ''' </summary>
+        Public Function GetProjectName() As String
+            Dim path = GetProjectFilePath()
+            If String.IsNullOrEmpty(path) Then Return String.Empty
+            Return IO.Path.GetFileNameWithoutExtension(path)
+        End Function
+
+        ''' <summary>
+        ''' Retourne la durée totale du projet en secondes.
+        ''' Retourne -1 si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetProjectLength() As Double
+            Dim raw = CallReaperBridge("GET_PROJECT_LENGTH")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            Dim v As Double = -1
+            Double.TryParse(raw, Globalization.NumberStyles.Any,
+                            Globalization.CultureInfo.InvariantCulture, v)
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Retourne les chemins de tous les projets ouverts dans Reaper.
+        ''' </summary>
+        Public Function EnumAllProjects() As IReadOnlyList(Of String)
+            Dim raw = CallReaperBridge("ENUM_PROJECTS")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return Array.Empty(Of String)()
+            End If
+            Return raw.Split("|"c)
+        End Function
+
+        ''' <summary>
+        ''' Active le projet à l'index donné (0-based parmi les projets ouverts).
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function SetActiveProject(projectIndex As Integer) As Boolean
+            Return CallReaperBridge($"SET_ACTIVE_PROJECT|{projectIndex}") = "OK"
+        End Function
 
 
     End Module
 
 
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  TRACK GROUP TYPE — noms de groupes Reaper
+    ' ══════════════════════════════════════════════════════════════════════════
 
+    ''' <summary>Types de groupes de piste reconnus par GetSetTrackGroupMembershipEx.</summary>
+    Public Enum TrackGroupType
+        VolumeLead
+        VolumeFollow
+        VolumeVcaLead
+        VolumeVcaFollow
+        PanLead
+        PanFollow
+        PanVcaLead
+        PanVcaFollow
+        WidthLead
+        WidthFollow
+        MuteLead
+        MuteFollow
+        SoloLead
+        SoloFollow
+        RecArmLead
+        RecArmFollow
+        PolarityLead
+        PolarityFollow
+        AutoModeLead
+        AutoModeFollow
+        ReverseLead
+        ReverseFollow
+        SendVolLead
+        SendVolFollow
+        SendPanLead
+        SendPanFollow
+        SendMuteLead
+        SendMuteFollow
+    End Enum
 
 
     ''' <summary>
@@ -1269,6 +1918,22 @@ Namespace Reaper
             End Set
         End Property
 
+
+        ''' <summary>
+        ''' Ouvre ou ferme la fenêtre flottante du FX.
+        ''' Le setter écrit immédiatement dans Reaper.
+        ''' </summary>
+        Public Property IsOpen As Boolean
+            Get
+                Dim raw = utility.CallReaperBridge($"GET_FX_OPEN|{_trackIndex}|{_fxIndex}")
+                Return raw = "1"
+            End Get
+            Set
+                utility.CallReaperBridge(
+                    $"SET_FX_OPEN|{_trackIndex}|{_fxIndex}|{If(Value, "1", "0")}")
+            End Set
+        End Property
+
         ''' <summary>Preset actuel — setter applique le preset par nom dans Reaper.</summary>
         Public Property Preset As String
             Get
@@ -1439,6 +2104,236 @@ Namespace Reaper
                 fx.Refresh()
             Next
         End Sub
+        ''' <summary>
+        ''' Copie un FX de cette piste vers une autre piste.
+        ''' destFxIndex : -1 = ajouter à la fin de la piste destination.
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function CopyFXToTrack(srcFxIndex As Integer,
+                                      destTrackIndex As Integer,
+                                      Optional destFxIndex As Integer = -1) As Boolean
+            Dim raw = utility.CallReaperBridge(
+                $"COPY_FX|{_trackIndex}|{srcFxIndex}|{destTrackIndex}|{destFxIndex}|0")
+            Return raw = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Déplace un FX de cette piste vers une autre piste (supprime de la source).
+        ''' destFxIndex : -1 = ajouter à la fin de la piste destination.
+        ''' Retourne True si l'opération a réussi.
+        ''' </summary>
+        Public Function MoveFXToTrack(srcFxIndex As Integer,
+                                      destTrackIndex As Integer,
+                                      Optional destFxIndex As Integer = -1) As Boolean
+            Dim raw = utility.CallReaperBridge(
+                $"COPY_FX|{_trackIndex}|{srcFxIndex}|{destTrackIndex}|{destFxIndex}|1")
+            If raw <> "OK" Then Return False
+            ' ── Mettre à jour la liste locale après déplacement ────────────────
+            If srcFxIndex >= 0 AndAlso srcFxIndex < _fxList.Count Then
+                _fxList.RemoveAt(srcFxIndex)
+                For i = srcFxIndex To _fxList.Count - 1
+                    _fxList(i) = New ReaperFX(_trackIndex, i)
+                Next
+                RaiseEvent On_CountChange(_fxList.Count)
+            End If
+            Return True
+        End Function
+        ''' <summary>
+        ''' Supprime le FX à l'index donné et met à jour la liste locale.
+        ''' Retourne True si la suppression a réussi.
+        ''' </summary>
+        Public Function DeleteFX(fxIndex As Integer) As Boolean
+            If fxIndex < 0 OrElse fxIndex >= _fxList.Count Then Return False
+            Dim raw = utility.CallReaperBridge($"DELETE_FX|{_trackIndex}|{fxIndex}")
+            If raw <> "OK" Then Return False
+            _fxList.RemoveAt(fxIndex)
+            ' ── Corriger les indices des FX suivants ───────────────────────────
+            For i = fxIndex To _fxList.Count - 1
+                _fxList(i) = New ReaperFX(_trackIndex, i)
+            Next
+            RaiseEvent On_CountChange(_fxList.Count)
+            Return True
+        End Function
 
     End Class
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  REAPER INSTALLED FX — FX installé dans Reaper
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Représente un FX installé dans Reaper (type + nom).</summary>
+    Public Structure InstalledFXInfo
+        ''' <summary>Type du plugin : "VST"  "VST3"  "JS"  "CLAP"  "AU"  "DX"…</summary>
+        Public ReadOnly FxType As String
+        ''' <summary>Nom tel qu'affiché dans Reaper ex: "ReaEQ (Cockos)".</summary>
+        Public ReadOnly Name As String
+
+        Public Sub New(fxType As String, name As String)
+            Me.FxType = fxType
+            Me.Name = name
+        End Sub
+
+        ''' <summary>Nom complet préfixé par le type, compatible avec TrackFX_AddByName.</summary>
+        Public ReadOnly Property FullName As String
+            Get
+                Return $"{FxType}: {Name}" : End Get
+        End Property
+    End Structure
+
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  AUDIO CHANNEL INFO — canal d'entrée ou de sortie audio
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Représente un canal audio (entrée ou sortie) de l'interface audio.</summary>
+    Public Structure AudioChannelInfo
+        ''' <summary>Index 0-based du canal.</summary>
+        Public ReadOnly Index As Integer
+        ''' <summary>Nom du canal tel que retourné par Reaper.</summary>
+        Public ReadOnly Name As String
+
+        Public Sub New(index As Integer, name As String)
+            Me.Index = index
+            Me.Name = name
+        End Sub
+    End Structure
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  MODES DE FORMATAGE TEMPOREL
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Format d'affichage d'une position temporelle (format_timepos2).</summary>
+    Public Enum TimePositionMode As Integer
+        ''' <summary>H:MM:SS.sss</summary>
+        Time = 0
+        ''' <summary>Mesure.Temps.Centièmes  ex: "3.2.40"</summary>
+        MeasuresBeats = 1
+        ''' <summary>MM:SS</summary>
+        MinutesSeconds = 2
+        ''' <summary>Samples</summary>
+        Samples = 3
+        ''' <summary>H:MM:SS:FF (SMPTE)</summary>
+        SMPTEFrames = 4
+        ''' <summary>Secondes uniquement</summary>
+        Seconds = 5
+    End Enum
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  CURSOR INFO — état complet du curseur d'édition
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Regroupe la position du curseur d'édition et toutes ses conversions.
+    ''' Chargé par <see cref="utility.GetCursorInfo"/> en un seul appel pipe.
+    ''' </summary>
+    Public Structure CursorInfo
+        ''' <summary>Position en secondes.</summary>
+        Public ReadOnly Time As Double
+        ''' <summary>Position en Quarter Notes depuis le début du projet.</summary>
+        Public ReadOnly QN As Double
+        ''' <summary>Numéro de mesure 0-based.</summary>
+        Public ReadOnly Measures As Integer
+        ''' <summary>Beat entier dans la mesure (0-based).</summary>
+        Public ReadOnly Cml As Integer
+        ''' <summary>Beats complets depuis le début du projet.</summary>
+        Public ReadOnly FullBeats As Double
+        ''' <summary>Dénominateur de la signature en vigueur (4=noire 8=croche…).</summary>
+        Public ReadOnly CDenom As Integer
+        ''' <summary>Position fine dans le beat courant [0..1[.</summary>
+        Public ReadOnly BeatPos As Double
+        ''' <summary>Numérateur de la signature en vigueur (ex: 4 pour 4/4).</summary>
+        Public ReadOnly TimeSigNum As Integer
+        ''' <summary>Dénominateur de la signature en vigueur (ex: 4 pour 4/4).</summary>
+        Public ReadOnly TimeSigDen As Integer
+        ''' <summary>Tempo en BPM à la position courante.</summary>
+        Public ReadOnly BPM As Double
+        ''' <summary>Affichage M.B.H lisible pour la surface de contrôle (ex: "3.2.40").</summary>
+        Public ReadOnly Formatted As String
+
+        ''' <summary>Numéro de mesure 1-based (affiché dans Reaper).</summary>
+        Public ReadOnly Property MeasureDisplay As Integer
+            Get
+                Return Measures + 1 : End Get
+        End Property
+
+        ''' <summary>Beat courant dans la mesure 1-based.</summary>
+        Public ReadOnly Property BeatDisplay As Integer
+            Get
+                Return Cml + 1 : End Get
+        End Property
+
+        Public Sub New(time As Double, qn As Double,
+                       measures As Integer, cml As Integer,
+                       fullBeats As Double, cdenom As Integer, beatPos As Double,
+                       timeSigNum As Integer, timeSigDen As Integer,
+                       bpm As Double, formatted As String)
+            Me.Time = time : Me.QN = qn
+            Me.Measures = measures : Me.Cml = cml
+            Me.FullBeats = fullBeats : Me.CDenom = cdenom : Me.BeatPos = beatPos
+            Me.TimeSigNum = timeSigNum : Me.TimeSigDen = timeSigDen
+            Me.BPM = bpm : Me.Formatted = formatted
+        End Sub
+    End Structure
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  FLAGS DE BLOC D'ANNULATION
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Combinaison de flags pour <see cref="utility.EndUndoBlock"/>.</summary>
+    <Flags>
+    Public Enum UndoFlags As Integer
+        Tracks = 1   ' modifications de pistes
+        Items = 4   ' modifications d'items
+        FX = 8   ' modifications de FX
+        All = Tracks Or Items Or FX
+    End Enum
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  REAPER PROJECT INFO — état complet du projet actif
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Regroupe les informations du projet actif chargées en un seul appel pipe.</summary>
+    Public Structure ReaperProjectInfo
+        ''' <summary>Nom du projet sans extension  ex: "MySession".</summary>
+        Public ReadOnly Name As String
+        ''' <summary>Chemin complet du fichier .rpp  (vide si jamais sauvegardé).</summary>
+        Public ReadOnly FilePath As String
+        ''' <summary>True si le projet a des modifications non sauvegardées.</summary>
+        Public ReadOnly IsDirty As Boolean
+        ''' <summary>Compteur de changements — s'incrémente à chaque modification.</summary>
+        Public ReadOnly StateChangeCount As Integer
+        ''' <summary>Nombre de pistes (sans la piste maître).</summary>
+        Public ReadOnly TrackCount As Integer
+        ''' <summary>Durée totale du projet en secondes.</summary>
+        Public ReadOnly LengthSeconds As Double
+
+        ''' <summary>Dossier du projet dérivé de <see cref="FilePath"/>.</summary>
+        Public ReadOnly Property Folder As String
+            Get
+                If String.IsNullOrEmpty(FilePath) Then Return String.Empty
+                Return IO.Path.GetDirectoryName(FilePath)
+            End Get
+        End Property
+
+        ''' <summary>True si le projet n'a jamais été sauvegardé (pas de fichier .rpp).</summary>
+        Public ReadOnly Property IsUnsaved As Boolean
+            Get
+                Return String.IsNullOrEmpty(FilePath) : End Get
+        End Property
+
+        Public Sub New(name As String, filePath As String, isDirty As Boolean,
+                       stateChangeCount As Integer, trackCount As Integer,
+                       lengthSeconds As Double)
+            Me.Name = name
+            Me.FilePath = filePath
+            Me.IsDirty = isDirty
+            Me.StateChangeCount = stateChangeCount
+            Me.TrackCount = trackCount
+            Me.LengthSeconds = lengthSeconds
+        End Sub
+    End Structure
+
+
+
+
+
 End Namespace

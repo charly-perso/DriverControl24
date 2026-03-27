@@ -79,7 +79,7 @@ Public Class ReaperAPI
     Public Shared format_timepos2 As format_timepos2Del
 
     ' ═══════════════════════════════════════════════════════════════
-    '  PISTES
+    '  PISTES SENDS
     ' ═══════════════════════════════════════════════════════════════
 
     ''' <summary>Pointeur sur la piste (proj=0 pour projet actif, trackidx 0-based).</summary>
@@ -130,7 +130,33 @@ Public Class ReaperAPI
     ''' <summary>Retourne un pointeur sur la dernière piste modifiée par l'utilisateur (IntPtr.Zero si aucune).</summary>
     Public Delegate Function GetLastTouchedTrackDel() As IntPtr
     Public Shared GetLastTouchedTrack As GetLastTouchedTrackDel
+    ''' <summary>
+    ''' Retourne True si au moins une piste du projet est en solo.
+    ''' proj = IntPtr.Zero pour le projet actif.
+    ''' </summary>
+    Public Delegate Function AnyTrackSoloDel(proj As IntPtr) As Boolean
+    Public Shared AnyTrackSolo As AnyTrackSoloDel
 
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  ROUTING — CRÉATION / SUPPRESSION D'ENVOIS
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Crée un envoi depuis <c>tr</c> vers <c>desttrIn</c>.
+    ''' Si <c>desttrIn</c> = IntPtr.Zero → sortie matérielle (hardware output).
+    ''' Retourne l'index 0-based du nouvel envoi, ou -1 en cas d'échec.
+    ''' </summary>
+    Public Delegate Function CreateTrackSendDel(tr As IntPtr, desttrIn As IntPtr) As Integer
+    Public Shared CreateTrackSend As CreateTrackSendDel
+
+    ''' <summary>
+    ''' Supprime un envoi/reçu d'une piste.
+    ''' category : 0=envois  -1=reçus  1=sorties HW
+    ''' sendidx  : index 0-based de l'envoi à supprimer.
+    ''' Retourne True si supprimé avec succès.
+    ''' </summary>
+    Public Delegate Function RemoveTrackSendDel(tr As IntPtr, category As Integer, sendidx As Integer) As Boolean
+    Public Shared RemoveTrackSend As RemoveTrackSendDel
     ' ═══════════════════════════════════════════════════════════════
     '  SÉLECTION
     ' ═══════════════════════════════════════════════════════════════
@@ -202,6 +228,14 @@ Public Class ReaperAPI
     ''' <summary>Valeur formatée d'un paramètre FX dans buf (ex: "-6.0 dB").</summary>
     Public Delegate Function TrackFX_GetFormattedParamValueDel(track As IntPtr, fx As Integer, param As Integer, buf As IntPtr, bufsz As Integer) As Boolean
     Public Shared TrackFX_GetFormattedParamValue As TrackFX_GetFormattedParamValueDel
+
+    ''' <summary>Ouvre ou ferme la fenêtre d'un FX de piste.</summary>
+    Public Delegate Sub TrackFX_SetOpenDel(track As IntPtr, fx As Integer, open As Boolean)
+    Public Shared TrackFX_SetOpen As TrackFX_SetOpenDel
+
+    ''' <summary>Retourne True si la fenêtre du FX est actuellement ouverte.</summary>
+    Public Delegate Function TrackFX_GetOpenDel(track As IntPtr, fx As Integer) As Boolean
+    Public Shared TrackFX_GetOpen As TrackFX_GetOpenDel
 
     ' ═══════════════════════════════════════════════════════════════
     '  ITEMS / TAKES
@@ -572,6 +606,49 @@ Public Class ReaperAPI
         ByRef paramnumber As Integer) As Boolean
     Public Shared GetLastTouchedFX As GetLastTouchedFXDel
 
+
+    ''' <summary>
+    ''' Copie ou déplace un FX d'une piste vers une autre.
+    ''' destFxIndex : position cible (-1 = ajouter à la fin).
+    ''' move        : True = déplacer (supprime de la source), False = copier.
+    ''' </summary>
+    Public Delegate Sub TrackFX_CopyToTrackDel(
+        src As IntPtr, src_fx As Integer,
+        dest As IntPtr, dest_fx_index As Integer,
+        move As Boolean)
+    Public Shared TrackFX_CopyToTrack As TrackFX_CopyToTrackDel
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  FX INSTALLÉS
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Énumère les FX installés dans Reaper.
+    ''' Retourne False quand l'index dépasse la liste.
+    ''' typebuf : "VST"  "VST3"  "AU"  "JS"  "CLAP"…
+    ''' namebuf : nom du plugin tel qu'affiché dans Reaper.
+    ''' </summary>
+    Public Delegate Function EnumInstalledFXDel(
+        i As Integer,
+        typebuf As IntPtr, typebuf_sz As Integer,
+        namebuf As IntPtr, namebuf_sz As Integer) As Boolean
+    Public Shared EnumInstalledFX As EnumInstalledFXDel
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  GROUPES DE PISTE
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Lit ou modifie l'appartenance à un groupe de piste.
+    ''' groupname : "VOLUME_LEAD" "VOLUME_FOLLOW" "PAN_LEAD" "MUTE_LEAD" etc.
+    ''' setmask   : masque des bits à modifier (0 = lecture seule)
+    ''' setval    : valeur des bits couverts par setmask
+    ''' Retourne  : masque courant (bits 0-31 → groupes 1-32)
+    ''' </summary>
+    Public Delegate Function GetSetTrackGroupMembershipExDel(
+        tr As IntPtr,
+        <MarshalAs(UnmanagedType.LPStr)> groupname As String,
+        setmask As UInteger,
+        setval As UInteger) As UInteger
+    Public Shared GetSetTrackGroupMembershipEx As GetSetTrackGroupMembershipExDel
     ' ══════════════════════════════════════════════════════════════
     '  ENVELOPPES / AUTOMATION
     ' ══════════════════════════════════════════════════════════════
@@ -677,4 +754,67 @@ Public Class ReaperAPI
     ''' <summary>Chemin de l'exécutable Reaper — retourne IntPtr const char*.</summary>
     Public Delegate Function GetExePathDel() As IntPtr
     Public Shared GetExePath As GetExePathDel
+
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  CANAUX AUDIO
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Nombre d'entrées audio disponibles sur l'interface.</summary>
+    Public Delegate Function GetNumAudioInputsDel() As Integer
+    Public Shared GetNumAudioInputs As GetNumAudioInputsDel
+
+    ''' <summary>Nombre de sorties audio disponibles sur l'interface.</summary>
+    Public Delegate Function GetNumAudioOutputsDel() As Integer
+    Public Shared GetNumAudioOutputs As GetNumAudioOutputsDel
+
+    ''' <summary>
+    ''' Nom d'une entrée audio (pointeur statique — ne pas libérer).
+    ''' channelIndex : 0-based.
+    ''' </summary>
+    Public Delegate Function GetInputChannelNameDel(channelIndex As Integer) As IntPtr
+    Public Shared GetInputChannelName As GetInputChannelNameDel
+
+    ''' <summary>
+    ''' Nom d'une sortie audio (pointeur statique — ne pas libérer).
+    ''' channelIndex : 0-based.
+    ''' </summary>
+    Public Delegate Function GetOutputChannelNameDel(channelIndex As Integer) As IntPtr
+    Public Shared GetOutputChannelName As GetOutputChannelNameDel
+
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  UNDO — compléments (BeginBlock/EndBlock/CanUndo2/CanRedo2 déjà déclarés)
+    ' ══════════════════════════════════════════════════════════════════════════
+
+    ''' <summary>Exécute un Undo sur le projet (Ctrl+Z).</summary>
+    Public Delegate Sub Undo_DoUndo2Del(proj As IntPtr)
+    Public Shared Undo_DoUndo2 As Undo_DoUndo2Del
+
+    ''' <summary>Exécute un Redo sur le projet (Ctrl+Y).</summary>
+    Public Delegate Sub Undo_DoRedo2Del(proj As IntPtr)
+    Public Shared Undo_DoRedo2 As Undo_DoRedo2Del
+
+    ' ── Complément de la section PROJET ──────────────────────────────────────
+
+    ''' <summary>
+    ''' Compteur d'état du projet — s'incrémente à chaque modification.
+    ''' Idéal pour du polling : comparer avec la valeur précédente.
+    ''' </summary>
+    Public Delegate Function GetProjectStateChangeCountDel(proj As IntPtr) As Integer
+    Public Shared GetProjectStateChangeCount As GetProjectStateChangeCountDel
+
+    ''' <summary>Retourne 1 si le projet a des modifications non sauvegardées.</summary>
+    Public Delegate Function IsProjectDirtyDel(proj As IntPtr) As Integer
+    Public Shared IsProjectDirty As IsProjectDirtyDel
+
+    ''' <summary>
+    ''' Sauvegarde le projet.
+    ''' saveAsIn = True → ouvre la boîte de dialogue "Enregistrer sous".
+    ''' </summary>
+    Public Delegate Sub Main_SaveProjectDel(proj As IntPtr, saveAsIn As Boolean)
+    Public Shared Main_SaveProject As Main_SaveProjectDel
+
+    ''' <summary>Active un projet ouvert dans Reaper (le met au premier plan).</summary>
+    Public Delegate Sub SelectProjectInstanceDel(proj As IntPtr)
+    Public Shared SelectProjectInstance As SelectProjectInstanceDel
 End Class

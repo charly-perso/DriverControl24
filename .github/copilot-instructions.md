@@ -31,3 +31,4 @@
 - Ne pas utiliser `Task.Delay` dans les hot paths réseau
 - Ne pas ouvrir le pipe plus d'une fois par requête (pas de connexion persistante côté driver)
 - Ne pas utiliser `Marshal.StringToHGlobalAnsi` côté driver (uniquement côté plugin)
+- Ne pas générer des propriété avec le format Get : Return : End Get Set : : End Set

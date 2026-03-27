@@ -846,10 +846,11 @@ Namespace Control24
                 Console.WriteLine(Reaper.utility.CallReaperBridge("GET_TRACK_INFO|0|D_VOL"))
                 Console.WriteLine(Reaper.utility.CallReaperBridge("GET_TRACK_ALL_INFO|0"))
 
-                'Do While True
-                '    'Console.WriteLine(Reaper.utility.CallReaperBridge("GET_TRACK_PEAK_STEREO|0"))
-                '    Thread.Sleep(10)
-                'Loop
+                Do While True
+
+                    Console.WriteLine(Reaper.utility.CallReaperBridge("GET_PLAY_POSITION"))
+                    Thread.Sleep(1000)
+                Loop
 
                 Exit Sub
                 'init packet handler

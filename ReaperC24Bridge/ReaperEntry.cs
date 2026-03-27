@@ -103,6 +103,15 @@ public static unsafe class ReaperEntry
             ReaperAPI.format_timepos            = GetDel<ReaperAPI.format_timeposDel>(getFn, "format_timepos");
             ReaperAPI.format_timepos2           = GetDel<ReaperAPI.format_timepos2Del>(getFn, "format_timepos2");
 
+            // Groups
+            ReaperAPI.GetSetTrackGroupMembershipEx = GetDel<ReaperAPI.GetSetTrackGroupMembershipExDel>(getFn, "GetSetTrackGroupMembershipEx");
+
+            //Channels
+            ReaperAPI.GetNumAudioInputs = GetDel<ReaperAPI.GetNumAudioInputsDel>(getFn, "GetNumAudioInputs");
+            ReaperAPI.GetNumAudioOutputs = GetDel<ReaperAPI.GetNumAudioOutputsDel>(getFn, "GetNumAudioOutputs");
+            ReaperAPI.GetInputChannelName = GetDel<ReaperAPI.GetInputChannelNameDel>(getFn, "GetInputChannelName");
+            ReaperAPI.GetOutputChannelName = GetDel<ReaperAPI.GetOutputChannelNameDel>(getFn, "GetOutputChannelName");
+
             // Pistes
             ReaperAPI.GetTrack                  = GetDel<ReaperAPI.GetTrackDel>(getFn, "GetTrack");
             ReaperAPI.GetMasterTrack            = GetDel<ReaperAPI.GetMasterTrackDel>(getFn, "GetMasterTrack");
@@ -117,6 +126,9 @@ public static unsafe class ReaperEntry
             ReaperAPI.SetTrackColor             = GetDel<ReaperAPI.SetTrackColorDel>(getFn, "SetTrackColor");
             ReaperAPI.GetTrackStateChunk        = GetDel<ReaperAPI.GetTrackStateChunkDel>(getFn, "GetTrackStateChunk");
             ReaperAPI.SetTrackStateChunk        = GetDel<ReaperAPI.SetTrackStateChunkDel>(getFn, "SetTrackStateChunk");
+            ReaperAPI.CreateTrackSend = GetDel<ReaperAPI.CreateTrackSendDel>(getFn, "CreateTrackSend");
+            ReaperAPI.RemoveTrackSend = GetDel<ReaperAPI.RemoveTrackSendDel>(getFn, "RemoveTrackSend");
+            ReaperAPI.AnyTrackSolo = GetDel<ReaperAPI.AnyTrackSoloDel>(getFn, "AnyTrackSolo");
 
             // Sélection
             ReaperAPI.CountSelectedTracks       = GetDel<ReaperAPI.CountSelectedTracksDel>(getFn, "CountSelectedTracks");
@@ -144,6 +156,10 @@ public static unsafe class ReaperEntry
             ReaperAPI.TrackFX_AddByName             = GetDel<ReaperAPI.TrackFX_AddByNameDel>(getFn, "TrackFX_AddByName");
             ReaperAPI.GetLastTouchedFX = GetDel<ReaperAPI.GetLastTouchedFXDel>(getFn, "GetLastTouchedFX");
             ReaperAPI.GetLastTouchedTrack = GetDel<ReaperAPI.GetLastTouchedTrackDel>(getFn, "GetLastTouchedTrack");
+            ReaperAPI.TrackFX_SetOpen = GetDel<ReaperAPI.TrackFX_SetOpenDel>(getFn, "TrackFX_SetOpen");
+            ReaperAPI.TrackFX_GetOpen = GetDel<ReaperAPI.TrackFX_GetOpenDel>(getFn, "TrackFX_GetOpen");
+            ReaperAPI.EnumInstalledFX = GetDel<ReaperAPI.EnumInstalledFXDel>(getFn, "EnumInstalledFX");
+            ReaperAPI.TrackFX_CopyToTrack = GetDel<ReaperAPI.TrackFX_CopyToTrackDel>(getFn, "TrackFX_CopyToTrack");
 
             // Items / Takes
             ReaperAPI.GetTrackNumMediaItems     = GetDel<ReaperAPI.GetTrackNumMediaItemsDel>(getFn, "GetTrackNumMediaItems");
@@ -210,13 +226,21 @@ public static unsafe class ReaperEntry
             ReaperAPI.MIDIEditor_SetSetting_int = GetDel<ReaperAPI.MIDIEditor_SetSetting_intDel>(getFn, "MIDIEditor_SetSetting_int");
 
             // Undo / UI
-            ReaperAPI.Undo_BeginBlock           = GetDel<ReaperAPI.Undo_BeginBlockDel>(getFn, "Undo_BeginBlock2");
-            ReaperAPI.Undo_EndBlock             = GetDel<ReaperAPI.Undo_EndBlockDel>(getFn, "Undo_EndBlock2");
-            ReaperAPI.Undo_CanUndo2             = GetDel<ReaperAPI.Undo_CanUndo2Del>(getFn, "Undo_CanUndo2");
-            ReaperAPI.Undo_CanRedo2             = GetDel<ReaperAPI.Undo_CanRedo2Del>(getFn, "Undo_CanRedo2");
+            ReaperAPI.Undo_DoUndo2        = GetDel<ReaperAPI.Undo_DoUndo2Del>(getFn, "Undo_DoUndo2");
+            ReaperAPI.Undo_DoRedo2        = GetDel<ReaperAPI.Undo_DoRedo2Del>(getFn, "Undo_DoRedo2");
+            ReaperAPI.Undo_BeginBlock     = GetDel<ReaperAPI.Undo_BeginBlockDel>(getFn, "Undo_BeginBlock");
+            ReaperAPI.Undo_EndBlock       = GetDel<ReaperAPI.Undo_EndBlockDel>(getFn, "Undo_EndBlock");
+            ReaperAPI.Undo_CanUndo2       = GetDel<ReaperAPI.Undo_CanUndo2Del>(getFn, "Undo_CanUndo2");
+            ReaperAPI.Undo_CanRedo2       = GetDel<ReaperAPI.Undo_CanRedo2Del>(getFn, "Undo_CanRedo2");
             ReaperAPI.UpdateTimeline            = GetDel<ReaperAPI.UpdateTimelineDel>(getFn, "UpdateTimeline");
             ReaperAPI.UpdateArrange             = GetDel<ReaperAPI.UpdateArrangeDel>(getFn, "UpdateArrange");
             ReaperAPI.TrackList_AdjustWindows   = GetDel<ReaperAPI.TrackList_AdjustWindowsDel>(getFn, "TrackList_AdjustWindows");
+
+
+            ReaperAPI.GetProjectStateChangeCount = GetDel<ReaperAPI.GetProjectStateChangeCountDel>(getFn, "GetProjectStateChangeCount");
+            ReaperAPI.IsProjectDirty = GetDel<ReaperAPI.IsProjectDirtyDel>(getFn, "IsProjectDirty");
+            ReaperAPI.Main_SaveProject = GetDel<ReaperAPI.Main_SaveProjectDel>(getFn, "Main_SaveProject");
+            ReaperAPI.SelectProjectInstance = GetDel<ReaperAPI.SelectProjectInstanceDel>(getFn, "SelectProjectInstance");
 
             return ReaperBridge.Initialize(rec, dllDir);
         }
