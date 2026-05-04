@@ -5,4 +5,7 @@
     <!-- ✅ Namespace racine explicite pour les types VB.NET sans déclaration Namespace -->
     <RootNamespace>DriverControl24.Extension</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DriverConfig\DriverConfig.vbproj" />
+  </ItemGroup>
 </Project>

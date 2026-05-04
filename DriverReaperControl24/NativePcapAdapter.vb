@@ -29,6 +29,29 @@ Namespace Control24
         Private _captureHandler As Action(Of Byte())
         Private disposedValue As Boolean
 
+        ''' <summary>
+        ''' Ajoute le dossier d'installation Npcap au PATH du processus avant
+        ''' tout appel P/Invoke vers wpcap.dll.
+        ''' Npcap installe wpcap.dll dans System32\Npcap\ qui n'est pas dans
+        ''' le PATH par défaut sous .NET 10.
+        ''' </summary>
+        Shared Sub New()
+            Dim npcapDir As String = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System), "Npcap")
+
+            If System.IO.Directory.Exists(npcapDir) Then
+                Dim currentPath As String = Environment.GetEnvironmentVariable("PATH")
+
+                If currentPath Is Nothing Then
+                    currentPath = ""
+                End If
+
+                If Not currentPath.Contains(npcapDir) Then
+                    Environment.SetEnvironmentVariable("PATH", npcapDir & ";" & currentPath)
+                End If
+            End If
+        End Sub
+
         ' bpf_program structure (for filter compilation)
         <StructLayout(LayoutKind.Sequential)>
         Private Structure BpfProgram

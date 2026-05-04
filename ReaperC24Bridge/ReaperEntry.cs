@@ -31,6 +31,8 @@ public static unsafe class ReaperEntry
         try { return r(p, info); } finally { Marshal.FreeHGlobal(p); }
     }
 
+   
+
     /// <summary>
     /// Lie un delegate de façon sécurisée : retourne null si la fonction est absente de Reaper.
     /// Évite ArgumentNullException sur les fonctions optionnelles ou spécifiques à une version.
@@ -46,7 +48,12 @@ public static unsafe class ReaperEntry
     {
         try
         {
-            if (rec == IntPtr.Zero) return 0;
+            if (rec == IntPtr.Zero)
+            {
+                // Reaper décharge le plugin — exécuter le nettoyage
+                ReaperBridge.Shutdown();
+                return 0;
+            }
 
             var sb = new StringBuilder(260);
             GetModuleFileNameW(hInstance, sb, 260);
@@ -197,6 +204,15 @@ public static unsafe class ReaperEntry
             ReaperAPI.CSurf_OnSendVolumeChange  = GetDel<ReaperAPI.CSurf_OnSendVolumeChangeDel>(getFn, "CSurf_OnSendVolumeChange");
             ReaperAPI.GetMixerScroll            = GetDel<ReaperAPI.GetMixerScrollDel>(getFn, "GetMixerScroll");
             ReaperAPI.SetMixerScroll            = GetDel<ReaperAPI.SetMixerScrollDel>(getFn, "SetMixerScroll");
+            ReaperAPI.GetTrackUIVolPan = GetDel<ReaperAPI.GetTrackUIVolPanDel>(getFn, "GetTrackUIVolPan");
+            ReaperAPI.GetTrackSendUIVolPan = GetDel<ReaperAPI.GetTrackSendUIVolPanDel>(getFn, "GetTrackSendUIVolPan");
+            ReaperAPI.SetTrackSendUIVol = GetDel<ReaperAPI.SetTrackSendUIVolDel>(getFn, "SetTrackSendUIVol");
+            ReaperAPI.SetTrackUIPan = GetDel<ReaperAPI.SetTrackUIPanDel>(getFn, "SetTrackUIPan");
+            ReaperAPI.GetTrackUIMute = GetDel<ReaperAPI.GetTrackUIMuteDel>(getFn, "GetTrackUIMute");
+            ReaperAPI.SetTrackUIMute = GetDel<ReaperAPI.SetTrackUIMuteDel>(getFn, "SetTrackUIMute");
+            ReaperAPI.GetTrackSendUIMute = GetDel<ReaperAPI.GetTrackSendUIMuteDel>(getFn, "GetTrackSendUIMute");
+            ReaperAPI.ToggleTrackSendUIMute = GetDel<ReaperAPI.ToggleTrackSendUIMuteDel>(getFn, "ToggleTrackSendUIMute");
+            ReaperAPI.SetTrackUIVolume = GetDel<ReaperAPI.SetTrackUIVolumeDel>(getFn, "SetTrackUIVolume");
 
             // Volume / Peak
             ReaperAPI.Track_GetPeakInfo         = GetDel<ReaperAPI.Track_GetPeakInfoDel>(getFn, "Track_GetPeakInfo");
@@ -218,6 +234,14 @@ public static unsafe class ReaperEntry
             ReaperAPI.InsertEnvelopePoint       = GetDel<ReaperAPI.InsertEnvelopePointDel>(getFn, "InsertEnvelopePoint");
             ReaperAPI.DeleteEnvelopePointRange  = GetDel<ReaperAPI.DeleteEnvelopePointRangeDel>(getFn, "DeleteEnvelopePointRange");
             ReaperAPI.Envelope_SortPoints       = GetDel<ReaperAPI.Envelope_SortPointsDel>(getFn, "Envelope_SortPoints");
+            ReaperAPI.Envelope_Evaluate = GetDel<ReaperAPI.Envelope_EvaluateDel>(getFn, "Envelope_Evaluate");
+            ReaperAPI.GetSetEnvelopeInfo_Value = GetDel<ReaperAPI.GetSetEnvelopeInfo_ValueDel>(getFn, "GetSetEnvelopeInfo_Value");
+            ReaperAPI.GetSetEnvelopeInfo_String = GetDel<ReaperAPI.GetSetEnvelopeInfo_StringDel>(getFn, "GetSetEnvelopeInfo_String");
+            ReaperAPI.GetEnvelopeInfo_Value = GetDel<ReaperAPI.GetEnvelopeInfo_ValueDel>(getFn, "GetEnvelopeInfo_Value");
+            ReaperAPI.GetTrackStateChunk = GetDel<ReaperAPI.GetTrackStateChunkDel>(getFn, "GetTrackStateChunk");
+            ReaperAPI.SetTrackStateChunk = GetDel<ReaperAPI.SetTrackStateChunkDel>(getFn, "SetTrackStateChunk");
+            ReaperAPI.GetEnvelopeStateChunk = GetDel<ReaperAPI.GetEnvelopeStateChunkDel>(getFn, "GetEnvelopeStateChunk");
+            ReaperAPI.SetEnvelopeStateChunk = GetDel<ReaperAPI.SetEnvelopeStateChunkDel>(getFn, "SetEnvelopeStateChunk");
 
             // MIDI Editor
             ReaperAPI.MIDIEditor_GetActive      = GetDel<ReaperAPI.MIDIEditor_GetActiveDel>(getFn, "MIDIEditor_GetActive");

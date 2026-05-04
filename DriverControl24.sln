@@ -21,6 +21,8 @@ Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "DriverReaperControl24", "Dr
 EndProject
 Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "Launcher", "Launcher\Launcher.vbproj", "{7AA6DEDB-4233-4987-9772-49E706FAB90B}"
 EndProject
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "DriverConfig", "DriverConfig\DriverConfig.vbproj", "{160262B6-EC5B-4198-837A-ACE0E62B4A9D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,10 @@ Global
 		{7AA6DEDB-4233-4987-9772-49E706FAB90B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AA6DEDB-4233-4987-9772-49E706FAB90B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AA6DEDB-4233-4987-9772-49E706FAB90B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{160262B6-EC5B-4198-837A-ACE0E62B4A9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{160262B6-EC5B-4198-837A-ACE0E62B4A9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{160262B6-EC5B-4198-837A-ACE0E62B4A9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{160262B6-EC5B-4198-837A-ACE0E62B4A9D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

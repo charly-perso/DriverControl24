@@ -218,7 +218,7 @@ Public Class ReaperAPI
     Public Shared TrackFX_GetParam As TrackFX_GetParamDel
 
     ''' <summary>Modifie la valeur brute d'un paramètre.</summary>
-    Public Delegate Sub TrackFX_SetParamDel(tr As IntPtr, fx As Integer, param As Integer, val As Double)
+    Public Delegate Function TrackFX_SetParamDel(tr As IntPtr, fx As Integer, param As Integer, val As Double) As Boolean
     Public Shared TrackFX_SetParam As TrackFX_SetParamDel
 
     ''' <summary>Nom d'un paramètre FX dans buf.</summary>
@@ -359,6 +359,104 @@ Public Class ReaperAPI
     Public Delegate Function SetMixerScrollDel(leftmosttrack As IntPtr) As IntPtr
     Public Shared SetMixerScroll As SetMixerScrollDel
 
+    ''' <summary>
+    ''' Retourne le volume et le pan POST-automation affichés dans l'UI Reaper.
+    ''' C'est la seule fonction qui reflète la valeur réelle du fader en lecture.
+    ''' volumeOut : 0..4  (1.0 = 0 dB)   panOut : -1..1
+    ''' </summary>
+    Public Delegate Function GetTrackUIVolPanDel(track As IntPtr,
+                                                 ByRef volumeOut As Double,
+                                                 ByRef panOut As Double) As Boolean
+    Public Shared GetTrackUIVolPan As GetTrackUIVolPanDel
+
+    ''' <summary>
+    ''' Retourne le volume et le pan POST-automation d'un envoi (catégorie 0 uniquement).
+    ''' Équivalent de <see cref="GetTrackUIVolPan"/> mais pour les envois.
+    ''' volumeOut : 0..4  (1.0 = 0 dB)   panOut : -1..1
+    ''' Retourne False si l'index est hors limites.
+    ''' </summary>
+    Public Delegate Function GetTrackSendUIVolPanDel(track As IntPtr,
+                                                      sendIndex As Integer,
+                                                      ByRef volumeOut As Double,
+                                                      ByRef panOut As Double) As Boolean
+    Public Shared GetTrackSendUIVolPan As GetTrackSendUIVolPanDel
+    ''' <summary>
+    ''' Écrit le volume d'un envoi au niveau UI (post-automation, category=0 uniquement).
+    ''' Pendant le lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
+    ''' vol    : 0..4  (1.0 = 0 dB)
+    ''' isend  : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' </summary>
+    Public Delegate Function SetTrackSendUIVolDel(track As IntPtr,
+                                                   sendIndex As Integer,
+                                                   vol As Double,
+                                                   isend As Integer) As Boolean
+    Public Shared SetTrackSendUIVol As SetTrackSendUIVolDel
+
+
+    ''' <summary>
+    ''' Écrit le pan d'une piste au niveau UI.
+    ''' Pendant la lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
+    ''' pan   : -1..1  (-1=Gauche  0=Centre  1=Droite)
+    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' </summary>
+    Public Delegate Function SetTrackUIPanDel(track As IntPtr,
+                                               pan As Double,
+                                               isend As Integer) As Boolean
+    Public Shared SetTrackUIPan As SetTrackUIPanDel
+
+    ''' <summary>
+    ''' Retourne l'état mute POST-automation d'une piste (valeur affichée dans l'UI Reaper).
+    ''' Équivalent de <see cref="GetTrackUIVolPan"/> mais pour le mute.
+    ''' muteOut : True=muet  False=actif
+    ''' Retourne False si l'index est hors limites.
+    ''' </summary>
+    Public Delegate Function GetTrackUIMuteDel(track As IntPtr,
+                                                ByRef muteOut As Boolean) As Boolean
+    Public Shared GetTrackUIMute As GetTrackUIMuteDel
+    ''' <summary>
+    ''' Écrit l'état mute d'une piste au niveau UI.
+    ''' Pendant la lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
+    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' </summary>
+    Public Delegate Function SetTrackUIMuteDel(track As IntPtr,
+                                                mute As Boolean,
+                                                isend As Integer) As Boolean
+    Public Shared SetTrackUIMute As SetTrackUIMuteDel
+    ''' <summary>
+    ''' Retourne l'état mute POST-automation d'un envoi (category=0 uniquement).
+    ''' Équivalent de <see cref="GetTrackUIMute"/> mais pour les envois.
+    ''' muteOut : True=muet  False=actif
+    ''' Retourne False si l'index est hors limites.
+    ''' </summary>
+    Public Delegate Function GetTrackSendUIMuteDel(track As IntPtr,
+                                                    sendIndex As Integer,
+                                                    ByRef muteOut As Boolean) As Boolean
+    Public Shared GetTrackSendUIMute As GetTrackSendUIMuteDel
+
+    ''' <summary>
+    ''' Bascule l'état mute d'un envoi au niveau UI en un seul appel atomique.
+    ''' Préférer cette fonction à Get+Set pour éviter la race condition.
+    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' Retourne True si la valeur a été appliquée.
+    ''' </summary>
+    Public Delegate Function ToggleTrackSendUIMuteDel(track As IntPtr,
+                                                       sendIndex As Integer,
+                                                       isend As Integer) As Boolean
+    Public Shared ToggleTrackSendUIMute As ToggleTrackSendUIMuteDel
+
+
+    ''' <summary>
+    ''' Écrit le volume d'une piste au niveau UI (post-automation, surface-safe).
+    ''' Pendant la lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
+    ''' vol   : 0..4  (1.0 = 0 dB)
+    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' </summary>
+    Public Delegate Function SetTrackUIVolumeDel(track As IntPtr,
+                                                  vol As Double,
+                                                  isend As Integer) As Boolean
+    Public Shared SetTrackUIVolume As SetTrackUIVolumeDel
+
+
     ' ═══════════════════════════════════════════════════════════════
     '  UNDO / UI
     ' ═══════════════════════════════════════════════════════════════
@@ -395,11 +493,27 @@ Public Class ReaperAPI
     Public Delegate Function GetMainHwndDel() As IntPtr
     Public Shared GetMainHwnd As GetMainHwndDel
 
-    ''' <summary>Boîte de message (type: 0=OK 1=OKCancel 3=YesNoCancel 4=YesNo). Retourne: 1=OK 2=Cancel 6=Yes 7=No.</summary>
+    ' ══════════════════════════════════════════════════════════════
+    '  BOÎTE DE DIALOGUE
+    ' ══════════════════════════════════════════════════════════════
+
+    ''' <summary>
+    ''' Affiche une boîte de dialogue modale dans Reaper.
+    ''' <list type="table">
+    ''' <item><term>type 0</term><description>OK</description></item>
+    ''' <item><term>type 1</term><description>OK / Annuler</description></item>
+    ''' <item><term>type 2</term><description>Abandonner / Réessayer / Ignorer</description></item>
+    ''' <item><term>type 3</term><description>Oui / Non / Annuler</description></item>
+    ''' <item><term>type 4</term><description>Oui / Non</description></item>
+    ''' <item><term>type 5</term><description>Réessayer / Annuler</description></item>
+    ''' </list>
+    ''' Valeurs de retour :
+    ''' 1=OK  2=Annuler  3=Abandonner  4=Réessayer  5=Ignorer  6=Oui  7=Non
+    ''' </summary>
     Public Delegate Function ShowMessageBoxDel(
         <MarshalAs(UnmanagedType.LPStr)> msg As String,
         <MarshalAs(UnmanagedType.LPStr)> title As String,
-        typ As Integer) As Integer
+        type As Integer) As Integer
     Public Shared ShowMessageBox As ShowMessageBoxDel
 
     ' ═══════════════════════════════════════════════════════════════
@@ -624,13 +738,14 @@ Public Class ReaperAPI
     ''' <summary>
     ''' Énumère les FX installés dans Reaper.
     ''' Retourne False quand l'index dépasse la liste.
-    ''' typebuf : "VST"  "VST3"  "AU"  "JS"  "CLAP"…
-    ''' namebuf : nom du plugin tel qu'affiché dans Reaper.
+    ''' nameOut  : nom affiché du plugin ex: "FabFilter Pro-Q 3 (FabFilter)".
+    ''' identOut : identifiant complet ex: "VST3: FabFilter Pro-Q 3 (FabFilter)".
+    '''            Correspond à la valeur à passer à TrackFX_AddByName.
     ''' </summary>
     Public Delegate Function EnumInstalledFXDel(
-        i As Integer,
-        typebuf As IntPtr, typebuf_sz As Integer,
-        namebuf As IntPtr, namebuf_sz As Integer) As Boolean
+        index As Integer,
+        ByRef nameOut As IntPtr,
+        ByRef identOut As IntPtr) As Boolean
     Public Shared EnumInstalledFX As EnumInstalledFXDel
     ' ══════════════════════════════════════════════════════════════════════════
     '  GROUPES DE PISTE
@@ -665,8 +780,14 @@ Public Class ReaperAPI
     Public Delegate Function GetFXEnvelopeDel(track As IntPtr, fxindex As Integer, parameterindex As Integer, create As Boolean) As IntPtr
     Public Shared GetFXEnvelope As GetFXEnvelopeDel
 
-    ''' <summary>Nom de l'enveloppe dans buf.</summary>
-    Public Delegate Function GetEnvelopeNameDel(env As IntPtr, buf As IntPtr, bufsz As Integer) As Boolean
+    ''' <summary>
+    ''' Copie le nom affiché d'une enveloppe dans <paramref name="buf"/>.
+    ''' Retourne True si le nom a été copié avec succès.
+    ''' env : TrackEnvelope* obtenu via <see cref="GetTrackEnvelope"/>.
+    ''' </summary>
+    Public Delegate Function GetEnvelopeNameDel(env As IntPtr,
+                                                 buf As System.Text.StringBuilder,
+                                                 buflen As Integer) As Boolean
     Public Shared GetEnvelopeName As GetEnvelopeNameDel
 
     ''' <summary>Nombre de points dans une enveloppe.</summary>
@@ -681,11 +802,23 @@ Public Class ReaperAPI
         ByRef selectedOut As Boolean) As Boolean
     Public Shared GetEnvelopePoint As GetEnvelopePointDel
 
-    ''' <summary>Insère un point d'enveloppe.</summary>
+    ''' <summary>
+    ''' Insère un point dans une enveloppe.
+    ''' ⚠️  <paramref name="noSortIn"/> est un <c>bool*</c> dans l'API native (paramètre optionnel).
+    '''      Passer <see cref="IntPtr.Zero"/> = tri normal après l'insertion.
+    '''      Passer un pointeur vers <c>True</c> = pas de tri (mode batch — appeler
+    '''      <see cref="Envelope_SortPoints"/> manuellement après le batch).
+    '''      Ne jamais passer True/False directement : Reaper interprèterait 0 ou 1
+    '''      comme une adresse mémoire et crasherait immédiatement.
+    ''' </summary>
     Public Delegate Function InsertEnvelopePointDel(
-        envelope As IntPtr, time As Double, value As Double,
-        shape As Integer, tension As Double,
-        selected As Boolean, noSortIn As Boolean) As Boolean
+            envelope As IntPtr,
+            time As Double,
+            value As Double,
+            shape As Integer,
+            tension As Double,
+            selected As Boolean,
+            noSortIn As IntPtr) As Boolean
     Public Shared InsertEnvelopePoint As InsertEnvelopePointDel
 
     ''' <summary>Supprime les points dans un intervalle de temps.</summary>
@@ -696,6 +829,99 @@ Public Class ReaperAPI
     ''' <summary>Trie les points d'enveloppe après modification.</summary>
     Public Delegate Function Envelope_SortPointsDel(envelope As IntPtr) As Boolean
     Public Shared Envelope_SortPoints As Envelope_SortPointsDel
+
+    ''' <summary>
+    ''' Évalue une enveloppe à une position temporelle.
+    ''' valueOut    : valeur interpolée à <c>time</c>.
+    ''' dVdSOut     : dérivée première (vitesse de changement).
+    ''' ddVdSOut    : dérivée seconde.
+    ''' dddVdSOut   : dérivée troisième.
+    ''' Passer samplerate=0 et samplesRequested=0 si seule valueOut est nécessaire.
+    ''' </summary>
+    Public Delegate Function Envelope_EvaluateDel(envelope As IntPtr,
+                                                   time As Double,
+                                                   samplerate As Double,
+                                                   samplesRequested As Integer,
+                                                   ByRef valueOut As Double,
+                                                   ByRef dVdSOut As Double,
+                                                   ByRef ddVdSOut As Double,
+                                                   ByRef dddVdSOut As Double) As Integer
+    Public Shared Envelope_Evaluate As Envelope_EvaluateDel
+
+    ''' <summary>
+    ''' Lit ou écrit une propriété d'enveloppe par nom.
+    ''' Propriétés disponibles :
+    ''' ACTIVE, VISIBLE, ARMED, IN_LANE (bool 0/1),
+    ''' LANEHEIGHT, DEFSHAPE, AUTO_ITEMS_OPTIONS (int),
+    ''' MIN_VALUE, MAX_VALUE, CENTER_VALUE, FADER_SCALING (lecture seule).
+    ''' setNewValue = False → lecture  True → écriture.
+    ''' Retourne la valeur courante (lecture) ou la nouvelle valeur (écriture).
+    ''' </summary>
+    Public Delegate Function GetSetEnvelopeInfo_ValueDel(
+        env As IntPtr,
+        <MarshalAs(UnmanagedType.LPStr)> parmname As String,
+        newvalue As Double,
+        setNewValue As Boolean) As Double
+    Public Shared GetSetEnvelopeInfo_Value As GetSetEnvelopeInfo_ValueDel
+
+    ''' <summary>
+    ''' Lit ou écrit une propriété de type chaîne d'une enveloppe.
+    ''' Paramètres courants :
+    ''' "GUID"      → {XXXXXXXX-…} identifiant stable de l'enveloppe (lecture seule).
+    ''' "P_EXT:xxx" → état d'extension personnalisé clé/valeur (lecture/écriture).
+    ''' stringNeedBig : buffer pré-alloué pour la lecture, ou chaîne source pour l'écriture.
+    ''' setNewValue   : False=lire  True=écrire.
+    ''' Retourne True si la propriété a été traitée avec succès.
+    ''' </summary>
+    Public Delegate Function GetSetEnvelopeInfo_StringDel(
+            env As IntPtr,
+            <MarshalAs(UnmanagedType.LPStr)> parmname As String,
+            stringNeedBig As IntPtr,
+            stringNeedBig_sz As Integer,
+            setNewValue As Boolean) As Boolean
+    Public Shared GetSetEnvelopeInfo_String As GetSetEnvelopeInfo_StringDel
+
+    ''' <summary>
+    ''' Lit une propriété numérique d'une enveloppe (lecture seule).
+    ''' Alternative simplifiée à <see cref="GetSetEnvelopeInfo_Value"/> —
+    ''' ne prend pas de valeur en entrée ni de flag setNewValue.
+    ''' Paramètres courants :
+    ''' "ACTIVE" "VISIBLE" "ARMED" "IN_LANE" "LANEHEIGHT" "DEFSHAPE"
+    ''' "MINVALUE" "MAXVALUE" "CENTERVALUE" "FADERSCALING"
+    ''' "AUTO_ITEMS_OPTIONS" "I_SEND_IDX".
+    ''' </summary>
+    Public Delegate Function GetEnvelopeInfo_ValueDel(
+            env As IntPtr,
+            <MarshalAs(UnmanagedType.LPStr)> parmname As String) As Double
+    Public Shared GetEnvelopeInfo_Value As GetEnvelopeInfo_ValueDel
+
+    ' ── Enveloppe — State Chunk ───────────────────────────────────────────────
+
+    ''' <summary>
+    ''' Sérialise l'état complet d'une enveloppe (format .rpp) dans un buffer.
+    ''' strNeedBig  : buffer pré-alloué par l'appelant (taille typique : 65 536).
+    ''' isundopoint : True pour créer un point d'annulation Reaper.
+    ''' Retourne True si réussi.
+    ''' Analogue de <see cref="GetTrackStateChunkDel"/> pour les enveloppes.
+    ''' </summary>
+    Public Delegate Function GetEnvelopeStateChunkDel(
+            env As IntPtr,
+            strNeedBig As IntPtr,
+            strNeedBig_sz As Integer,
+            isundopoint As Boolean) As Boolean
+    Public Shared GetEnvelopeStateChunk As GetEnvelopeStateChunkDel
+
+    ''' <summary>
+    ''' Restaure l'état d'une enveloppe depuis un state chunk .rpp.
+    ''' isundopoint : True pour créer un point d'annulation Reaper.
+    ''' Retourne True si réussi.
+    ''' Analogue de <see cref="SetTrackStateChunkDel"/> pour les enveloppes.
+    ''' </summary>
+    Public Delegate Function SetEnvelopeStateChunkDel(
+            env As IntPtr,
+            <MarshalAs(UnmanagedType.LPStr)> str As String,
+            isundopoint As Boolean) As Boolean
+    Public Shared SetEnvelopeStateChunk As SetEnvelopeStateChunkDel
 
     ' ══════════════════════════════════════════════════════════════
     '  MIDI EDITOR
@@ -817,4 +1043,7 @@ Public Class ReaperAPI
     ''' <summary>Active un projet ouvert dans Reaper (le met au premier plan).</summary>
     Public Delegate Sub SelectProjectInstanceDel(proj As IntPtr)
     Public Shared SelectProjectInstance As SelectProjectInstanceDel
+
+
+
 End Class

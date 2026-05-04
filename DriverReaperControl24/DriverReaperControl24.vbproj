@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DriverConfig\DriverConfig.vbproj" />
     <ProjectReference Include="..\DriverControl24.Extension\DriverControl24.Extension.vbproj" />
   </ItemGroup>
 
