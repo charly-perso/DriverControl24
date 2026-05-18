@@ -252,6 +252,9 @@ Namespace Control24
                 End Get
                 Set
                     _IsBlinking = Value
+                    If Value = False Then
+                        Led = False
+                    End If
                 End Set
             End Property
 
@@ -384,18 +387,34 @@ Namespace Control24
         ''' et l'affichage 7 segments (<see cref="Commands.Clock_Cmd"/>).
         ''' Composant d'affichage uniquement — aucune commande reçue depuis le hardware.
         ''' </summary>
+        ''' <summary>
+        ''' Pilote l'affichage horloge du Control24.
+        ''' Regroupe les LEDs de mode (<see cref="Commands.ClockLed_Cmd"/>)
+        ''' et l'affichage 7 segments (<see cref="Commands.Clock_Cmd"/>).
+        ''' Composant d'affichage uniquement — aucune commande reçue depuis le hardware.
+        ''' </summary>
         Public Class C24_Clock
             Inherits C24_Component
 
             Private ReadOnly _ClockLedCmd As Commands.ClockLed_Cmd
             Private ReadOnly _ClockCmd As Commands.Clock_Cmd
-            Private _ClockMode As Commands.ClockModes = Commands.ClockModes.Time
+            Private _ClockMode As Commands.ClockModes = Commands.ClockModes.HourMinuteSecondMS
             Private _Clock_Value As String = ""
+
+            ' ── Constantes FeetFrames ─────────────────────────────────────────
+            ''' <summary>Fréquence d'images pour le mode FeetFrames (35mm = 24 fps).</summary>
+            Public Const FeetFramesFps As Integer = 24
+            ''' <summary>Nombre de frames par foot (35mm = 16 frames/foot).</summary>
+            Public Const FramesPerFoot As Integer = 16
+
+            ' ── Constantes HourMinuteSecondFrames ─────────────────────────────
+            ''' <summary>Fréquence d'images pour le mode HourMinuteSecondFrames.</summary>
+            Public Const HmsfFps As Integer = 30
 
             ' ── Propriétés ────────────────────────────────────────────────────
 
             ''' <summary>
-            ''' Mode d'affichage de l'horloge (Time / Frame / Sample / Beat).
+            ''' Mode d'affichage de l'horloge.
             ''' Met à jour simultanément les LEDs de mode et les points des séparateurs.
             ''' </summary>
             Public Property ClockMode As Commands.ClockModes
@@ -439,9 +458,7 @@ Namespace Control24
 
             ' ── Constructeur ──────────────────────────────────────────────────
 
-            ''' <summary>
-            ''' Crée le composant horloge du Control24.
-            ''' </summary>
+            ''' <summary>Crée le composant horloge du Control24.</summary>
             ''' <param name="Name">Nom unique du composant.</param>
             Public Sub New(Name As String)
                 _Name = Name
@@ -457,13 +474,128 @@ Namespace Control24
             ''' <summary>
             ''' Met à jour simultanément le mode et la valeur affichée.
             ''' </summary>
-            ''' <param name="mode">Mode d'affichage (Time / Frame / Sample / Beat).</param>
+            ''' <param name="mode">Mode d'affichage.</param>
             ''' <param name="value">Valeur à afficher sur les 8 digits.</param>
             Public Sub SetClock(mode As Commands.ClockModes, value As String)
                 ClockMode = mode
                 Clock_Value = value
             End Sub
+            ''' <summary>
+            ''' Remplace les zéros de tête dans chaque groupe de digits par des espaces,
+            ''' .
+            ''' </summary>
+            ''' <param name="value">Chaîne de 8 digits.</param>
+            ''' <param name="groups">Tailles des groupes (somme doit être = 8).</param>
+            Private Shared Function TrimLeadingZerosInGroups(value As String, groups As Integer()) As String
+                Dim result As Char() = value.ToCharArray()
+                Dim pos As Integer = 0
+                For Each groupSize In groups
+                    ' ── Remplace les zéros de tête ──
+                    For i = pos To pos + groupSize - 1
+                        If result(i) = "0"c Then
+                            result(i) = " "c
+                        Else
+                            Exit For
+                        End If
+                    Next
+                    pos += groupSize
+                Next
+                Return New String(result)
+            End Function
+            ''' <summary>
+            ''' Convertit un temps en millisecondes dans le format sélectionné par
+            ''' <see cref="ClockMode"/> et met à jour l'affichage via <see cref="Clock_Value"/>.
+            ''' <para>
+            ''' Formats produits (8 digits, séparateurs gérés par le hardware) :
+            ''' <list type="table">
+            ''' <item><term>HourMinuteSecondMS</term>
+            '''       <description>HHMMSSCC — CC = centisecondes (ms ÷ 10)</description></item>
+            ''' <item><term>HourMinuteSecondFrames</term>
+            '''       <description>HHMMSSFF — FF = frames à <see cref="HmsfFps"/> fps (défaut 30)</description></item>
+            ''' <item><term>FeetFrames</term>
+            '''       <description>FFFFFFNN — FFFFFF = feet, NN = frames à <see cref="FeetFramesFps"/> fps / <see cref="FramesPerFoot"/> frames/foot</description></item>
+            ''' <item><term>BarBeats</term>
+            '''       <description>BBBBBbTT — BBBBB = mesures, b = temps (1-based), TT = ticks 0-99</description></item>
+            ''' </list>
+            ''' </para>
+            ''' </summary>
+            ''' <param name="ms">Position en millisecondes (valeur positive).</param>
+            ''' <param name="bpm">
+            ''' Tempo en BPM, utilisé uniquement en mode <see cref="Commands.ClockModes.BarBeats"/>.
+            ''' Défaut : 120.
+            ''' </param>
+            ''' <param name="beatsPerBar">
+            ''' Nombre de temps par mesure, utilisé uniquement en mode <see cref="Commands.ClockModes.BarBeats"/>.
+            ''' Défaut : 4.
+            ''' </param>
+            Public Sub Set_Time_Ms(ms As Long,
+                                               Optional bpm As Integer = 120,
+                                               Optional beatsPerBar As Integer = 4)
+                Dim totalMs As Long = Math.Max(0, ms)
+                Dim value As String
 
+                Select Case _ClockMode
+
+                    Case Commands.ClockModes.HourMinuteSecondMS
+                        ' ── H MM SS mmm ─────────────────────────────────────────────
+                        Dim h As Integer = CInt(totalMs \ 3600000L)
+                        Dim m As Integer = CInt((totalMs Mod 3600000L) \ 60000L)
+                        Dim s As Integer = CInt((totalMs Mod 60000L) \ 1000L)
+                        Dim ms3 As Integer = CInt(totalMs Mod 1000L)
+                        value = h.ToString("D1") & m.ToString("D2") & s.ToString("D2") & ms3.ToString("D3")
+
+                    Case Commands.ClockModes.HourMinuteSecondFrames
+                        ' ── HH MM SS FF (HmsfFps fps) ────────────────────────────────
+                        Dim h As Integer = CInt(totalMs \ 3600000L)
+                        Dim m As Integer = CInt((totalMs Mod 3600000L) \ 60000L)
+                        Dim s As Integer = CInt((totalMs Mod 60000L) \ 1000L)
+                        Dim ff As Integer = CInt((totalMs Mod 1000L) * CLng(HmsfFps) \ 1000L)
+                        value = h.ToString("D2") & m.ToString("D2") & s.ToString("D2") & ff.ToString("D2")
+
+                    Case Commands.ClockModes.FeetFrames
+                        ' ── FFFFFF NN (35mm : FeetFramesFps fps, FramesPerFoot frames/foot) ──
+                        Dim totalFrames As Long = totalMs * CLng(FeetFramesFps) \ 1000L
+                        Dim feet As Long = totalFrames \ CLng(FramesPerFoot)
+                        Dim frames As Integer = CInt(totalFrames Mod CLng(FramesPerFoot))
+                        value = (feet Mod 1000000L).ToString("D6") & frames.ToString("D2")
+
+                    Case Commands.ClockModes.BarBeats
+                        ' ── BBBBB b TT (bpm, beatsPerBar) ───────────────────────────
+                        Dim safeBpm As Integer = Math.Max(1, bpm)
+                        Dim safeBpB As Integer = Math.Max(1, beatsPerBar)
+                        Dim msPerBeat As Long = 60000L \ CLng(safeBpm)
+                        Dim totalBeats As Long = totalMs \ msPerBeat
+                        Dim bar As Long = totalBeats \ CLng(safeBpB) + 1L
+                        Dim beat As Integer = CInt(totalBeats Mod CLng(safeBpB)) + 1
+                        Dim tick As Integer = CInt((totalMs Mod msPerBeat) * 100L \ msPerBeat)
+                        value = (bar Mod 100000L).ToString("D5") & beat.ToString("D1") & tick.ToString("D2")
+
+                    Case Else
+                        value = "        "
+
+                End Select
+
+                ' ── Tronque par la gauche si débordement (ex : HH > 99) ──────
+                If value.Length > 8 Then
+                    value = value.Substring(value.Length - 8, 8)
+                Else
+                    value = value.PadLeft(8)
+                End If
+
+                ' ── Remplace les zéros de tête par des espaces dans chaque groupe ──
+                Select Case _ClockMode
+                    Case Commands.ClockModes.HourMinuteSecondMS
+                        value = TrimLeadingZerosInGroups(value, {1, 2, 2, 3})
+                    Case Commands.ClockModes.HourMinuteSecondFrames
+                        value = TrimLeadingZerosInGroups(value, {2, 2, 2, 2})
+                    Case Commands.ClockModes.FeetFrames
+                        value = TrimLeadingZerosInGroups(value, {6, 2})
+                    Case Commands.ClockModes.BarBeats
+                        value = TrimLeadingZerosInGroups(value, {5, 1, 2})
+                End Select
+
+                Clock_Value = value
+            End Sub
         End Class
         Public Class C24_ScribbleStrip
             Inherits C24_Component
@@ -471,6 +603,12 @@ Namespace Control24
             Private _Text As String
             Private _ScribbleStripCmd As ScribbleStrip_Cmd
             Private _Value As Double
+
+            ' ── Affichage temporaire ──────────────────────────────────────────
+            Private _OriginalText As String = String.Empty
+            Private _IsShowingTemp As Boolean = False
+            Private _TempTimer As System.Threading.Timer
+            Private Const TempDisplayMs As Integer = 2000
 
             Public Property Text As String
                 Get
@@ -480,9 +618,9 @@ Namespace Control24
                 Set
                     _Text = Value
                     _ScribbleStripCmd.Text = _Text
-
                 End Set
             End Property
+
             Public Property Value As Double
                 Get
                     _Value = _ScribbleStripCmd.Value
@@ -491,7 +629,6 @@ Namespace Control24
                 Set
                     _Value = Value
                     _ScribbleStripCmd.Value = _Value
-
                 End Set
             End Property
 
@@ -501,12 +638,42 @@ Namespace Control24
                 End Get
             End Property
 
+            ''' <summary>
+            ''' Affiche un texte temporaire pendant <see cref="TempDisplayMs"/> ms,
+            ''' puis restaure automatiquement le texte précédent.
+            ''' Si un affichage temporaire est déjà en cours, le timer est réarmé
+            ''' et le texte temporaire est mis à jour.
+            ''' </summary>
+            ''' <param name="tempText">Texte à afficher temporairement (max 4 caractères).</param>
+            Public Sub ShowTempText(tempText As String)
+                If Not _IsShowingTemp Then
+                    _OriginalText = _ScribbleStripCmd.Text
+                    _IsShowingTemp = True
+                End If
+
+                _ScribbleStripCmd.Text = tempText
+                _TempTimer.Change(TempDisplayMs, System.Threading.Timeout.Infinite)
+            End Sub
+
+            ''' <summary>Restaure le texte original après expiration du timer.</summary>
+            Private Sub OnTempTimer(state As Object)
+                _IsShowingTemp = False
+                _ScribbleStripCmd.Text = _OriginalText
+            End Sub
+
             Sub New(Name As String, Track_Nb As Integer)
                 _Name = Name
                 _ScribbleStripCmd = New ScribbleStrip_Cmd(Track_Nb)
                 C24_SendingCommands.Add(_ScribbleStripCmd)
                 Me._Component_Id = _ScribbleStripCmd.Cmd_Id
+
+                _TempTimer = New System.Threading.Timer(
+                    AddressOf OnTempTimer,
+                    Nothing,
+                    System.Threading.Timeout.Infinite,
+                    System.Threading.Timeout.Infinite)
             End Sub
+
         End Class
         Public Class C24_Vpot
             Inherits C24_Component
@@ -577,6 +744,7 @@ Namespace Control24
 
             Public Enum VpotModeType
                 Pan
+                VolumeLinear
                 Value
                 TextList
             End Enum
@@ -604,15 +772,30 @@ Namespace Control24
                 End Get
                 Set
                     _VpotMode = Value
-                    If Value = VpotModeType.Pan Then
-                        LedMode = LedModeType.Central_Dot
-                        _Min_Value = -1
-                        _Max_Value = 1
-                    Else
-                        LedMode = LedModeType.Dot
-                        _Min_Value = 0
-                        _Max_Value = 1
-                    End If
+                    Select Case VpotMode
+                        Case VpotModeType.Pan
+                            LedMode = LedModeType.Central_Dot
+                            _Min_Value = -1
+                            _Max_Value = 1
+                        Case VpotModeType.VolumeLinear
+                            LedMode = LedModeType.Gauge
+                            _Min_Value = 0
+                            _Max_Value = 2
+                        Case VpotModeType.TextList
+                            LedMode = LedModeType.Dot
+                            _Min_Value = 0
+                            ' ── Max_Value sera mis à jour au premier accès ou
+                            '    via SelectedItem_Index dès que la liste est assignée
+                            If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                                _Max_Value = Value_TextList.Count - 1
+                            Else
+                                _Max_Value = 0
+                            End If
+                        Case Else
+                            LedMode = LedModeType.Dot
+                            _Min_Value = 0
+                            _Max_Value = 1
+                    End Select
                 End Set
             End Property
 
@@ -714,15 +897,24 @@ Namespace Control24
                 Set
                     _SelectedItem_Index = Value
                     RefreshSelectedItem()
+                    ' ── Synchronise _Value et les LEDs ───────────────────────
+                    If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                        _Min_Value = 0
+                        _Max_Value = Value_TextList.Count - 1
+                        _Value = _SelectedItem_Index
+                        RefreshLedStatus()
+                    End If
                 End Set
             End Property
+
             Private Sub RefreshSelectedItem()
-                'display SelectedItem on scribble
-                If Value_TextList IsNot Nothing AndAlso SelectedItem_Index < Value_TextList.Count Then
-                    Dim item_text = Value_TextList.Item(SelectedItem_Index).item
-                    Dim item_checked = Value_TextList.Item(SelectedItem_Index).Checked
+                If Value_TextList IsNot Nothing AndAlso
+                   _SelectedItem_Index >= 0 AndAlso
+                   _SelectedItem_Index < Value_TextList.Count Then
+                    Dim item_text = Value_TextList.Item(_SelectedItem_Index).item
+                    Dim item_checked = Value_TextList.Item(_SelectedItem_Index).Checked
                     If item_checked Then
-                        ScribbleStrip.Text = ">" & item_text.Substring(0, 3)
+                        ScribbleStrip.Text = ">" & item_text.Substring(0, Math.Min(3, item_text.Length))
                     Else
                         ScribbleStrip.Text = item_text
                     End If
@@ -741,49 +933,101 @@ Namespace Control24
                     Value_TextList.Item(i) = item
                 Next
             End Sub
-
-
+            ''' <summary>
+            ''' Retourne la liste des textes de tous les éléments cochés dans <see cref="Value_TextList"/>.
+            ''' Retourne une liste vide si la liste n'est pas initialisée.
+            ''' </summary>
+            ''' <returns>Liste des textes cochés.</returns>
+            Public Function GetCheckedItems() As List(Of String)
+                Dim result As New List(Of String)
+                If Value_TextList Is Nothing Then
+                    Return result
+                End If
+                For Each item In Value_TextList
+                    If item.Checked Then
+                        result.Add(item.item)
+                    End If
+                Next
+                Return result
+            End Function
+            ''' <summary>
+            ''' Sélectionne l'élément dont le texte correspond à <paramref name="itemText"/>
+            ''' et met à jour les LEDs et le ScribbleStrip.
+            ''' Sans effet si le texte n'est pas trouvé ou si la liste est vide.
+            ''' </summary>
+            ''' <param name="itemText">Texte de l'élément à sélectionner.</param>
+            ''' <returns>True si l'élément a été trouvé et sélectionné.</returns>
+            Public Function SelectItemByText(itemText As String) As Boolean
+                If Value_TextList Is Nothing OrElse Value_TextList.Count = 0 Then
+                    Return False
+                End If
+                For i = 0 To Value_TextList.Count - 1
+                    If Value_TextList(i).item = itemText Then
+                        SelectedItem_Index = i
+                        Return True
+                    End If
+                Next
+                Return False
+            End Function
 
 
             Private Sub UpdateValueFromCmd() Handles _VpotCmd.OnCmdChange
 
-                If VpotMode = VpotModeType.Value Or VpotMode = VpotModeType.Pan Then
+                Select Case VpotMode
+                    Case VpotModeType.Pan
 
-                    If Adjust_Value2 Then
-                        If Math.Abs(_Value2) <> 0 AndAlso Math.Abs(_Value2) <= 0.05 Then
-                            _Value2 = 0
+                        If Adjust_Value2 Then
+                            If Math.Abs(_Value2) <> 0 AndAlso Math.Abs(_Value2) <= 0.05 Then
+                                _Value2 = 0
+                            Else
+                                _Value2 += _VpotCmd.Rotate_Velocity * Step_Value
+                                _Value2 = Math.Round(Math.Min(Math.Max(_Value2, Min_Value), Max_Value), 2)
+                            End If
+                            RefreshLedStatus()
+                            RefreshScribbleStrip(_Value2 * 100)
+                            RaiseEvent OnVpotValue2Change(_TrackNb, _Value2)
                         Else
-                            _Value2 += _VpotCmd.Rotate_Velocity * Step_Value
-                            _Value2 = Math.Round(Math.Min(Math.Max(_Value2, Min_Value), Max_Value), 2)
-                        End If
-                        RefreshLedStatus()
-                        RefreshScribbleStrip(_Value2 * 100)
-                        RaiseEvent OnVpotValue2Change(_TrackNb, _Value2)
-                    Else
-                        If Math.Abs(_Value) <> 0 AndAlso Math.Abs(_Value) <= 0.05 Then
-                            _Value = 0
-                        Else
-                            _Value += _VpotCmd.Rotate_Velocity * Step_Value
-                            _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
-                        End If
+                            If Math.Abs(_Value) <> 0 AndAlso Math.Abs(_Value) <= 0.05 Then
+                                _Value = 0
+                            Else
+                                _Value += _VpotCmd.Rotate_Velocity * Step_Value
+                                _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
+                            End If
 
-                        RefreshLedStatus()
+                            RefreshLedStatus()
                         RefreshScribbleStrip(_Value * 100)
                         RaiseEvent OnVpotValueChange(_TrackNb, _Value)
 
-                    End If
+                        End If
 
-                ElseIf VpotMode = VpotModeType.TextList Then
-                    LedMode = LedModeType.Dot
-                    If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
-                        Min_Value = 0
-                        Max_Value = Value_TextList.Count - 1
+                    Case VpotModeType.VolumeLinear
+                        _Value += _VpotCmd.Rotate_Velocity * Step_Value
+                        _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
 
-                        Value = _VpotCmd.Rotate_Velocity
-                        SelectedItem_Index = Value
-                        RaiseEvent OnVpotSelectedItemChange(_TrackNb, SelectedItem_Index)
-                    End If
-                End If
+                        RefreshLedStatus()
+                        RefreshScribbleStrip(Reaper.SLIDER2DB(_Value))
+                        RaiseEvent OnVpotValueChange(_TrackNb, _Value)
+
+                    Case VpotModeType.TextList
+                        LedMode = LedModeType.Dot
+                        If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                            Min_Value = 0
+                            Max_Value = Value_TextList.Count - 1
+                            ' ── +1 ou -1 par cran, quelle que soit la vélocité ───────
+                            Dim [step] As Integer = Math.Sign(_VpotCmd.Rotate_Velocity)
+                            Dim newIdx As Integer = Math.Min(
+                                Math.Max(_SelectedItem_Index + [step], 0),
+                                Value_TextList.Count - 1)
+                            If newIdx <> _SelectedItem_Index Then
+                                SelectedItem_Index = newIdx
+                                ' ── Synchronise _Value pour le rendu des LEDs ─────────
+                                _Value = newIdx
+                                RefreshLedStatus()
+                                RaiseEvent OnVpotSelectedItemChange(_TrackNb, SelectedItem_Index)
+                            End If
+                        End If
+
+                End Select
 
 
             End Sub
@@ -815,24 +1059,37 @@ Namespace Control24
                     _IsShowingValue = True
                 End If
 
-                If VpotMode = VpotModeType.Value Then
-                    _ScribbleStrip.Value = Value
-                ElseIf VpotMode = VpotModeType.Pan Then
-                    LedMode = LedModeType.Central_Dot
-                    Dim Value_int As Integer = CInt(Value)
-                    If Value_int = 0 Then
-                        _ScribbleStrip.Text = "<0>"
-                    ElseIf Value_int > 0 Then
-                        _ScribbleStrip.Text = Value_int & ">"
-                    ElseIf Value_int < 0 Then
-                        _ScribbleStrip.Text = "<" & Math.Abs(Value_int)
-                    End If
-                End If
+                Select Case VpotMode
+                    Case VpotModeType.Value, VpotModeType.VolumeLinear
+                        _ScribbleStrip.Value = Value
+                    Case VpotModeType.Pan
+                        LedMode = LedModeType.Central_Dot
+                        Dim Value_int As Integer = CInt(Value)
+                        If Value_int = 0 Then
+                            _ScribbleStrip.Text = "<0>"
+                        ElseIf Value_int > 0 Then
+                            _ScribbleStrip.Text = Value_int & ">"
+                        ElseIf Value_int < 0 Then
+                            _ScribbleStrip.Text = "<" & Math.Abs(Value_int)
+                        End If
+                End Select
 
                 ' ── Réarmer le timer à chaque mouvement ───────────────────────
                 _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
             End Sub
-
+            ''' <summary>
+            ''' Initialise <see cref="Value_TextList"/> à partir de deux listes parallèles.
+            ''' </summary>
+            ''' <param name="items">Textes des éléments (max 4 caractères chacun).</param>
+            ''' <param name="checkedItems">Textes des éléments qui doivent être cochés.
+            ''' Un élément est coché si son texte figure dans cette liste.</param>
+            Public Sub InitTextList(items As IReadOnlyList(Of String), checkedItems As IReadOnlyList(Of String))
+                Dim list As New List(Of (item As String, Checked As Boolean))
+                For Each txt In items
+                    list.Add((txt, checkedItems.Contains(txt)))
+                Next
+                Value_TextList = list
+            End Sub
 #Region "Led"
             Private Sub RefreshLedStatus()
 
@@ -854,7 +1111,7 @@ Namespace Control24
             Private Function GetLedsStatus(Value As Double) As BitArray
                 Dim LedsStatus As New BitArray(LedNumber)
 
-                If LedMode = LedModeType.Off Then
+                If LedMode = LedModeType.off Then
                     Return LedsStatus
                 ElseIf LedMode = LedModeType.Dot Then
 
@@ -939,92 +1196,35 @@ Namespace Control24
         End Class
         Public Class C24_VueMeter
             Inherits C24_Component
-            Const LedNumber As Integer = 14
-            Private _VueMeterCmdLeft As VueMeter_Cmd    ' ✅ cmd dédiée canal gauche
-            Private _VueMeterCmdRight As VueMeter_Cmd   ' ✅ cmd dédiée canal droit
-            Private _Value_Left As Double
-            Private _Min_Value As Double = 0
-            Private _Max_Value As Double = 1
 
-            Private _Reverse As Boolean = False
-            Private _Value_Right As Double
+            Const LedNumber As Integer = 14
+
+            Private _VueMeterCmdLeft As VueMeter_Cmd
+            Private _VueMeterCmdRight As VueMeter_Cmd
+
+            ' ── Valeurs initialisées à Min pour que 0 LED soit allumée au départ ──
+            Private _Min_Value As Double = -62
+            Private _Max_Value As Double = 6
+            Private _Value_Left As Double = -62
+            Private _Value_Right As Double = -62
+            Private _Hold_Value_Left As Double = -62
+            Private _Hold_Value_Right As Double = -62
             Private _Peak_Left As Boolean = False
             Private _Peak_Right As Boolean = False
+            Private _Reverse As Boolean = False
 
-
+            ' ── Propriétés ────────────────────────────────────────────────────
 
             ReadOnly Property VueMeterCmdLeft As VueMeter_Cmd
                 Get
                     Return _VueMeterCmdLeft
                 End Get
             End Property
+
             ReadOnly Property VueMeterCmdRight As VueMeter_Cmd
                 Get
                     Return _VueMeterCmdRight
                 End Get
-            End Property
-
-            Sub New(Name As String, Track_Nb As Integer)
-                _Name = Name
-                'C24
-                ' ✅ Canal gauche — cmd indépendante
-                _VueMeterCmdLeft = New VueMeter_Cmd(Track_Nb)
-                _VueMeterCmdLeft.Channel = StereoChannel.Left
-                C24_SendingCommands.Add(_VueMeterCmdLeft)
-
-                ' ✅ Canal droit — cmd indépendante
-                _VueMeterCmdRight = New VueMeter_Cmd(Track_Nb)
-                _VueMeterCmdRight.Channel = StereoChannel.Right
-                C24_SendingCommands.Add(_VueMeterCmdRight)
-
-                Me._Component_Id = _VueMeterCmdLeft.Cmd_Id
-
-
-
-
-            End Sub
-
-
-            Public Property Value_Left As Double
-                Get
-                    Return _Value_Left
-                End Get
-                Set
-                    _Value_Left = Value
-                    RefreshLedStatus(_Value_Left, StereoChannel.Left)
-                    If _Value_Left = Max_Value Then
-                        _Peak_Left = True
-                    End If
-                End Set
-            End Property
-            Public Property Value_Right As Double
-                Get
-                    Return _Value_Right
-                End Get
-                Set
-                    _Value_Right = Value
-                    RefreshLedStatus(_Value_Right, StereoChannel.Right)
-                    If _Value_Left = Max_Value Then
-                        _Peak_Right = True
-                    End If
-                End Set
-            End Property
-            Public Property Peak_Left As Boolean
-                Get
-                    Return _Peak_Left
-                End Get
-                Set
-                    _Peak_Left = Value
-
-                End Set
-            End Property
-            Public Property Peak_Right As Boolean
-                Get
-                    Return _Peak_Right
-                End Get
-                Set
-                    _Peak_Right = Value
-                End Set
             End Property
 
             Public Property Min_Value As Double
@@ -1033,6 +1233,11 @@ Namespace Control24
                 End Get
                 Set
                     _Min_Value = Value
+                    ' ── Réinitialise au min pour éviter des LEDs parasites ─────
+                    _Value_Left = _Min_Value
+                    _Value_Right = _Min_Value
+                    _Hold_Value_Left = _Min_Value
+                    _Hold_Value_Right = _Min_Value
                 End Set
             End Property
 
@@ -1054,43 +1259,169 @@ Namespace Control24
                 End Set
             End Property
 
+            Public Property Hold_Value_Left As Double
+                Get
+                    Return _Hold_Value_Left
+                End Get
+                Set
+                    _Hold_Value_Left = Value
+                    RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
+                End Set
+            End Property
+
+            Public Property Hold_Value_Right As Double
+                Get
+                    Return _Hold_Value_Right
+                End Get
+                Set
+                    _Hold_Value_Right = Value
+                    RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Niveau gauche. Met à jour les LEDs immédiatement.
+            ''' Passe le hold courant pour afficher la LED hold en même temps.
+            ''' </summary>
+            Public Property Value_Left As Double
+                Get
+                    Return _Value_Left
+                End Get
+                Set
+                    _Value_Left = Value
+                    If _Value_Left >= Max_Value Then
+                        _Peak_Left = True
+                    End If
+                    RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Niveau droit. Met à jour les LEDs immédiatement.
+            ''' Passe le hold courant pour afficher la LED hold en même temps.
+            ''' </summary>
+            Public Property Value_Right As Double
+                Get
+                    Return _Value_Right
+                End Get
+                Set
+                    _Value_Right = Value
+                    If _Value_Right >= Max_Value Then
+                        _Peak_Right = True
+                    End If
+                    RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
+                End Set
+            End Property
+
+            Public Property Peak_Left As Boolean
+                Get
+                    Return _Peak_Left
+                End Get
+                Set
+                    _Peak_Left = Value
+                End Set
+            End Property
+
+            Public Property Peak_Right As Boolean
+                Get
+                    Return _Peak_Right
+                End Get
+                Set
+                    _Peak_Right = Value
+                End Set
+            End Property
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            Sub New(Name As String, Track_Nb As Integer)
+                _Name = Name
+
+                _VueMeterCmdLeft = New VueMeter_Cmd(Track_Nb)
+                _VueMeterCmdLeft.Channel = StereoChannel.Left
+                C24_SendingCommands.Add(_VueMeterCmdLeft)
+
+                _VueMeterCmdRight = New VueMeter_Cmd(Track_Nb)
+                _VueMeterCmdRight.Channel = StereoChannel.Right
+                C24_SendingCommands.Add(_VueMeterCmdRight)
+
+                Me._Component_Id = _VueMeterCmdLeft.Cmd_Id
+            End Sub
+
+            ' ── Réinitialisation ──────────────────────────────────────────────
+
             Public Sub ResetPeaks()
-                Peak_Left = False
-                Peak_Right = False
-                Value_Left = _Value_Left
-                Value_Right = _Value_Right
+                _Peak_Left = False
+                _Peak_Right = False
+                RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
+                RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
             End Sub
-            Private Sub RefreshLedStatus(Value As Double, Channel As StereoChannel)
-                Dim Leds_Status = GetLedsStatus(Value)
-                If Reverse Then
-                    Leds_Status = DriverReaperControl24.Utility.Bit.ReverseBitArray(Leds_Status)
-                End If
-                If Peak_Left OrElse Peak_Right Then
-                    Leds_Status.Item(LedNumber - 1) = True
+
+            ' ── Refresh ───────────────────────────────────────────────────────
+
+            Private Sub RefreshLedStatus(value As Double, holdValue As Double, channel As StereoChannel)
+                Dim ledsStatus = GetLedsStatus(value, holdValue)
+
+                If _Reverse Then
+                    ledsStatus = DriverReaperControl24.Utility.Bit.ReverseBitArray(ledsStatus)
                 End If
 
-                ' ✅ Chaque canal met à jour sa propre cmd — aucune interférence
-                If Channel = StereoChannel.Left Then
-                    _VueMeterCmdLeft.Leds_Status = Leds_Status
+                ' ── LED de clip (dernière) ─────────────────────────────────────
+                If _Peak_Left OrElse _Peak_Right Then
+                    ledsStatus.Item(LedNumber - 1) = True
+                End If
+
+                If channel = StereoChannel.Left Then
+                    _VueMeterCmdLeft.Leds_Status = ledsStatus
                 Else
-                    _VueMeterCmdRight.Leds_Status = Leds_Status
+                    _VueMeterCmdRight.Leds_Status = ledsStatus
                 End If
             End Sub
 
-            Private Function GetLedsStatus(Value As Double) As BitArray
-                Dim LedsStatus As New BitArray(LedNumber)
+            ''' <summary>
+            ''' Calcule les LEDs à allumer de façon strictement linéaire :
+            ''' <list type="bullet">
+            ''' <item>value ≤ Min → 0 LED allumée</item>
+            ''' <item>Min &lt; value &lt; Max → linéaire, 1ère LED dès le premier pas</item>
+            ''' <item>value ≥ Max → toutes les <see cref="LedNumber"/> LEDs allumées</item>
+            ''' </list>
+            ''' </summary>
+            Private Function GetLedsStatus(value As Double, holdValue As Double) As BitArray
+                Dim ledsStatus As New BitArray(LedNumber)
+                Dim range As Double = _Max_Value - _Min_Value
 
-                Dim LedIndex As Integer = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
-                For i = 0 To LedIndex - 1
-                    LedsStatus.Item(i) = True
+                ' ── Niveau courant ─────────────────────────────────────────────
+                Dim ledIdx As Integer
+                If range <= 0 OrElse value <= _Min_Value Then
+                    ledIdx = 0
+                ElseIf value >= _Max_Value Then
+                    ledIdx = LedNumber
+                Else
+                    ' Linéaire : chaque LED couvre un segment égal de la plage
+                    ' Floor garantit que min+epsilon allume exactement 1 LED
+                    ledIdx = CInt(Math.Floor((value - _Min_Value) / range * LedNumber))
+                    ledIdx = Math.Max(0, Math.Min(LedNumber, ledIdx))
+                End If
+
+                For i = 0 To ledIdx - 1
+                    ledsStatus.Item(i) = True
                 Next
-                Return LedsStatus
 
+                ' ── Hold : 1 LED indépendante ──────────────────────────────────
+                If holdValue > _Min_Value Then
+                    Dim hIdx As Integer
+                    If holdValue >= _Max_Value Then
+                        hIdx = LedNumber - 1
+                    Else
+                        hIdx = CInt(Math.Floor((holdValue - _Min_Value) / range * LedNumber))
+                        hIdx = Math.Max(0, Math.Min(LedNumber - 1, hIdx))
+                    End If
+                    ledsStatus.Item(hIdx) = True
+                End If
+
+                Return ledsStatus
             End Function
 
-
-        End Class
-        ''' <summary>
+        End Class        ''' <summary>
         ''' Représente la molette Jog du Control24.
         ''' Composant de réception uniquement — détecte les rotations hardware
         ''' via <see cref="Commands.JogWheel_Cmd"/>.
@@ -1232,7 +1563,162 @@ Namespace Control24
             End Sub
 
         End Class
+        ''' <summary>
+        ''' Regroupe plusieurs <see cref="C24_LedButton"/> pour les piloter simultanément.
+        ''' Permet d'allumer, éteindre ou faire clignoter un ensemble de boutons en un seul appel.
+        ''' Supporte un mode exclusif (un seul bouton actif à la fois dans le groupe).
+        ''' </summary>
+        Public Class C24_GroupLedButton
 
+            Private ReadOnly _Buttons As New List(Of C24_LedButton)
+            Private _ExclusiveMode As Boolean = False
+
+            ' ── Événement ─────────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Déclenché quand un bouton du groupe est relâché.
+            ''' Retourne le bouton source et son index dans le groupe.
+            ''' </summary>
+            Public Event OnGroupButtonReleased(button As C24_LedButton, index As Integer)
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+
+            ''' <summary>Nombre de boutons dans le groupe.</summary>
+            Public ReadOnly Property Count As Integer
+                Get
+                    Return _Buttons.Count
+                End Get
+            End Property
+
+            ''' <summary>Accès indexé à un bouton du groupe.</summary>
+            Public ReadOnly Property Buttons(index As Integer) As C24_LedButton
+                Get
+                    Return _Buttons(index)
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Active le mode exclusif : un seul bouton peut être allumé à la fois.
+            ''' L'activation d'un bouton éteint automatiquement les autres.
+            ''' </summary>
+            Public Property ExclusiveMode As Boolean
+                Get
+                    Return _ExclusiveMode
+                End Get
+                Set
+                    _ExclusiveMode = Value
+                End Set
+            End Property
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Crée un groupe vide. Utiliser <see cref="Add"/> pour ajouter des boutons.
+            ''' </summary>
+            Public Sub New()
+            End Sub
+
+            ''' <summary>
+            ''' Crée un groupe à partir d'une liste de boutons existants.
+            ''' </summary>
+            ''' <param name="buttons">Boutons à regrouper.</param>
+            Public Sub New(buttons As IEnumerable(Of C24_LedButton))
+                For Each btn In buttons
+                    Add(btn)
+                Next
+            End Sub
+
+            ' ── Gestion des boutons ───────────────────────────────────────────
+
+            ''' <summary>
+            ''' Ajoute un bouton au groupe et branche l'événement de relâchement.
+            ''' </summary>
+            ''' <param name="button">Bouton à ajouter.</param>
+            Public Sub Add(button As C24_LedButton)
+                Dim idx As Integer = _Buttons.Count
+                _Buttons.Add(button)
+                Dim capturedBtn = button
+                Dim capturedIdx = idx
+                AddHandler button.OnButtonReleased,
+                    Sub(trackNb As Integer?)
+                        If _ExclusiveMode Then
+                            SetExclusive(capturedIdx)
+                        End If
+                        RaiseEvent OnGroupButtonReleased(capturedBtn, capturedIdx)
+                    End Sub
+            End Sub
+
+            ''' <summary>
+            ''' Retire un bouton du groupe par index.
+            ''' </summary>
+            ''' <param name="index">Index 0-based du bouton à retirer.</param>
+            Public Sub RemoveAt(index As Integer)
+                If index >= 0 AndAlso index < _Buttons.Count Then
+                    _Buttons.RemoveAt(index)
+                End If
+            End Sub
+
+            ' ── Contrôle de groupe ────────────────────────────────────────────
+
+            ''' <summary>Allume toutes les LEDs du groupe.</summary>
+            Public Sub SetAllOn()
+                For Each btn In _Buttons
+                    btn.Led = True
+                Next
+            End Sub
+
+            ''' <summary>Éteint toutes les LEDs du groupe.</summary>
+            Public Sub SetAllOff()
+                For Each btn In _Buttons
+                    btn.Led = False
+                    btn.IsBlinking = False
+                Next
+            End Sub
+
+            ''' <summary>Active ou désactive le clignotement sur tous les boutons.</summary>
+            ''' <param name="blinking">True pour activer le clignotement.</param>
+            Public Sub SetAllBlinking(blinking As Boolean)
+                For Each btn In _Buttons
+                    btn.IsBlinking = blinking
+                Next
+            End Sub
+
+            ''' <summary>
+            ''' Allume uniquement le bouton à l'index spécifié et éteint tous les autres.
+            ''' </summary>
+            ''' <param name="index">Index 0-based du bouton à activer.</param>
+            Public Sub SetExclusive(index As Integer)
+                For i = 0 To _Buttons.Count - 1
+                    _Buttons(i).IsBlinking = False
+                    _Buttons(i).Led = (i = index)
+                Next
+            End Sub
+
+            ''' <summary>
+            ''' Définit l'état LED de chaque bouton selon un tableau de booléens.
+            ''' Les entrées excédentaires sont ignorées.
+            ''' </summary>
+            ''' <param name="states">Tableau d'états (True = allumé).</param>
+            Public Sub SetStates(states As IReadOnlyList(Of Boolean))
+                For i = 0 To Math.Min(_Buttons.Count, states.Count) - 1
+                    _Buttons(i).Led = states(i)
+                Next
+            End Sub
+
+            ''' <summary>
+            ''' Retourne l'index du premier bouton dont la LED est allumée.
+            ''' Retourne -1 si aucun bouton n'est allumé.
+            ''' </summary>
+            Public Function GetActiveIndex() As Integer
+                For i = 0 To _Buttons.Count - 1
+                    If _Buttons(i).Led Then
+                        Return i
+                    End If
+                Next
+                Return -1
+            End Function
+
+        End Class
 
 
 
@@ -1484,13 +1970,42 @@ Namespace Control24
             ' ── JogWheel ─────────────────────────────────────────────────────
             Private _JogWheel As C24_JogWheel
             ' ── Bank ─────────────────────────────────────────────────────────
-            Private _Bank_Left As C24_LedButton
+            Private _Bank_Left As C24_Button
             Private _Nudge As C24_LedButton
-            Private _Bank_Right As C24_LedButton
+            Private _Bank_Right As C24_Button
             ' ── ScribbleScreen ───────────────────────────────────────────────
             Private _ScreenLine As C24_ScribbleScreen
             Private _ScreenChannelBarScroll As C24_ScribbleScreen
+            ' ── Group Buttons  ───────────────────────────────────────────────
+            Private _Esc_Group As C24_GroupLedButton
+            ' ── Masters VuMeters  ────────────────────────────────────────────
+            Private _VueMeterMaster1 As C24_VueMeter
+            Private _VueMeterMaster2 As C24_VueMeter
+            Private _VueMeterMaster3 As C24_VueMeter
 
+
+            ' ── Masters VuMeters  ────────────────────────────────────────────
+            Public ReadOnly Property VueMeterMaster1 As C24_VueMeter
+                Get
+                    Return _VueMeterMaster1
+                End Get
+            End Property
+            Public ReadOnly Property VueMeterMaster2 As C24_VueMeter
+                Get
+                    Return _VueMeterMaster2
+                End Get
+            End Property
+            Public ReadOnly Property VueMeterMaster3 As C24_VueMeter
+                Get
+                    Return _VueMeterMaster3
+                End Get
+            End Property
+            ' ── Group Buttons  ───────────────────────────────────────────────
+            Public ReadOnly Property Esc_Group As C24_GroupLedButton
+                Get
+                    Return _Esc_Group
+                End Get
+            End Property
 
             ' ── ScribbleScreen ───────────────────────────────────────────────
             ''' <summary>
@@ -1515,7 +2030,7 @@ Namespace Control24
             End Property
             ' ── Bank ─────────────────────────────────────────────────────────
             ''' <summary>Bouton Bank Left.</summary>
-            Public ReadOnly Property Bank_Left As C24_LedButton
+            Public ReadOnly Property Bank_Left As C24_Button
                 Get
                     Return _Bank_Left
                 End Get
@@ -1529,7 +2044,7 @@ Namespace Control24
             End Property
 
             ''' <summary>Bouton Bank Right.</summary>
-            Public ReadOnly Property Bank_Right As C24_LedButton
+            Public ReadOnly Property Bank_Right As C24_Button
                 Get
                     Return _Bank_Right
                 End Get
@@ -3429,6 +3944,8 @@ Namespace Control24
 
                 _Clock = New C24_Clock("Clock")
                 Me.Add_C24_Component(_Clock, "Clock")
+                ' ── Force l'envoi de ClockLed_Cmd + Clock_Cmd après enregistrement ──
+                _Clock.ClockMode = Commands.ClockModes.HourMinuteSecondMS
 
                 '*----------------------------------*
                 '*      init JogWheel               *
@@ -3443,11 +3960,11 @@ Namespace Control24
                 '*----------------------------------*
 
 
-                _Bank_Left = New C24_LedButton("Bank_Left", Btn_Region.Edit, &HA)
+                _Bank_Left = New C24_Button("Bank_Left", Btn_Region.Edit, &HA)
                 Me.Add_C24_Component(_Bank_Left, "Bank")
                 _Nudge = New C24_LedButton("Nudge", Btn_Region.Edit, &HB)
                 Me.Add_C24_Component(_Nudge, "Bank")
-                _Bank_Right = New C24_LedButton("Bank_Right", Btn_Region.Edit, &HC)
+                _Bank_Right = New C24_Button("Bank_Right", Btn_Region.Edit, &HC)
                 Me.Add_C24_Component(_Bank_Right, "Bank")
 
                 '*----------------------------------*
@@ -3461,6 +3978,21 @@ Namespace Control24
                 Me.Add_C24_Component(Sb2_ScribbleStrip, "ChannelBarScroll")
                 _ScreenChannelBarScroll = New C24_ScribbleScreen({Sb1_ScribbleStrip, Sb2_ScribbleStrip}.ToList)
 
+                '*----------------------------------*
+                '*      Group Buttons               *
+                '*----------------------------------*
+
+                _Esc_Group = New C24_GroupLedButton({Esc_Cancel, Esc_Cancel_2})
+
+
+
+                '*----------------------------------*
+                '*      Masters VueMeters           *
+                '*----------------------------------*
+
+                _VueMeterMaster1 = New C24_VueMeter("VueMeterMaster1", 25)
+                Me.Add_AutoRefresh_C24_Component(VueMeterMaster1, "VueMeterMasters")
+                'init other VueMaster2/3 on demand
 
 
                 ' ── Signal : initialisation terminée ──────────────────────────
@@ -3469,13 +4001,6 @@ Namespace Control24
             End Sub
 
 
-
-            Private Sub NewChannelStrip(Tack_Number As Integer)
-
-
-
-
-            End Sub
 
             Private Sub Test_reaper_utility()
 
@@ -4043,7 +4568,7 @@ Namespace Control24
             Private ReadOnly _Mute As C24_LedButton
             Private ReadOnly _Select As C24_LedButton
             Private ReadOnly _SwitchActive As C24_LedButton
-
+            Private ReadOnly _LedSwitchActive As C24_LedButton
             Private ReadOnly _AutoMode As C24_Button
             Private ReadOnly _AutoModeLed As C24_AutoModeLed
             Private ReadOnly _SendPanMode As C24_LedButton
@@ -4051,13 +4576,15 @@ Namespace Control24
             Private ReadOnly _DynMode As C24_LedButton
             Private ReadOnly _InsertMode As C24_LedButton
 
+
+
             ' ── Byte IDs boutons Control24 standard par piste ─────────────────
             Private Const BtnRecArm As Byte = &H0
             Private Const BtnSolo As Byte = &H7
             Private Const BtnMute As Byte = &H8
             Private Const BtnSelect As Byte = &H6
             Private Const BtnSwitchActive As Byte = &H4
-
+            Private Const BtnLedSwitchActive As Byte = &HB
             Private Const BtnAutoMode As Byte = &H5
             Private Const BtnSendMode As Byte = &H1
             Private Const BtnEqMode As Byte = &H2
@@ -4135,6 +4662,13 @@ Namespace Control24
                     Return _SwitchActive
                 End Get
             End Property
+            ''' <summary>Led SwitchActive.</summary>
+            Public ReadOnly Property LedSwitchActive As C24_LedButton
+                Get
+                    Return _LedSwitchActive
+                End Get
+            End Property
+
 
             ''' <summary>Bouton physique AutoMode (détection d'appui uniquement).</summary>
             Public ReadOnly Property AutoMode As C24_Button
@@ -4198,7 +4732,7 @@ Namespace Control24
                 _Mute = New C24_LedButton($"Mute_{n}", BtnMute, trackNumber)
                 _Select = New C24_LedButton($"Select_{n}", BtnSelect, trackNumber)
                 _SwitchActive = New C24_LedButton($"SwitchActive_{n}", BtnSwitchActive, trackNumber)
-
+                _LedSwitchActive = New C24_LedButton($"LedSwitchActive_{n}", BtnLedSwitchActive, trackNumber)
                 _AutoMode = New C24_Button($"AutoMode_{n}", BtnAutoMode, trackNumber)
                 _AutoModeLed = New C24_AutoModeLed($"AutoModeLed_{n}", trackNumber)
                 _SendPanMode = New C24_LedButton($"SendPanMode_{n}", BtnSendMode, trackNumber)
@@ -4227,6 +4761,7 @@ Namespace Control24
                 components.Add_C24_Component(_Mute, group)
                 components.Add_C24_Component(_Select, group)
                 components.Add_C24_Component(_SwitchActive, group)
+                components.Add_C24_Component(_LedSwitchActive, group)
                 components.Add_C24_Component(_AutoMode, group)
                 components.Add_C24_Component(_AutoModeLed, group)
                 components.Add_C24_Component(_SendPanMode, group)
@@ -5341,19 +5876,19 @@ Namespace Control24
             End Sub
         End Class
         Public Enum ClockModes
-            Time
-            Frame
-            Sample
-            Beat
+            HourMinuteSecondMS
+            HourMinuteSecondFrames
+            FeetFrames
+            BarBeats
             None
         End Enum
         Public Class ClockLed_Cmd
             Inherits Track_Display_Cmd
             Private ClockLedBytes = New Dictionary(Of ClockModes, Byte) From
-                    {{ClockModes.Time, &H40},
-                    {ClockModes.Frame, &H20},
-                    {ClockModes.Sample, &H10},
-                    {ClockModes.Beat, &H8},
+                    {{ClockModes.HourMinuteSecondMS, &H40},
+                    {ClockModes.HourMinuteSecondFrames, &H20},
+                    {ClockModes.FeetFrames, &H10},
+                    {ClockModes.BarBeats, &H8},
                     {ClockModes.None, &H0}
                     }
             Private ClockLedBytesRev As Dictionary(Of Byte, ClockModes) = Utility.ReverseDictionary(Of ClockModes, Byte)(ClockLedBytes)
@@ -5372,7 +5907,7 @@ Namespace Control24
                 Cmd = ByteManager.ConcatBytes(Display_Header, {&H0}, {&H0}, {&H0}, {Display_Ender})
                 DisplayCommand = DisplayCommands.AutoModeLed
                 Track_Number = 25
-                ClockMode = ClockModes.Time
+                ClockMode = ClockModes.HourMinuteSecondMS
                 'set Id             
 
                 SetCmdId(Mask_Id)
@@ -5398,63 +5933,55 @@ Namespace Control24
         End Class
         Public Class Clock_Cmd
             Inherits Track_Display_Cmd
-            Private ClockModesDots = New Dictionary(Of ClockModes, Byte) From
-                    {{ClockModes.Time, &H15},
-                    {ClockModes.Frame, &H2A},
-                    {ClockModes.Sample, &H0},
-                    {ClockModes.Beat, &H14}}
+
+            Private ClockModesDots As New Dictionary(Of ClockModes, Byte) From {
+                {ClockModes.HourMinuteSecondMS, &H18},
+                {ClockModes.HourMinuteSecondFrames, &H2A},
+                {ClockModes.FeetFrames, &H0},
+                {ClockModes.BarBeats, &H14}
+            }
             Private ClockModesDotsRev As Dictionary(Of Byte, ClockModes) = Utility.ReverseDictionary(Of ClockModes, Byte)(ClockModesDots)
+
             Private ReadOnly SevenSeg As New Dictionary(Of Char, Byte) From {
-    {"0"c, &H7E},  ' 0b1111110
-    {"1"c, &H30},  ' 0b0110000
-    {"2"c, &H6D},  ' 0b1101101
-    {"3"c, &H79},  ' 0b1111001
-    {"4"c, &H33},  ' 0b0110011
-    {"5"c, &H5B},  ' 0b1011011
-    {"6"c, &H5F},  ' 0b1011111
-    {"7"c, &H70},  ' 0b1110000
-    {"8"c, &H7F},  ' 0b1111111
-    {"9"c, &H7B},  ' 0b1111011
-    {"-"c, &H1},  ' 0b0000001
-    {" "c, &H0},
-    {"L"c, &HE},
-    {"h"c, &H17},
-    {"o"c, &H1D},
-    {"b"c, &H1F},
-    {"H"c, &H37},
-    {"J"c, &H38},
-    {"Y"c, &H3B},
-    {"d"c, &H3D},
-    {"U"c, &H3E},
-    {"R"c, &H46},
-    {"F"c, &H47},
-    {"C"c, &H4E},
-    {"E"c, &H4F},
-    {"S"c, &H5B},  ' 0b1011011 (= '5')
-    {"P"c, &H67},
-    {"Z"c, &H6D},  ' 0b1101101 (= '2')
-    {"A"c, &H77}
-}
+                {"0"c, &H7E}, {"1"c, &H30}, {"2"c, &H6D}, {"3"c, &H79},
+                {"4"c, &H33}, {"5"c, &H5B}, {"6"c, &H5F}, {"7"c, &H70},
+                {"8"c, &H7F}, {"9"c, &H7B}, {"-"c, &H1}, {" "c, &H0},
+                {"L"c, &HE}, {"h"c, &H17}, {"o"c, &H1D}, {"b"c, &H1F},
+                {"H"c, &H37}, {"J"c, &H38}, {"Y"c, &H3B}, {"d"c, &H3D},
+                {"U"c, &H3E}, {"R"c, &H46}, {"F"c, &H47}, {"C"c, &H4E},
+                {"E"c, &H4F}, {"S"c, &H5B}, {"P"c, &H67}, {"Z"c, &H6D},
+                {"A"c, &H77}
+            }
             Private ReadOnly SevenSegRev As Dictionary(Of Byte, Char) = Utility.ReverseDictionary(Of Char, Byte)(SevenSeg)
+
             Private _ClockMode As ClockModes
             Private _Clock_Value As String
-            Shared _Mask_Id As Byte() = {&HFF, &HFF, &HFF, &HFF, &HFF, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0, &HFF}
+
+            ''' <summary>
+            ''' Cache des 8 bytes seven-segment précédemment envoyés (index 0 = leftmost).
+            ''' Initialisé à zéro (= 8 espaces) pour forcer l'envoi au premier appel.
+            ''' </summary>
+            Private _prevSevenSegFull As Byte() = New Byte(7) {}
+
+            ''' <summary>Masque sur les 5 premiers bytes (F0 13 01 30 19) — ID unique du composant horloge.</summary>
+            Shared _Mask_Id As Byte() = {&HFF, &HFF, &HFF, &HFF, &HFF}
 
             Shared ReadOnly Property Mask_Id As Byte()
                 Get
                     Return _Mask_Id
                 End Get
             End Property
-            Sub New()
 
-                'set defaut cmd
-                Cmd = ByteManager.ConcatBytes(Display_Header, {&H0, &H0}, {&H0}, {&H0, &H0, &H0, &H0, &H0, &H0, &H0, &H0}, {Display_Ender})
-                Track_Number = 25
-                ClockMode = ClockModes.Time
-                'set Id             
-                SetCmdId(Mask_Id)
+            Sub New()
+                ' Format minimal : F0 13 01 [cmd] [track] [mode] F7 (7 bytes, aucun digit)
+                _Cmd = ByteManager.ConcatBytes(Display_Header, {&H0, &H0, &H0, Display_Ender})
+                Me.DisplayCommand = DisplayCommands.Clock
+                Track_Number = 26
+                ClockMode = ClockModes.HourMinuteSecondMS
+                SetCmdId(_Mask_Id)
             End Sub
 
+            ''' <summary>Mode d'affichage (dots séparateurs).</summary>
             Public Property ClockMode As ClockModes
                 Get
                     Return _ClockMode
@@ -5466,55 +5993,113 @@ Namespace Control24
             End Property
 
             Private Sub ReadClockMode() Handles MyBase.OnCmdChange
-                ClockMode = ClockModesDotsRev(Cmd(5))
-
+                If _Cmd Is Nothing OrElse _Cmd.Length < 6 Then Return
+                Dim mode As ClockModes = ClockModes.None
+                If ClockModesDotsRev.TryGetValue(_Cmd(5), mode) Then
+                    _ClockMode = mode
+                End If
             End Sub
+
             Private Sub SetClockMode()
-                Cmd(5) = ClockModesDots(ClockMode)
+                If _Cmd Is Nothing OrElse _Cmd.Length < 6 Then Return
+                _Cmd(5) = ClockModesDots(ClockMode)
                 SendCmd()
-
             End Sub
 
+            ''' <summary>Valeur texte affichée sur les 8 digits 7-segments.</summary>
             Public Property Clock_Value As String
                 Get
                     Return _Clock_Value
                 End Get
                 Set
                     _Clock_Value = Value
+
                     SetClockValue()
                 End Set
             End Property
 
+            ''' <summary>
+            ''' Relit la valeur depuis un Cmd reçu (variable-length, digits right-to-left à partir de Cmd[6]).
+            ''' </summary>
             Private Sub ReadClockValue() Handles MyBase.OnCmdChange
-                If Cmd Is Nothing OrElse Cmd.Length < 14 Then Return
+                If _Cmd Is Nothing OrElse _Cmd.Length < 7 Then Return
 
-                ' Cmd(6..13) = 8 bytes seven-segment → reconstitue la string
+                Dim digitCount As Integer = _Cmd.Length - 7
                 Dim chars(7) As Char
                 For i = 0 To 7
-                    Dim b As Byte = Cmd(6 + i)
+                    chars(i) = " "c
+                Next
+
+                For i = 0 To Math.Min(digitCount, 8) - 1
+                    Dim b As Byte = _Cmd(6 + i)
+                    Dim c As Char = " "c
                     If SevenSegRev.ContainsKey(b) Then
-                        chars(i) = SevenSegRev(b)
-                    Else
-                        chars(i) = "?"c   ' byte inconnu → espace
+                        c = SevenSegRev(b)
                     End If
+                    chars(7 - i) = c
                 Next
 
                 _Clock_Value = New String(chars)
             End Sub
+
+            ''' <summary>
+            ''' Construit et envoie un Cmd de longueur minimale.
+            ''' Format : F0 13 01 30 [track] [mode] [d_rightmost .. d_firstChanged] F7.
+            ''' <para>
+            ''' Mémorisation : compare les 8 bytes seven-seg avec le dernier envoi.
+            ''' Seule la tranche [firstChangedIndex..7] (de droite à gauche) est envoyée,
+            ''' ce qui évite de rafraîchir les digits stables et réduit le clignotement.
+            ''' </para>
+            ''' </summary>
             Private Sub SetClockValue()
                 _Clock_Value = _Clock_Value.PadLeft(8)
-                Dim Char_Values = Clock_Value.ToArray
-                Cmd(6) = SevenSeg(Char_Values(0))
-                Cmd(7) = SevenSeg(Char_Values(1))
-                Cmd(8) = SevenSeg(Char_Values(2))
-                Cmd(9) = SevenSeg(Char_Values(3))
-                Cmd(10) = SevenSeg(Char_Values(4))
-                Cmd(11) = SevenSeg(Char_Values(5))
-                Cmd(12) = SevenSeg(Char_Values(6))
-                Cmd(13) = SevenSeg(Char_Values(7))
-                SendCmd()
+                Dim charValues = _Clock_Value.ToCharArray()
 
+                ' ── Calcule la représentation complète sur 8 positions ─────────
+                Dim newFull(7) As Byte
+                For i = 0 To 7
+                    Dim c As Char = charValues(i)
+                    If SevenSeg.ContainsKey(c) Then
+                        newFull(i) = SevenSeg(c)
+                    Else
+                        newFull(i) = &H0
+                    End If
+                Next
+
+                ' ── Trouve le premier byte changé depuis la gauche ────────────
+                Dim firstChanged As Integer = -1
+                For i = 0 To 7
+                    If newFull(i) <> _prevSevenSegFull(i) Then
+                        firstChanged = i
+                        Exit For
+                    End If
+                Next
+
+                ' ── Rien n'a changé : pas d'envoi ────────────────────────────
+                If firstChanged = -1 Then Return
+
+                ' ── Met à jour le cache ───────────────────────────────────────
+                Array.Copy(newFull, _prevSevenSegFull, 8)
+
+                ' ── Collecte les bytes de droite à gauche jusqu'à firstChanged ─
+                ' Exemple "      43" (ancien "      42") : firstChanged=7 → 1 seul byte [79]
+                ' Exemple "      42" (ancien "    1234") : firstChanged=4 → 4 bytes [6D,33,00,00]
+                Dim digitBytes As New List(Of Byte)
+                For i = 7 To firstChanged Step -1
+                    digitBytes.Add(newFull(i))
+                Next
+
+                ' ── Reconstruction du Cmd variable ────────────────────────────
+                Dim parts As New List(Of Byte())
+                parts.Add(Display_Header)
+                parts.Add({_Cmd(3), _Cmd(4), _Cmd(5)})
+                parts.Add(digitBytes.ToArray())
+                parts.Add({Display_Ender})
+
+                _Cmd = ByteManager.ConcatBytes(parts.ToArray())
+                SendCmd()
             End Sub
+
         End Class
         Public Class ScribbleStrip_Cmd
             Inherits Track_Display_Cmd

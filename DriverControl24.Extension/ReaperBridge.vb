@@ -45,11 +45,9 @@ Public Class ReaperBridge
 
         _dllDirectory = dllDirectory
 
-
         Dim autoStart As Boolean = False
         Dim VSDebug As Boolean = False
 
-        'load config from ini file
         Dim iniFilePath As String = IO.Path.Combine(dllDirectory, "ReaperDriver.ini")
         If IO.File.Exists(iniFilePath) Then
             Dim _ReaperConfigReader As New ReaperConfigReader(iniFilePath)
@@ -58,23 +56,24 @@ Public Class ReaperBridge
             VSDebug = _ReaperConfigReader.GetBoolean("Driver", "VSDebug", False)
         End If
 
-
-
         If autoStart Then
-
+            ' ── Bridge pipe on-demand (1 requête par connexion) ───────────────
             Task.Run(Function() StartPipeServerAsync())
 
-            Task.Run(Function() StartPollPipeServerAsync())
+            ' ── Poll pipe multi-instances : 1 connexion persistante par monitor
+            ' N instances simultanées autorisées (TransportMonitor, TrackMonitor…)
+            Const PollServerInstances As Integer = 10
+            For i = 1 To PollServerInstances
+                Task.Run(Function() StartPollPipeServerAsync())
+            Next
 
             If VSDebug = False Then
                 LaunchDriver()
             End If
-
         End If
 
         Return 1
     End Function
-
 
 
     Public Shared Function OnReaperCommand(cmd As Integer, flag As Integer) As Boolean
@@ -194,9 +193,11 @@ Public Class ReaperBridge
         While True
             Dim hasError = False
             Try
+                ' ── MaxAllowedServerInstances : le serveur accepte N connexions ──
                 Using pipe As New IO.Pipes.NamedPipeServerStream(
                         "c24_reaper_poll",
-                        IO.Pipes.PipeDirection.InOut, 1,
+                        IO.Pipes.PipeDirection.InOut,
+                        IO.Pipes.NamedPipeServerStream.MaxAllowedServerInstances,
                         IO.Pipes.PipeTransmissionMode.Byte)
                     Await pipe.WaitForConnectionAsync()
                     Dim reader As New IO.StreamReader(pipe)
@@ -215,7 +216,7 @@ Public Class ReaperBridge
             If hasError Then Await Task.Delay(50)
         End While
     End Function
-    Private Shared Function HandleRequest(request As String) As String
+    Public Shared Function HandleRequest(request As String) As String
         Try
             Dim parts = request.Split("|"c)
             Select Case parts(0)
@@ -517,36 +518,65 @@ Public Class ReaperBridge
                         parts(4),
                         newVal), "OK", "ERROR:Set failed")
 
-                ' ── GET_SEND_ALL_INFO|trackIndex|category|sendIndex ───────────
+                                                ' ── GET_SEND_ALL_INFO|trackIndex|category|sendIndex ───────────
                 ' Retourne tous les paramètres d'un envoi en un seul appel pipe.
                 ' Format fixe séparé par "|" (InvariantCulture) :
                 '
-                ' Idx  Param        Description
-                ' ───  ───────────  ──────────────────────────────────────────
-                '  0   D_VOL        Volume (0..4  1.0=0dB)
-                '  1   D_PAN        Pan (-1=L  0=C  1=R)
-                '  2   D_PANLAW     Pan law (<0=projet défaut)
-                '  3   D_MUTE       Muet (0/1)
-                '  4   B_PHASE      Phase inversée (0/1)
-                '  5   B_MONO       Mono (0/1)
-                '  6   I_SENDMODE   0=post-fader  1=pre-fx  3=pre-fader
-                '  7   I_SRCCHAN    Canal source (bit10=stéréo  bit11=phase inv.)
-                '  8   I_DSTCHAN    Canal destination
-                '  9   I_MIDIFLAGS  Flags MIDI
+                ' Idx  Param           Description
+                ' ───  ─────────────   ──────────────────────────────────────────
+                '  0   D_VOL           Volume (0..4  1.0=0dB)
+                '  1   D_PAN           Pan (-1=L  0=C  1=R)
+                '  2   D_PANLAW        Pan law (<0=projet défaut)
+                '  3   B_MUTE          Muet (0/1)
+                '  4   B_PHASE         Phase inversée (0/1)
+                '  5   B_MONO          Mono (0/1)
+                '  6   I_SENDMODE      0=post-fader  1=pre-fx  3=post-fx
+                '  7   I_SRCCHAN       Canal source (low 10 bits=offset (>>10)=count)
+                '  8   I_DSTCHAN       Canal destination (&1024=mono)
+                '  9   I_MIDIFLAGS     Flags MIDI
+                ' 10   IP_DSTTRKIDX    Index 0-based de la piste destination (-1=HW)
                 Case "GET_SEND_ALL_INFO"
                     If parts.Length < 4 Then Return "ERROR:Usage GET_SEND_ALL_INFO|trackIndex|category|sendIndex"
                     If ReaperAPI.GetTrackSendInfo_Value Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                    Dim tIdx As Integer = 0, cat As Integer = 0, si As Integer = 0
+                    If Not Integer.TryParse(parts(1), tIdx) Then Return "ERROR:Invalid trackIndex"
+                    If Not Integer.TryParse(parts(2), cat) Then Return "ERROR:Invalid category"
+                    If Not Integer.TryParse(parts(3), si) Then Return "ERROR:Invalid sendIndex"
+                    Dim tr = GetTrackByIndex(tIdx)
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
                     Dim ic = Globalization.CultureInfo.InvariantCulture
-                    Dim cat = Integer.Parse(parts(2))
-                    Dim si = Integer.Parse(parts(3))
+                    ' ── Valeurs doubles ────────────────────────────────────────────
                     Dim g = Function(p As String) _
                                 ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, p).ToString("G", ic)
+                    ' ── Valeurs booléennes → "0" ou "1" garanti ────────────────────
+                    Dim gb = Function(p As String) _
+                                 If(ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, p) <> 0, "1", "0")
+                    ' ── P_DESTTRACK via GetTrackSendInfo_Value → cast double→IntPtr ─
+                    ' ⚠️ Valide sur x86 (pointer=32 bits). Sur x64, le cast CLng peut
+                    '    tronquer la valeur : préférer GetSetTrackSendInfo si disponible.
+                    Dim destTrkIdx As Integer = -1
+                    Dim destTrPtr = ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, "P_DESTTRACK")
+                    If destTrPtr <> 0 AndAlso
+                       ReaperAPI.CountTracks IsNot Nothing AndAlso
+                       ReaperAPI.GetTrack IsNot Nothing Then
+                        Dim destPtr = New IntPtr(CLng(destTrPtr))
+                        Dim count = ReaperAPI.CountTracks(IntPtr.Zero)
+                        For i = 0 To count - 1
+                            If ReaperAPI.GetTrack(IntPtr.Zero, i) = destPtr Then
+                                destTrkIdx = i
+                                Exit For
+                            End If
+                        Next
+                    End If
                     Return String.Join("|",
-                        g("D_VOL"), g("D_PAN"), g("D_PANLAW"), g("D_MUTE"),
-                        g("B_PHASE"), g("B_MONO"),
-                        g("I_SENDMODE"), g("I_SRCCHAN"), g("I_DSTCHAN"), g("I_MIDIFLAGS"))
+                        g("D_VOL"), g("D_PAN"), g("D_PANLAW"),
+                        gb("B_MUTE"), gb("B_PHASE"), gb("B_MONO"),
+                        CInt(ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, "I_SENDMODE")).ToString(ic),
+                        CInt(ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, "I_SRCCHAN")).ToString(ic),
+                        CInt(ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, "I_DSTCHAN")).ToString(ic),
+                        CInt(ReaperAPI.GetTrackSendInfo_Value(tr, cat, si, "I_MIDIFLAGS")).ToString(ic),
+                        destTrkIdx.ToString(ic))
+
                                     ' ── GET_FX_COUNT|trackIndex ───────────────────────────────────
                 Case "GET_FX_COUNT"
                     If parts.Length < 2 Then Return "ERROR:Usage GET_FX_COUNT|trackIndex"
@@ -1260,21 +1290,31 @@ Public Class ReaperBridge
                     ReaperAPI.SelectProjectInstance(proj)
                     Return "OK"
 
-                                    ' ── POLL_STATE ────────────────────────────────────────────────
+                                ' ── POLL_STATE ────────────────────────────────────────────────
                 ' Commande ultra-légère pour le polling de changement d'état.
                 ' 3 valeurs en 1 appel — utilisée sur le pipe persistant.
                 ' Réponse : "stateCount|playState|playPos"
                 '   stateCount : compteur Reaper — change à chaque modification
                 '   playState  : 0=stop 1=play 2=pause 4=rec 5=rec+play
                 '   playPos    : position lecture en secondes (InvariantCulture)
+                '                → GetCursorPosition() si arrêté, GetPlayPosition() si en lecture
                 Case "POLL_STATE"
                     Dim ic = Globalization.CultureInfo.InvariantCulture
                     Dim sc = If(ReaperAPI.GetProjectStateChangeCount IsNot Nothing,
                                 ReaperAPI.GetProjectStateChangeCount(IntPtr.Zero).ToString(), "-1")
                     Dim ps = If(ReaperAPI.GetPlayState IsNot Nothing,
                                 ReaperAPI.GetPlayState().ToString(), "0")
-                    Dim pp = If(ReaperAPI.GetPlayPosition IsNot Nothing,
-                                ReaperAPI.GetPlayPosition().ToString("G", ic), "0")
+                    ' ── Stable quand arrêté : curseur d'édition ; dynamique quand en lecture ──
+                    Dim playState As Integer = 0
+                    Integer.TryParse(ps, playState)
+                    Dim pp As String
+                    If playState = 0 AndAlso ReaperAPI.GetCursorPosition IsNot Nothing Then
+                        pp = ReaperAPI.GetCursorPosition().ToString("G", ic)
+                    ElseIf ReaperAPI.GetPlayPosition IsNot Nothing Then
+                        pp = ReaperAPI.GetPlayPosition().ToString("G", ic)
+                    Else
+                        pp = "0"
+                    End If
                     Return $"{sc}|{ps}|{pp}"
 
                       ' ── EVAL_ENVELOPE|trackIndex|envIndex|time ────────────────────
@@ -1549,7 +1589,7 @@ Public Class ReaperBridge
                         Return If(mute, "1", "0")
                     End If
                     If ReaperAPI.GetTrackSendInfo_Value Is Nothing Then Return "ERROR:API unavailable"
-                    Return If(ReaperAPI.GetTrackSendInfo_Value(tr, cat, idx, "D_MUTE") <> 0, "1", "0")
+                    Return If(ReaperAPI.GetTrackSendInfo_Value(tr, cat, idx, "B_MUTE") <> 0, "1", "0")
 
 
 
@@ -1741,7 +1781,7 @@ Public Class ReaperBridge
                         Dim vol = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "D_VOL")
                         Dim pan = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "D_PAN")
                         Dim panLaw = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "D_PANLAW")
-                        Dim mute = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "D_MUTE")
+                        Dim mute = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "B_MUTE")
                         Dim phase = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "B_PHASE")
                         Dim mono = ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "B_MONO")
                         Dim sendMode = CInt(ReaperAPI.GetTrackSendInfo_Value(tr, cat, sendIdx, "I_SENDMODE"))
@@ -1810,7 +1850,7 @@ Public Class ReaperBridge
                 ' ── SET_ENVELOPE_PROP|trackIndex|envIndex|param|value ─────────────────
                 ' Retourne "OK" ou "ERROR:..."
                 Case "SET_ENVELOPE_PROP"
-                                        If parts.Length < 5 Then Return "ERROR:Usage SET_ENVELOPE_PROP|trackIndex|envIndex|param|value"
+                    If parts.Length < 5 Then Return "ERROR:Usage SET_ENVELOPE_PROP|trackIndex|envIndex|param|value"
                     If ReaperAPI.GetSetEnvelopeInfo_Value Is Nothing Then Return "ERROR:API unavailable"
                     Dim tIdx As Integer = 0, eIdx As Integer = 0
                     Integer.TryParse(parts(1), tIdx)
@@ -2055,6 +2095,62 @@ Public Class ReaperBridge
                     Dim buf As New System.Text.StringBuilder(256)
                     ReaperAPI.GetEnvelopeName(env, buf, buf.Capacity)
                     Return buf.ToString()
+
+                                    ' ── SET_TRANSPORT_STATE|playState ─────────────────────────────
+                ' Impose un état de transport par sa valeur numérique.
+                ' 0=stop  1=play  2=pause  4=rec  5=rec+play  6=pause+rec
+                ' Utilise Main_OnCommand avec les IDs de commandes Reaper standard.
+                ' Réponse : "OK" ou "ERROR:..."
+                Case "SET_TRANSPORT_STATE"
+                    If parts.Length < 2 Then Return "ERROR:Usage SET_TRANSPORT_STATE|playState"
+                    If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
+                    Dim state As Integer = 0
+                    If Not Integer.TryParse(parts(1), state) Then Return "ERROR:Invalid playState"
+                    Select Case state
+                        Case 0  ' Stop
+                            ReaperAPI.Main_OnCommand(1016, 0)
+                        Case 1  ' Play
+                            ReaperAPI.Main_OnCommand(1007, 0)
+                        Case 2  ' Pause
+                            ReaperAPI.Main_OnCommand(1008, 0)
+                        Case 4  ' Record
+                            ReaperAPI.Main_OnCommand(1013, 0)
+                        Case 5  ' Record + Play → lancer l'enregistrement (play implicite)
+                            ReaperAPI.Main_OnCommand(1013, 0)
+                        Case 6  ' Pause + Record → pause
+                            ReaperAPI.Main_OnCommand(1008, 0)
+                        Case Else
+                            Return "ERROR:Unknown playState"
+                    End Select
+                    Return "OK"
+
+                                    ' ── GET_ALL_PEAKS|idx0|idx1|...|idxN ─────────────────────────
+                ' Retourne L et R pour chaque piste en un seul appel.
+                ' Format réponse : "L0|R0|L1|R1|...|LN|RN"
+                ' Valeur -1 si la piste n'existe pas.
+                Case "GET_ALL_PEAKS"
+                    If parts.Length < 2 Then Return "ERROR:Usage GET_ALL_PEAKS|idx0|idx1|..."
+                    If ReaperAPI.Track_GetPeakInfo Is Nothing Then Return "ERROR:API unavailable"
+                    Dim ic = Globalization.CultureInfo.InvariantCulture
+                    Dim tokens As New List(Of String)
+                    For i = 1 To parts.Length - 1
+                        Dim tIdx As Integer = 0
+                        If Not Integer.TryParse(parts(i), tIdx) Then
+                            tokens.Add("-1")
+                            tokens.Add("-1")
+                            Continue For
+                        End If
+                        Dim tr = GetTrackByIndex(tIdx)
+                        If tr = IntPtr.Zero Then
+                            tokens.Add("-1")
+                            tokens.Add("-1")
+                            Continue For
+                        End If
+                        tokens.Add(ReaperAPI.Track_GetPeakInfo(tr, 0).ToString("G", ic))
+                        tokens.Add(ReaperAPI.Track_GetPeakInfo(tr, 1).ToString("G", ic))
+                    Next
+                    Return String.Join("|", tokens)
+
 
 
                 Case Else

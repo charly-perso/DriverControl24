@@ -1620,6 +1620,17 @@ Namespace Reaper
             Next
             Return -1
         End Function
+        ''' <summary>
+        ''' Impose un état de transport Reaper par sa valeur numérique.
+        ''' 0=stop  1=play  2=pause  4=rec  5=rec+play  6=pause+rec
+        ''' Retourne True si Reaper a accepté la commande.
+        ''' </summary>
+        ''' <param name="playState">Valeur cible de l'état de transport.</param>
+        Public Function SetReaperPlayState(playState As Integer) As Boolean
+            Dim raw = CallReaperBridge($"SET_TRANSPORT_STATE|{playState}")
+            Return raw = "OK"
+        End Function
+
 
     End Module
 
@@ -1642,74 +1653,47 @@ Namespace Reaper
         Public Class ReaperSendMonitor
             Implements IDisposable
 
-            ' ── Identité de l'envoi (fixe) ────────────────────────────────────
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
+
             Private ReadOnly _sendIndex As Integer
             Private ReadOnly _category As Integer
-
-            ' ── Flag de changement d'état ──────────────────────────────────────
             Private _stateChanged As Boolean = True
-
-
             Private _thread As Thread
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
             Private _interval As Integer = 50
-
-            ' ── Pistes surveillées ────────────────────────────────────────────
-            ' Clé  = trackIndex  |  Bool = True si suspendu
-            ' Suspension → cache NON mis à jour, événements muets.
-            ' Reprise   → cache effacé → resync au prochain cycle.
             Private ReadOnly _lock As New Object()
             Private ReadOnly _tracks As New Dictionary(Of Integer, Boolean)
             Private ReadOnly _volCache As New Dictionary(Of Integer, Double)
             Private ReadOnly _panCache As New Dictionary(Of Integer, Double)
             Private ReadOnly _muteCache As New Dictionary(Of Integer, Boolean)
 
-            ' ── Événements ────────────────────────────────────────────────────
-
-            ''' <summary>Déclenché quand la connexion au bridge démarre.</summary>
             Public Event On_Connected()
-            ''' <summary>Déclenché quand le thread de monitoring s'arrête.</summary>
             Public Event On_Disconnected()
-            ''' <summary>Déclenché quand le volume de l'envoi change sur une piste.</summary>
             Public Event On_VolChange(trackIndex As Integer, vol As Double)
-            ''' <summary>Déclenché quand le pan de l'envoi change sur une piste.</summary>
             Public Event On_PanChange(trackIndex As Integer, pan As Double)
-            ''' <summary>Déclenché quand l'état mute de l'envoi change sur une piste.</summary>
             Public Event On_MuteChange(trackIndex As Integer, mute As Boolean)
-            ''' <summary>Déclenché quand l'état de lecture Reaper change.</summary>
             Public Event On_PlayStateChange(playState As Integer)
 
-            ' ── Constructeur ──────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Initialise le moniteur pour un envoi donné.
-            ''' </summary>
-            ''' <param name="sendIndex">Index 0-based de l'envoi à surveiller.</param>
-            ''' <param name="category"><see cref="SendCategory"/> (défaut : Sends).</param>
             Public Sub New(sendIndex As Integer,
                            Optional category As SendCategory = SendCategory.Sends)
                 _sendIndex = sendIndex
                 _category = CInt(category)
             End Sub
 
-            ' ── Propriétés ────────────────────────────────────────────────────
-
-            ''' <summary>Index 0-based de l'envoi surveillé.</summary>
             Public ReadOnly Property SendIndex As Integer
                 Get
                     Return _sendIndex
                 End Get
             End Property
 
-            ''' <summary>Catégorie de l'envoi surveillé.</summary>
             Public ReadOnly Property Category As SendCategory
                 Get
                     Return CType(_category, SendCategory)
                 End Get
             End Property
 
-            ''' <summary>Intervalle de polling en ms (défaut : 50 ms).</summary>
             Public Property Interval As Integer
                 Get
                     Return _interval
@@ -1719,19 +1703,12 @@ Namespace Reaper
                 End Set
             End Property
 
-            ''' <summary>True si le thread de monitoring est actif.</summary>
             Public ReadOnly Property IsRunning As Boolean
                 Get
                     Return Threading.Volatile.Read(_isRunning)
                 End Get
             End Property
 
-            ' ── Gestion de la collection ──────────────────────────────────────
-
-            ''' <summary>
-            ''' Ajoute une piste à la surveillance.
-            ''' Sans effet si la piste est déjà enregistrée.
-            ''' </summary>
             Public Sub WatchTrack(trackIndex As Integer)
                 SyncLock _lock
                     If Not _tracks.ContainsKey(trackIndex) Then
@@ -1740,14 +1717,12 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>Ajoute une collection de pistes à la surveillance.</summary>
             Public Sub WatchTracks(tracks As IEnumerable(Of ReaperTrack))
                 For Each trk In tracks
                     WatchTrack(trk.TrackIndex)
                 Next
             End Sub
 
-            ''' <summary>Retire une piste et efface ses caches.</summary>
             Public Sub UnwatchTrack(trackIndex As Integer)
                 SyncLock _lock
                     _tracks.Remove(trackIndex)
@@ -1757,7 +1732,6 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>Retire toutes les pistes et efface les caches.</summary>
             Public Sub ClearWatched()
                 SyncLock _lock
                     _tracks.Clear()
@@ -1767,12 +1741,6 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ' ── Suspension par piste ──────────────────────────────────────────
-
-            ''' <summary>
-            ''' Suspend la détection pour une piste.
-            ''' Le cache n'est plus mis à jour ; à la reprise il est effacé.
-            ''' </summary>
             Public Sub SuspendTrack(trackIndex As Integer)
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
@@ -1781,10 +1749,6 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>
-            ''' Réactive la détection pour une piste suspendue.
-            ''' Le cache est effacé → resync au prochain cycle.
-            ''' </summary>
             Public Sub ResumeTrack(trackIndex As Integer)
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
@@ -1796,7 +1760,6 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>Retourne True si la piste est suspendue.</summary>
             Public Function IsTrackSuspended(trackIndex As Integer) As Boolean
                 SyncLock _lock
                     Dim suspended As Boolean = False
@@ -1805,12 +1768,8 @@ Namespace Reaper
                 End SyncLock
             End Function
 
-            ' ── Cycle de vie ──────────────────────────────────────────────────
-
-            ''' <summary>Démarre le thread de monitoring. Sans effet si déjà démarré.</summary>
             Public Sub Start()
                 If IsRunning Then Return
-                ' ── S'abonner au hub avant de démarrer ────────────────────────
                 AddHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, True)
@@ -1822,18 +1781,15 @@ Namespace Reaper
                 _thread.Start()
             End Sub
 
-            ''' <summary>Arrête le thread de monitoring et ferme la connexion pipe.</summary>
             Public Sub [Stop]()
                 RemoveHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, False)
+                _pipe.Disconnect()
             End Sub
-
-            ' ── Boucle de monitoring ──────────────────────────────────────────
 
             Private Sub MonitorLoop()
                 RaiseEvent On_Connected()
-
                 While Threading.Volatile.Read(_isRunning)
                     If Threading.Volatile.Read(_stateChanged) Then
                         Threading.Volatile.Write(_stateChanged, False)
@@ -1841,8 +1797,6 @@ Namespace Reaper
                     End If
                     Thread.Sleep(_interval)
                 End While
-
-
                 RaiseEvent On_Disconnected()
             End Sub
 
@@ -1850,13 +1804,6 @@ Namespace Reaper
                 Threading.Volatile.Write(_stateChanged, True)
             End Sub
 
-            ''' <summary>
-            ''' Interroge vol+pan (1 requête) et mute (1 requête) par piste surveillée.
-            ''' <list type="bullet">
-            ''' <item>Suspendue → requêtes faites, caches NON mis à jour, événements muets.</item>
-            ''' <item>Active    → caches mis à jour, événements déclenchés si changement.</item>
-            ''' </list>
-            ''' </summary>
             Private Sub PollSends()
                 Dim snapshot As (trackIndex As Integer, isSuspended As Boolean)()
                 SyncLock _lock
@@ -1872,8 +1819,8 @@ Namespace Reaper
                 For Each entry In snapshot
                     Dim tIdx = entry.trackIndex
 
-                    ' ── Vol + Pan (1 requête) ─────────────────────────────────
-                    Dim rawVP = ReaperPollHub.Instance.Request($"GET_SEND_VOL_PAN|{tIdx}|{_category}|{_sendIndex}")
+                    ' ── Vol + Pan (1 requête via le pipe propre) ──────────────
+                    Dim rawVP = _pipe.Request($"GET_SEND_VOL_PAN|{tIdx}|{_category}|{_sendIndex}")
                     If Not String.IsNullOrEmpty(rawVP) AndAlso Not rawVP.StartsWith("ERROR") Then
                         Dim p = rawVP.Split("|"c)
                         If p.Length >= 2 Then
@@ -1890,15 +1837,14 @@ Namespace Reaper
                                     panChg = Not _panCache.TryGetValue(tIdx, pv) OrElse pv <> newPan
                                     If panChg Then _panCache(tIdx) = newPan
                                 End SyncLock
-                                ' ── Déclencher HORS lock ──────────────────────
                                 If volChg Then RaiseEvent On_VolChange(tIdx, newVol)
                                 If panChg Then RaiseEvent On_PanChange(tIdx, newPan)
                             End If
                         End If
                     End If
 
-                    ' ── Mute (1 requête séparée) ──────────────────────────────
-                    Dim rawMute = ReaperPollHub.Instance.Request($"GET_SEND_MUTE|{tIdx}|{_category}|{_sendIndex}")
+                    ' ── Mute (1 requête via le pipe propre) ───────────────────
+                    Dim rawMute = _pipe.Request($"GET_SEND_MUTE|{tIdx}|{_category}|{_sendIndex}")
                     If Not String.IsNullOrEmpty(rawMute) AndAlso Not rawMute.StartsWith("ERROR") Then
                         Dim newMute = rawMute = "1"
                         If Not entry.isSuspended Then
@@ -1914,18 +1860,16 @@ Namespace Reaper
                 Next
             End Sub
 
-            ' ── IDisposable ───────────────────────────────────────────────────
-
-            ''' <summary>Arrête le monitoring et libère toutes les ressources.</summary>
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
-
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
 
         End Class
+
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER PROJECT MONITOR — surveillance du nombre de pistes
         ' ══════════════════════════════════════════════════════════════════════════
@@ -1941,37 +1885,21 @@ Namespace Reaper
         Public Class ReaperProjectMonitor
             Implements IDisposable
 
-            ' ── Flag de changement d'état projet ──────────────────────────────────
-            ' True au démarrage → force un premier poll (sync initiale).
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
+
             Private _stateChanged As Boolean = True
             Private _thread As Thread
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
             Private _interval As Integer = 50
-
-            ' ── Cache ─────────────────────────────────────────────────────────────
             Private ReadOnly _lock As New Object()
             Private _lastCount As Integer = -1
 
-            ' ── Événements ────────────────────────────────────────────────────────
-
-            ''' <summary>Déclenché quand la connexion au bridge démarre.</summary>
             Public Event On_Connected()
-            ''' <summary>Déclenché quand le thread de monitoring s'arrête.</summary>
             Public Event On_Disconnected()
-
-            ''' <summary>
-            ''' Déclenché quand le nombre de pistes du projet actif change.
-            ''' <paramref name="count"/> = nouveau nombre de pistes (sans la piste maître).
-            ''' </summary>
             Public Event On_TrackCountChanged(count As Integer)
 
-            ' ── Propriétés ────────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Nombre de pistes au dernier cycle de polling.
-            ''' Retourne -1 si le monitoring n'a pas encore effectué de premier poll.
-            ''' </summary>
             Public ReadOnly Property TrackCount As Integer
                 Get
                     SyncLock _lock
@@ -1980,7 +1908,6 @@ Namespace Reaper
                 End Get
             End Property
 
-            ''' <summary>Intervalle de polling en ms (défaut : 50 ms).</summary>
             Public Property Interval As Integer
                 Get
                     Return _interval
@@ -1990,19 +1917,14 @@ Namespace Reaper
                 End Set
             End Property
 
-            ''' <summary>True si le thread de monitoring est actif.</summary>
             Public ReadOnly Property IsRunning As Boolean
                 Get
                     Return Threading.Volatile.Read(_isRunning)
                 End Get
             End Property
 
-            ' ── Cycle de vie ──────────────────────────────────────────────────────
-
-            ''' <summary>Démarre le thread de monitoring. Sans effet si déjà démarré.</summary>
             Public Sub Start()
                 If IsRunning Then Return
-                ' ── S'abonner au hub avant de démarrer ────────────────────────
                 AddHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, True)
@@ -2014,18 +1936,15 @@ Namespace Reaper
                 _thread.Start()
             End Sub
 
-            ''' <summary>Arrête le thread de monitoring et ferme la connexion pipe.</summary>
             Public Sub [Stop]()
                 RemoveHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, False)
+                _pipe.Disconnect()
             End Sub
-
-            ' ── Boucle de monitoring ──────────────────────────────────────────────
 
             Private Sub MonitorLoop()
                 RaiseEvent On_Connected()
-
                 While Threading.Volatile.Read(_isRunning)
                     If Threading.Volatile.Read(_stateChanged) Then
                         Threading.Volatile.Write(_stateChanged, False)
@@ -2033,7 +1952,6 @@ Namespace Reaper
                     End If
                     Thread.Sleep(_interval)
                 End While
-
                 RaiseEvent On_Disconnected()
             End Sub
 
@@ -2041,15 +1959,9 @@ Namespace Reaper
                 Threading.Volatile.Write(_stateChanged, True)
             End Sub
 
-            ' ── Détection du nombre de pistes ─────────────────────────────────────
-
-            ''' <summary>
-            ''' Interroge Reaper via <c>COUNT_TRACKS</c> sur le pipe persistant.
-            ''' Déclenche <see cref="On_TrackCountChanged"/> uniquement si le
-            ''' nombre a changé depuis le dernier appel.
-            ''' </summary>
             Private Sub PollTrackCount()
-                Dim raw = ReaperPollHub.Instance.Request("COUNT_TRACKS")
+                ' ── Utilise le pipe propre du monitor ─────────────────────────
+                Dim raw = _pipe.Request("COUNT_TRACKS")
                 If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
 
                 Dim newCount As Integer = -1
@@ -2062,21 +1974,19 @@ Namespace Reaper
                     _lastCount = newCount
                 End SyncLock
 
-                ' ── Déclencher HORS lock ──────────────────────────────────────────
                 RaiseEvent On_TrackCountChanged(newCount)
             End Sub
 
-            ' ── IDisposable ───────────────────────────────────────────────────────
-
-            ''' <summary>Arrête le monitoring et libère toutes les ressources.</summary>
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
 
         End Class
+
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER SESSION MONITOR — détection de changement de projet actif
         ' ══════════════════════════════════════════════════════════════════════════
@@ -2091,37 +2001,29 @@ Namespace Reaper
         ''' <br/>
         ''' Intervalle recommandé : 500 ms — les changements de projet sont rares.
         ''' </summary>
+        ''' <summary>
+        ''' Surveille le changement de projet actif dans Reaper et les ouvertures/fermetures
+        ''' de projets. Polling sur un thread dédié à faible priorité, via son propre
+        ''' <see cref="ReaperPollPipe"/> persistant — indépendant du hub.
+        ''' Intervalle recommandé : 500 ms.
+        ''' </summary>
         Public Class ReaperSessionMonitor
             Implements IDisposable
 
-            ' ── Thread ────────────────────────────────────────────────────────────
+            ' ── Pipe propre — connexion persistante indépendante du hub ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
+
             Private _thread As Thread
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
             Private _interval As Integer = 500
 
-            ' ── Cache ─────────────────────────────────────────────────────────────
             Private _lastFilePath As String = String.Empty
             Private ReadOnly _lastOpenProjects As New List(Of String)
 
-            ' ── Événements ────────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Déclenché quand le projet actif change (changement d'onglet dans Reaper).
-            ''' </summary>
-            ''' <param name="newFilePath">Chemin du nouveau projet actif (vide si jamais sauvegardé).</param>
-            ''' <param name="previousFilePath">Chemin du projet précédent.</param>
             Public Event On_ActiveProjectChanged(newFilePath As String, previousFilePath As String)
-
-            ''' <summary>
-            ''' Déclenché quand la liste des projets ouverts change
-            ''' (nouveau projet ouvert ou projet fermé).
-            ''' </summary>
             Public Event On_OpenProjectsChanged(projects As IReadOnlyList(Of String))
 
-            ' ── Propriétés ────────────────────────────────────────────────────────
-
-            ''' <summary>Intervalle de polling en ms (défaut : 500 ms).</summary>
             Public Property Interval As Integer
                 Get
                     Return _interval
@@ -2131,55 +2033,45 @@ Namespace Reaper
                 End Set
             End Property
 
-            ''' <summary>True si le thread de surveillance est actif.</summary>
             Public ReadOnly Property IsRunning As Boolean
                 Get
                     Return Threading.Volatile.Read(_isRunning)
                 End Get
             End Property
 
-            ''' <summary>
-            ''' Chemin du projet actif au dernier cycle de polling.
-            ''' Vide si le projet n'a jamais été sauvegardé.
-            ''' </summary>
             Public ReadOnly Property CurrentFilePath As String
                 Get
                     Return _lastFilePath
                 End Get
             End Property
 
-            ' ── Cycle de vie ──────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Démarre le thread de surveillance.
-            ''' Initialise le cache à partir de l'état courant de Reaper avant de démarrer —
-            ''' appeler après un premier <see cref="ReaperProject.Refresh"/> pour garantir
-            ''' que Reaper est joignable.
-            ''' Sans effet si déjà démarré.
-            ''' </summary>
             Public Sub Start()
                 If IsRunning Then Return
 
-                ' ── Snapshot initial pour ne pas déclencher d'événements au 1er cycle ─
-                _lastFilePath = utility.GetProjectFilePath()
+                ' ── Snapshot initial via le pipe propre ───────────────────────
+                _lastFilePath = _pipe.Request("GET_PROJECT_FILE_PATH")
+                If _lastFilePath.StartsWith("ERROR") Then _lastFilePath = String.Empty
+
+                Dim projectsRaw = _pipe.Request("ENUM_PROJECTS")
                 _lastOpenProjects.Clear()
-                _lastOpenProjects.AddRange(utility.EnumAllProjects())
+                If Not String.IsNullOrEmpty(projectsRaw) AndAlso
+                   Not projectsRaw.StartsWith("ERROR") Then
+                    _lastOpenProjects.AddRange(projectsRaw.Split("|"c))
+                End If
 
                 Threading.Volatile.Write(_isRunning, True)
                 _thread = New Thread(AddressOf MonitorLoop) With {
-                .Name = "ReaperProjectMonitor",
-                .IsBackground = True,
-                .Priority = ThreadPriority.BelowNormal
-            }
+                    .Name = "ReaperSessionMonitor",
+                    .IsBackground = True,
+                    .Priority = ThreadPriority.BelowNormal
+                }
                 _thread.Start()
             End Sub
 
-            ''' <summary>Arrête le thread de surveillance.</summary>
             Public Sub [Stop]()
                 Threading.Volatile.Write(_isRunning, False)
+                _pipe.Disconnect()
             End Sub
-
-            ' ── Boucle de monitoring ──────────────────────────────────────────────
 
             Private Sub MonitorLoop()
                 While Threading.Volatile.Read(_isRunning)
@@ -2188,30 +2080,37 @@ Namespace Reaper
                 End While
             End Sub
 
-            ''' <summary>
-            ''' Vérifie le projet actif et la liste des projets ouverts.
-            ''' Déclenche les événements uniquement si un changement est détecté.
-            ''' </summary>
             Private Sub PollProject()
-                ' ── Projet actif ──────────────────────────────────────────────────
-                Dim currentPath = utility.GetProjectFilePath()
+                ' ── Projet actif ──────────────────────────────────────────────
+                Dim currentPath = _pipe.Request("GET_PROJECT_FILE_PATH")
+                If String.IsNullOrEmpty(currentPath) OrElse currentPath.StartsWith("ERROR") Then
+                    currentPath = String.Empty
+                End If
+
                 If currentPath <> _lastFilePath Then
                     Dim previous = _lastFilePath
                     _lastFilePath = currentPath
                     RaiseEvent On_ActiveProjectChanged(currentPath, previous)
                 End If
 
-                ' ── Projets ouverts ───────────────────────────────────────────────
-                Dim openProjects = utility.EnumAllProjects()
-                Dim changed = openProjects.Count <> _lastOpenProjects.Count
+                ' ── Projets ouverts ───────────────────────────────────────────
+                Dim projectsRaw = _pipe.Request("ENUM_PROJECTS")
+                Dim openProjects As String() = Array.Empty(Of String)()
+                If Not String.IsNullOrEmpty(projectsRaw) AndAlso
+                   Not projectsRaw.StartsWith("ERROR") Then
+                    openProjects = projectsRaw.Split("|"c)
+                End If
+
+                Dim changed = openProjects.Length <> _lastOpenProjects.Count
                 If Not changed Then
-                    For i = 0 To openProjects.Count - 1
+                    For i = 0 To openProjects.Length - 1
                         If openProjects(i) <> _lastOpenProjects(i) Then
                             changed = True
                             Exit For
                         End If
                     Next
                 End If
+
                 If changed Then
                     _lastOpenProjects.Clear()
                     _lastOpenProjects.AddRange(openProjects)
@@ -2219,17 +2118,16 @@ Namespace Reaper
                 End If
             End Sub
 
-            ' ── IDisposable ───────────────────────────────────────────────────────
-
-            ''' <summary>Arrête le monitoring et libère les ressources.</summary>
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
 
         End Class
+
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER FX PARAM MONITOR — surveillance ciblée des paramètres d'un FX
         ' ══════════════════════════════════════════════════════════════════════════
@@ -2247,6 +2145,8 @@ Namespace Reaper
         ''' </summary>
         Public Class ReaperFxParamMonitor
             Implements IDisposable
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
 
             ' ── Flag de changement d'état projet ─────────────────────────────────
             ' Initialisé à True pour forcer un premier poll au démarrage (sync initiale).
@@ -2433,11 +2333,12 @@ Namespace Reaper
                 _thread.Start()
             End Sub
 
-            ''' <summary>Arrête le thread de monitoring et ferme la connexion pipe.</summary>
             Public Sub [Stop]()
                 RemoveHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, False)
+                ' ── Fermer le pipe propre ─────────────────────────────────────
+                _pipe.Disconnect()
             End Sub
 
             ' ── Boucle de monitoring ──────────────────────────────────────────────
@@ -2488,21 +2389,24 @@ Namespace Reaper
 
                 Dim ic = Globalization.CultureInfo.InvariantCulture
                 For Each entry In snapshot
-                    Dim raw = ReaperPollHub.Instance.Request($"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
+                    ' ── Utilise le pipe propre du monitor ─────────────────────
+                    Dim raw = _pipe.Request(
+                        $"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
                     If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
 
                     Dim newVal As Double = Double.MinValue
-                    If Not Double.TryParse(raw, Globalization.NumberStyles.Any, ic, newVal) Then Continue For
+                    If Not Double.TryParse(raw, Globalization.NumberStyles.Any,
+                                           ic, newVal) Then Continue For
 
                     Dim changed As Boolean
                     Dim prevVal As Double = Double.MinValue
 
                     SyncLock _lock
-                        changed = Not _cache.TryGetValue(entry.paramIndex, prevVal) OrElse prevVal <> newVal
+                        changed = Not _cache.TryGetValue(entry.paramIndex, prevVal) OrElse
+                                  prevVal <> newVal
                         If changed Then _cache(entry.paramIndex) = newVal
                     End SyncLock
 
-                    ' ── Événement uniquement si changé ET non suspendu ────────────
                     If changed AndAlso Not entry.isSuspended Then
                         RaiseEvent On_ParamChange(entry.paramIndex, newVal)
                     End If
@@ -2515,6 +2419,8 @@ Namespace Reaper
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
+                    ' ── Libérer le pipe propre ────────────────────────────────
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
@@ -2543,14 +2449,16 @@ Namespace Reaper
         Public Class ReaperFxEnvelopeParamMonitor
             Implements IDisposable
 
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
+
             Private ReadOnly _trackIndex As Integer
             Private ReadOnly _fxIndex As Integer
             Private _thread As Thread
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
             Private _interval As Integer = 50
-            Private _isPlaying As Boolean = False          ' ← AJOUT : état lecture
-
+            Private _isPlaying As Boolean = False
             Private ReadOnly _lock As New Object()
             Private ReadOnly _params As New Dictionary(Of Integer, Boolean)
             Private ReadOnly _cache As New Dictionary(Of Integer, Double)
@@ -2652,7 +2560,7 @@ Namespace Reaper
 
             Public Sub Start()
                 If IsRunning Then Return
-                ' ── S'abonner au hub pour les événements de transport ──────────
+                ' ── Hub : événements transport uniquement (pas de Request) ────
                 AddHandler ReaperPollHub.Instance.On_PlayStateChange,
                     AddressOf OnHubPlayStateChange
                 AddHandler ReaperPollHub.Instance.On_PlayPositionChange,
@@ -2672,9 +2580,9 @@ Namespace Reaper
                 RemoveHandler ReaperPollHub.Instance.On_PlayPositionChange,
                     AddressOf OnHubPlayPositionChange
                 Threading.Volatile.Write(_isRunning, False)
+                ' ── Fermer le pipe propre ─────────────────────────────────────
+                _pipe.Disconnect()
             End Sub
-
-            ' ── Handlers hub ──────────────────────────────────────────────────
 
             Private Sub OnHubPlayStateChange(playState As Integer)
                 Threading.Volatile.Write(_isPlaying, playState <> 0)
@@ -2687,15 +2595,12 @@ Namespace Reaper
 
             Private Sub MonitorLoop()
                 RaiseEvent On_Connected()
-
                 While Threading.Volatile.Read(_isRunning)
-                    ' ── PollParams uniquement si Reaper est en lecture ─────────
                     If Threading.Volatile.Read(_isPlaying) Then
                         PollParams()
                     End If
                     Thread.Sleep(_interval)
                 End While
-
                 RaiseEvent On_Disconnected()
             End Sub
 
@@ -2711,8 +2616,8 @@ Namespace Reaper
 
                 Dim ic = CultureInfo.InvariantCulture
                 For Each entry In snapshot
-                    ' ── Requête via le hub partagé ────────────────────────────
-                    Dim raw = ReaperPollHub.Instance.Request(
+                    ' ── Utilise le pipe propre du monitor ─────────────────────
+                    Dim raw = _pipe.Request(
                         $"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
                     If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
 
@@ -2737,7 +2642,8 @@ Namespace Reaper
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
-                    ' Pas de _pipe.Dispose() — le hub est partagé
+                    ' ── Libérer le pipe propre ────────────────────────────────
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
@@ -2766,19 +2672,17 @@ Namespace Reaper
         Public Class ReaperTrackMonitor
             Implements IDisposable
 
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
+
             Private _stateChanged As Boolean = True
             Private _thread As Thread
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
             Private _interval As Integer = 50
 
-            ' ── Collection de pistes surveillées ──────────────────────────────
-            ' Clé = trackIndex
-            ' Valeur = (Track, IsSuspended)
-            ' Pas de caches internes : ReaperTrack.Refresh() gère tout.
             Private ReadOnly _lock As New Object()
             Private ReadOnly _tracks As New Dictionary(Of Integer, (Track As ReaperTrack, IsSuspended As Boolean))
-            ' Lambdas de RemoveHandler stockées pour un désabonnement propre.
             Private ReadOnly _cleanup As New Dictionary(Of Integer, Action)
 
             ' ── Événements ────────────────────────────────────────────────────
@@ -2970,7 +2874,6 @@ Namespace Reaper
 
             Public Sub Start()
                 If IsRunning Then Return
-                ' ── S'abonner au hub avant de démarrer ────────────────────────
                 AddHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, True)
@@ -2986,6 +2889,11 @@ Namespace Reaper
                 RemoveHandler ReaperPollHub.Instance.On_ProjectStateChange,
                     AddressOf OnProjectStateChange
                 Threading.Volatile.Write(_isRunning, False)
+                _pipe.Disconnect()
+            End Sub
+
+            Private Sub OnProjectStateChange(stateCount As Integer)
+                Threading.Volatile.Write(_stateChanged, True)
             End Sub
 
             Private Sub MonitorLoop()
@@ -3000,10 +2908,6 @@ Namespace Reaper
                 RaiseEvent On_Disconnected()
             End Sub
 
-            Private Sub OnProjectStateChange(stateCount As Integer)
-                Threading.Volatile.Write(_stateChanged, True)
-            End Sub
-
             Private Sub PollTracks()
                 Dim snapshot As (Track As ReaperTrack, IsSuspended As Boolean)()
                 SyncLock _lock
@@ -3013,10 +2917,10 @@ Namespace Reaper
                     Next
                     snapshot = tmp.ToArray()
                 End SyncLock
-
                 For Each entry In snapshot
                     If entry.IsSuspended Then Continue For
-                    entry.Track.Refresh()
+                    ' ── Utilise le pipe propre du monitor ─────────────────────
+                    entry.Track.Refresh(_pipe)
                 Next
             End Sub
 
@@ -3024,11 +2928,10 @@ Namespace Reaper
                 If Not _disposed Then
                     [Stop]()
                     ClearWatched()
-                    ' Pas de _pipe.Dispose() — le hub est partagé
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
-
 
         End Class
         ' ══════════════════════════════════════════════════════════════════════════
@@ -3053,7 +2956,9 @@ Namespace Reaper
         Public Class ReaperTrackEnvelopeMonitor
             Implements IDisposable
 
-            ' ── Plus de _pipe individuel — on utilise ReaperPollHub ───────────
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
+
             Private _thread As Thread
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
@@ -3173,6 +3078,8 @@ Namespace Reaper
                 RemoveHandler ReaperPollHub.Instance.On_PlayPositionChange,
                     AddressOf OnHubPlayPositionChange
                 Threading.Volatile.Write(_isRunning, False)
+                ' ── Fermer le pipe propre ─────────────────────────────────────
+                _pipe.Disconnect()
             End Sub
 
             Private Sub OnHubPlayStateChange(playState As Integer)
@@ -3210,9 +3117,8 @@ Namespace Reaper
                 For Each entry In snapshot
                     Dim tIdx = entry.trackIndex
 
-                    ' ── Vol + Pan (1 requête via le hub) ──────────────────────
-                    Dim rawVP = ReaperPollHub.Instance.Request(
-                        $"GET_TRACK_UI_VOL_PAN|{tIdx}")
+                    ' ── Vol + Pan (1 requête via le pipe propre) ──────────────
+                    Dim rawVP = _pipe.Request($"GET_TRACK_UI_VOL_PAN|{tIdx}")
                     If Not String.IsNullOrEmpty(rawVP) AndAlso
                        Not rawVP.StartsWith("ERROR") Then
                         Dim p = rawVP.Split("|"c)
@@ -3231,16 +3137,14 @@ Namespace Reaper
                                     panChg = Not _panCache.TryGetValue(tIdx, pv) OrElse pv <> newPan
                                     If panChg Then _panCache(tIdx) = newPan
                                 End SyncLock
-                                ' ── Déclencher HORS lock ──────────────────────
                                 If volChg Then RaiseEvent On_VolChange(tIdx, newVol)
                                 If panChg Then RaiseEvent On_PanChange(tIdx, newPan)
                             End If
                         End If
                     End If
 
-                    ' ── Mute (1 requête séparée via le hub) ───────────────────
-                    Dim rawMute = ReaperPollHub.Instance.Request(
-                        $"GET_TRACK_UI_MUTE|{tIdx}")
+                    ' ── Mute (1 requête via le pipe propre) ───────────────────
+                    Dim rawMute = _pipe.Request($"GET_TRACK_UI_MUTE|{tIdx}")
                     If Not String.IsNullOrEmpty(rawMute) AndAlso
                        Not rawMute.StartsWith("ERROR") Then
                         Dim newMute = rawMute = "1"
@@ -3260,7 +3164,8 @@ Namespace Reaper
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
-                    ' Pas de _pipe.Dispose() — le hub est partagé
+                    ' ── Libérer le pipe propre ────────────────────────────────
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
@@ -3283,7 +3188,8 @@ Namespace Reaper
         Public Class ReaperTransportMonitor
             Implements IDisposable
 
-            ' ── Plus de _pipe individuel — on utilise ReaperPollHub ───────────
+            ' ── Pipe propre — aucune contention avec les autres monitors ──────
+            Private ReadOnly _pipe As New ReaperPollPipe()
 
             Private _thread As Thread
             Private _isRunning As Boolean = False
@@ -3323,26 +3229,14 @@ Namespace Reaper
                 End Get
             End Property
 
-            ' ── Suspension ────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Suspend tous les événements du moniteur.
-            ''' Appeler avant d'envoyer une commande transport pour éviter
-            ''' que le changement produit par la commande ne reboucle vers la surface.
-            ''' </summary>
             Public Sub SuspendMonitor()
                 Threading.Volatile.Write(_suspended, True)
             End Sub
 
-            ''' <summary>
-            ''' Réactive les événements et force un re-poll immédiat au prochain cycle.
-            ''' </summary>
             Public Sub ResumeMonitor()
                 Threading.Volatile.Write(_stateChanged, True)
                 Threading.Volatile.Write(_suspended, False)
             End Sub
-
-            ' ── Cycle de vie ──────────────────────────────────────────────────
 
             Public Sub Start()
                 If IsRunning Then Return
@@ -3369,9 +3263,9 @@ Namespace Reaper
                 RemoveHandler ReaperPollHub.Instance.On_PlayPositionChange,
                     AddressOf OnHubPlayPositionChange
                 Threading.Volatile.Write(_isRunning, False)
+                ' ── Fermer le pipe propre ─────────────────────────────────────
+                _pipe.Disconnect()
             End Sub
-
-            ' ── Handlers hub ──────────────────────────────────────────────────
 
             Private Sub OnHubPlayStateChange(playState As Integer)
                 If Not Threading.Volatile.Read(_suspended) Then
@@ -3389,28 +3283,23 @@ Namespace Reaper
                 Threading.Volatile.Write(_stateChanged, True)
             End Sub
 
-            ' ── Boucle ────────────────────────────────────────────────────────
-
             Private Sub MonitorLoop()
                 RaiseEvent On_Connected()
-
                 While Threading.Volatile.Read(_isRunning)
-                    ' ── PollTransportState uniquement sur ProjectStateChange ───
                     If Threading.Volatile.Read(_stateChanged) Then
                         Threading.Volatile.Write(_stateChanged, False)
                         PollTransportState()
                     End If
                     Thread.Sleep(_interval)
                 End While
-
                 RaiseEvent On_Disconnected()
             End Sub
 
             Private Sub PollTransportState()
                 If Threading.Volatile.Read(_suspended) Then Return
 
-                ' ── Requête via le hub partagé ────────────────────────────────
-                Dim raw = ReaperPollHub.Instance.Request("GET_TRANSPORT_STATE")
+                ' ── Utilise le pipe propre du monitor ─────────────────────────
+                Dim raw = _pipe.Request("GET_TRANSPORT_STATE")
                 If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
 
                 Dim p = raw.Split("|"c)
@@ -3463,13 +3352,13 @@ Namespace Reaper
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
-                    ' Pas de _pipe.Dispose() — le hub est partagé
+                    ' ── Libérer le pipe propre ────────────────────────────────
+                    _pipe.Dispose()
                     _disposed = True
                 End If
             End Sub
 
         End Class
-
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER POLL PIPE — connexion persistante pour la détection de changement
         ' ══════════════════════════════════════════════════════════════════════════
@@ -3509,7 +3398,7 @@ Namespace Reaper
 
             ''' <summary>
             ''' Déclenché quand l'état de lecture change (stop/play/pause/rec).
-            ''' 0=stop  1=play  2=pause  4=rec  5=rec+play
+            ''' 0=stop  1=play  2=pause  4=rec  5=rec+play 6=pause+rec
             ''' </summary>
             Public Event On_PlayStateChange(playState As Integer)
 
@@ -3532,19 +3421,23 @@ Namespace Reaper
             ''' Ouvre la connexion persistante vers le bridge.
             ''' Retourne True si la connexion a réussi.
             ''' </summary>
+            Private ReadOnly _connectLock As New Object()
+
             Public Function Connect() As Boolean
-                Try
-                    Disconnect()
-                    _pipe = New IO.Pipes.NamedPipeClientStream(
-                        ".", "c24_reaper_poll", IO.Pipes.PipeDirection.InOut)
-                    _pipe.Connect(timeout:=500)
-                    _writer = New IO.StreamWriter(_pipe) With {.AutoFlush = True}
-                    _reader = New IO.StreamReader(_pipe)
-                    Return True
-                Catch
-                    Disconnect()
-                    Return False
-                End Try
+                SyncLock _connectLock
+                    Try
+                        Disconnect()
+                        _pipe = New IO.Pipes.NamedPipeClientStream(
+                            ".", "c24_reaper_poll", IO.Pipes.PipeDirection.InOut)
+                        _pipe.Connect(500)
+                        _writer = New IO.StreamWriter(_pipe) With {.AutoFlush = True}
+                        _reader = New IO.StreamReader(_pipe)
+                        Return True
+                    Catch
+                        Disconnect()
+                        Return False
+                    End Try
+                End SyncLock
             End Function
 
             ''' <summary>
@@ -3710,17 +3603,14 @@ Namespace Reaper
         Public Class ReaperPollHub
             Implements IDisposable
 
-            ' ── Singleton ─────────────────────────────────────────────────────────
             Private Shared ReadOnly _instance As New ReaperPollHub()
 
-            ''' <summary>Instance unique partagée par tous les moniteurs.</summary>
             Public Shared ReadOnly Property Instance As ReaperPollHub
                 Get
                     Return _instance
                 End Get
             End Property
 
-            ' ── Pipe + thread ─────────────────────────────────────────────────────
             Private ReadOnly _pipe As New ReaperPollPipe()
             Private _thread As Thread
             Private _isRunning As Boolean = False
@@ -3728,25 +3618,14 @@ Namespace Reaper
             Private _interval As Integer = 50
             Private ReadOnly _lock As New Object()
 
-            ' ── Événements distribués à tous les abonnés ──────────────────────────
-
-            ''' <summary>Déclenché quand le <c>ProjectStateChangeCount</c> Reaper change.</summary>
+            ' ── Plus de _ioLock ni de Request() — le hub est un bus d'événements pur ──
             Public Event On_ProjectStateChange(stateCount As Integer)
-
-            ''' <summary>Déclenché quand l'état de lecture Reaper change.</summary>
             Public Event On_PlayStateChange(playState As Integer)
-
-            ''' <summary>Déclenché quand la position de lecture change (secondes).</summary>
             Public Event On_PlayPositionChange(playPos As Double)
-
-            ' ── Constructeur privé (singleton) ────────────────────────────────────
 
             Private Sub New()
             End Sub
 
-            ' ── Propriétés ────────────────────────────────────────────────────────
-
-            ''' <summary>Intervalle de polling en ms (défaut : 50 ms).</summary>
             Public Property Interval As Integer
                 Get
                     Return _interval
@@ -3756,26 +3635,18 @@ Namespace Reaper
                 End Set
             End Property
 
-            ''' <summary>True si le thread de polling est actif.</summary>
             Public ReadOnly Property IsRunning As Boolean
                 Get
                     Return Threading.Volatile.Read(_isRunning)
                 End Get
             End Property
 
-            ''' <summary>True si la connexion pipe vers le bridge est active.</summary>
             Public ReadOnly Property IsConnected As Boolean
                 Get
                     Return _pipe.IsConnected
                 End Get
             End Property
 
-            ' ── Cycle de vie ──────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Démarre le thread de polling central. Sans effet si déjà démarré.
-            ''' Appeler une seule fois au démarrage de l'application.
-            ''' </summary>
             Public Sub Start()
                 SyncLock _lock
                     If IsRunning Then Return
@@ -3789,16 +3660,13 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>Arrête le thread de polling et ferme la connexion pipe.</summary>
             Public Sub [Stop]()
                 Threading.Volatile.Write(_isRunning, False)
                 _pipe.Disconnect()
             End Sub
 
-            ' ── Boucle centrale ───────────────────────────────────────────────────
-
             Private Sub PollLoop()
-                ' Câbler les événements du pipe vers les événements du hub
+                ' ── Câbler les events du pipe vers les events du hub ──────────
                 AddHandler _pipe.On_ProjectStateChange,
                     Sub(sc As Integer) RaiseEvent On_ProjectStateChange(sc)
                 AddHandler _pipe.On_PlayStateChange,
@@ -3807,20 +3675,11 @@ Namespace Reaper
                     Sub(pp As Double) RaiseEvent On_PlayPositionChange(pp)
 
                 While Threading.Volatile.Read(_isRunning)
+                    ' ── Pipe exclusif au hub → aucun lock nécessaire ──────────
                     _pipe.Poll()
                     Thread.Sleep(_interval)
                 End While
             End Sub
-
-            ''' <summary>
-            ''' Envoie une requête arbitraire sur la connexion persistante du hub.
-            ''' Reconnecte automatiquement si la connexion est perdue.
-            ''' </summary>
-            Public Function Request(query As String) As String
-                Return _pipe.Request(query)
-            End Function
-
-            ' ── IDisposable ───────────────────────────────────────────────────────
 
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
@@ -3831,7 +3690,6 @@ Namespace Reaper
             End Sub
 
         End Class
-
 
     End Namespace
 
@@ -4481,6 +4339,12 @@ Namespace Reaper
                                               soloState As SoloState)
                 SuspendTrack(pageTrackIndex)
                 Tracks(pageTrackIndex).Solo = CInt(soloState)
+                ResumeTrack(pageTrackIndex)
+            End Sub
+            Public Sub Set_SoloDefeat(pageTrackIndex As Integer,
+                                              soloDefeatState As Boolean)
+                SuspendTrack(pageTrackIndex)
+                Tracks(pageTrackIndex).SoloDefeat = soloDefeatState
                 ResumeTrack(pageTrackIndex)
             End Sub
 
@@ -6350,102 +6214,153 @@ Namespace Reaper
         End Class
 
         ' ══════════════════════════════════════════════════════════════════════════
-        '  REAPER PEAK LEVEL MANAGER — niveaux peak stéréo à la demande, pipe persistant
+        '  PEAK SNAPSHOT — résultat d'un appel Refresh sur le ReaperPeakLevelManager
         ' ══════════════════════════════════════════════════════════════════════════
 
         ''' <summary>
-        ''' Gère la lecture des niveaux peak stéréo d'une collection de pistes Reaper.
+        ''' Résultat immutable d'un appel <see cref="PageManagers.ReaperPeakLevelManager.Refresh"/>.
+        ''' Regroupe en un seul objet :
+        ''' <list type="bullet">
+        ''' <item>La position de lecture courante en secondes.</item>
+        ''' <item>Les peaks stéréo linéaires et le peak-hold de la piste Master.</item>
+        ''' <item>Les peaks stéréo linéaires et le peak-hold de toutes les pistes surveillées.</item>
+        ''' </list>
+        ''' Convertir en dB : <see cref="utility.SLIDER2DB"/>(value).
+        ''' </summary>
+        Public Structure PeakSnapshot
+
+            ''' <summary>Position de lecture en secondes. -1 si le transport est arrêté.</summary>
+            Public ReadOnly PlayPosition As Double
+
+            ''' <summary>Peak linéaire gauche de la piste Master.</summary>
+            Public ReadOnly MasterL As Double
+            ''' <summary>Peak linéaire droit de la piste Master.</summary>
+            Public ReadOnly MasterR As Double
+            ''' <summary>Peak-hold linéaire gauche de la piste Master.</summary>
+            Public ReadOnly MasterHoldL As Double
+            ''' <summary>Peak-hold linéaire droit de la piste Master.</summary>
+            Public ReadOnly MasterHoldR As Double
+
+            ''' <summary>
+            ''' Peaks stéréo linéaires courants par trackIndex.
+            ''' Clé = index 0-based Reaper.
+            ''' </summary>
+            Public ReadOnly TrackPeaks As IReadOnlyDictionary(Of Integer, (L As Double, R As Double))
+
+            ''' <summary>
+            ''' Peak-holds stéréo linéaires par trackIndex.
+            ''' Clé = index 0-based Reaper.
+            ''' </summary>
+            Public ReadOnly TrackHolds As IReadOnlyDictionary(Of Integer, (L As Double, R As Double))
+
+            Public Sub New(playPosition As Double,
+                       masterL As Double,
+                       masterR As Double,
+                       masterHoldL As Double,
+                       masterHoldR As Double,
+                       trackPeaks As IReadOnlyDictionary(Of Integer, (L As Double, R As Double)),
+                       trackHolds As IReadOnlyDictionary(Of Integer, (L As Double, R As Double)))
+                Me.PlayPosition = playPosition
+                Me.MasterL = masterL
+                Me.MasterR = masterR
+                Me.MasterHoldL = masterHoldL
+                Me.MasterHoldR = masterHoldR
+                Me.TrackPeaks = trackPeaks
+                Me.TrackHolds = trackHolds
+            End Sub
+
+            ''' <summary>Peak de la piste Master en dB (L, R).</summary>
+            Public ReadOnly Property MasterDB As (L As Double, R As Double)
+                Get
+                    Return (utility.SLIDER2DB(MasterL), utility.SLIDER2DB(MasterR))
+                End Get
+            End Property
+
+            ''' <summary>Peak-hold de la piste Master en dB (L, R).</summary>
+            Public ReadOnly Property MasterHoldDB As (L As Double, R As Double)
+                Get
+                    Return (utility.SLIDER2DB(MasterHoldL), utility.SLIDER2DB(MasterHoldR))
+                End Get
+            End Property
+
+            ''' <summary>Peak d'une piste en dB (L, R). Retourne (-150, -150) si absente.</summary>
+            Public Function GetTrackPeakDB(trackIndex As Integer) As (L As Double, R As Double)
+                Dim p As (Double, Double) = (0, 0)
+                If TrackPeaks Is Nothing Then Return (utility.SLIDER2DB(0), utility.SLIDER2DB(0))
+                TrackPeaks.TryGetValue(trackIndex, p)
+                Return (utility.SLIDER2DB(p.Item1), utility.SLIDER2DB(p.Item2))
+            End Function
+
+            ''' <summary>Peak-hold d'une piste en dB (L, R). Retourne (-150, -150) si absente.</summary>
+            Public Function GetTrackHoldDB(trackIndex As Integer) As (L As Double, R As Double)
+                Dim h As (Double, Double) = (0, 0)
+                If TrackHolds Is Nothing Then Return (utility.SLIDER2DB(0), utility.SLIDER2DB(0))
+                TrackHolds.TryGetValue(trackIndex, h)
+                Return (utility.SLIDER2DB(h.Item1), utility.SLIDER2DB(h.Item2))
+            End Function
+
+        End Structure
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER PEAK LEVEL MANAGER — peaks à la demande, retour PeakSnapshot
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Gère la lecture des niveaux peak stéréo d'une collection de pistes.
         ''' <br/>
-        ''' Le rafraîchissement est <b>à la demande</b> via <see cref="Refresh"/> —
-        ''' typiquement appelé toutes les 50 ms depuis un timer ou un thread externe.
+        ''' Appeler <see cref="Refresh"/> depuis le timer de la surface (~50 ms) :
+        ''' une seule commande pipe <c>GET_PEAKS_STATE</c> retourne simultanément
+        ''' la position de lecture, les peaks Master et les peaks de toutes les pistes
+        ''' surveillées sous forme d'un <see cref="PeakSnapshot"/> immutable.
         ''' <br/>
-        ''' La connexion pipe est <b>persistante</b> entre les appels, réutilisée via
-        ''' <see cref="ReaperPollPipe.Request"/> : aucune surcharge
-        ''' d'ouverture/fermeture à chaque requête (~0.1 ms économisé par piste).
-        ''' <br/>
-        ''' Convertir les valeurs linéaires en dB :
-        ''' <see cref="utility.SLIDER2DB"/>(peak) ou via <see cref="GetPeakDB"/>.
+        ''' Le peak-hold est calculé côté VB entre les appels — aucun appel pipe
+        ''' supplémentaire. Appeler <see cref="ResetHold"/> pour le réinitialiser.
         ''' </summary>
         Public Class ReaperPeakLevelManager
             Implements IDisposable
 
-            ' ── Pipe persistant — reconnexion automatique si perdu ────────────
-            Private ReadOnly _pipe As New ReaperPollPipe()
+            ''' <summary>
+            ''' Constante représentant la piste Master de Reaper (index -1).
+            ''' Toujours incluse dans le snapshot — pas besoin de <see cref="WatchMaster"/>.
+            ''' </summary>
+            Public Const MasterTrackIndex As Integer = -1
 
-            ' ── Pistes surveillées ────────────────────────────────────────────
-            ' Clé = trackIndex 0-based  |  Bool = True si suspendu
+            Private ReadOnly _pipe As New ReaperPeakPipe()
             Private ReadOnly _lock As New Object()
+
+            ' ── Pistes surveillées : clé = trackIndex, valeur = isSuspended ───
             Private ReadOnly _tracks As New Dictionary(Of Integer, Boolean)
 
-            ' ── Caches peak courant (linéaire 0..1+  |  1.0 = 0 dBFS) ────────
-            Private ReadOnly _peakL As New Dictionary(Of Integer, Double)
-            Private ReadOnly _peakR As New Dictionary(Of Integer, Double)
-
-            ' ── Peak hold — valeur max depuis le dernier reset ────────────────
+            ' ── Hold cache ────────────────────────────────────────────────────
             Private ReadOnly _holdL As New Dictionary(Of Integer, Double)
             Private ReadOnly _holdR As New Dictionary(Of Integer, Double)
+            Private _masterHoldL As Double = 0
+            Private _masterHoldR As Double = 0
 
             Private _disposed As Boolean = False
-
-            ' ── Événements ────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Déclenché quand les niveaux peak d'une piste changent.
-            ''' Valeurs linéaires [0..1+] — 1.0 = 0 dBFS.
-            ''' Convertir avec <see cref="utility.SLIDER2DB"/>.
-            ''' </summary>
-            Public Event On_PeakChange(trackIndex As Integer,
-                                        left As Double,
-                                        right As Double)
-
-            ''' <summary>
-            ''' Déclenché quand le peak-hold d'une piste augmente (nouvelle valeur max).
-            ''' Valeurs linéaires [0..1+].
-            ''' </summary>
-            Public Event On_PeakHoldChange(trackIndex As Integer,
-                                            leftHold As Double,
-                                            rightHold As Double)
-
-            ''' <summary>
-            ''' Déclenché quand un canal dépasse 0 dBFS (valeur linéaire ≥ 1.0 = clip).
-            ''' </summary>
-            Public Event On_Clip(trackIndex As Integer,
-                                  leftClip As Boolean,
-                                  rightClip As Boolean)
-
-            ' ── Propriétés ────────────────────────────────────────────────────
-
-            ''' <summary>Nombre de pistes surveillées.</summary>
-            Public ReadOnly Property TrackCount As Integer
-                Get
-                    SyncLock _lock
-                        Return _tracks.Count
-                    End SyncLock
-                End Get
-            End Property
-
-            ''' <summary>True si la connexion pipe vers le bridge est active.</summary>
-            Public ReadOnly Property IsConnected As Boolean
-                Get
-                    Return _pipe.IsConnected
-                End Get
-            End Property
 
             ' ── Gestion de la collection ──────────────────────────────────────
 
             ''' <summary>
-            ''' Ajoute une piste à la surveillance et initialise ses caches à 0.
-            ''' Sans effet si la piste est déjà enregistrée.
+            ''' Ajoute la piste Master à la surveillance.
+            ''' La piste Master est toujours incluse dans le <see cref="PeakSnapshot"/>
+            ''' quel que soit l'état de surveillance.
             ''' </summary>
-            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            Public Sub WatchMaster()
+            End Sub
+
+            ''' <summary>Retire la piste Master — sans effet (toujours incluse).</summary>
+            Public Sub UnwatchMaster()
+            End Sub
+
+            ''' <summary>Ajoute une piste à la surveillance.</summary>
             Public Sub WatchTrack(trackIndex As Integer)
                 SyncLock _lock
-                    If _tracks.ContainsKey(trackIndex) Then Return
-                    _tracks(trackIndex) = False
-                    _peakL(trackIndex) = 0
-                    _peakR(trackIndex) = 0
-                    _holdL(trackIndex) = 0
-                    _holdR(trackIndex) = 0
+                    If Not _tracks.ContainsKey(trackIndex) Then
+                        _tracks(trackIndex) = False
+                        _holdL(trackIndex) = 0
+                        _holdR(trackIndex) = 0
+                    End If
                 End SyncLock
             End Sub
 
@@ -6456,36 +6371,27 @@ Namespace Reaper
                 Next
             End Sub
 
-            ''' <summary>Retire une piste et efface ses caches.</summary>
-            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <summary>Retire une piste et efface son hold.</summary>
             Public Sub UnwatchTrack(trackIndex As Integer)
                 SyncLock _lock
                     _tracks.Remove(trackIndex)
-                    _peakL.Remove(trackIndex)
-                    _peakR.Remove(trackIndex)
                     _holdL.Remove(trackIndex)
                     _holdR.Remove(trackIndex)
                 End SyncLock
             End Sub
 
-            ''' <summary>Retire toutes les pistes et efface les caches.</summary>
+            ''' <summary>Retire toutes les pistes et réinitialise tous les holds.</summary>
             Public Sub ClearWatched()
                 SyncLock _lock
                     _tracks.Clear()
-                    _peakL.Clear()
-                    _peakR.Clear()
                     _holdL.Clear()
                     _holdR.Clear()
+                    _masterHoldL = 0
+                    _masterHoldR = 0
                 End SyncLock
             End Sub
 
-            ' ── Suspension par piste ──────────────────────────────────────────
-
-            ''' <summary>
-            ''' Suspend la mise à jour des peaks pour une piste.
-            ''' Les requêtes pipe sont toujours émises mais le cache n'est pas mis
-            ''' à jour et les événements sont muets.
-            ''' </summary>
+            ''' <summary>Suspend une piste — elle sera ignorée dans le snapshot.</summary>
             Public Sub SuspendTrack(trackIndex As Integer)
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
@@ -6494,207 +6400,139 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>Réactive la mise à jour des peaks pour une piste suspendue.</summary>
+            ''' <summary>Réactive une piste et efface son hold pour forcer un resync.</summary>
             Public Sub ResumeTrack(trackIndex As Integer)
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
                         _tracks(trackIndex) = False
-                    End If
-                End SyncLock
-            End Sub
-
-            ''' <summary>Retourne True si la piste est suspendue.</summary>
-            Public Function IsTrackSuspended(trackIndex As Integer) As Boolean
-                SyncLock _lock
-                    Dim suspended As Boolean = False
-                    _tracks.TryGetValue(trackIndex, suspended)
-                    Return suspended
-                End SyncLock
-            End Function
-
-            ' ── Rafraîchissement à la demande ─────────────────────────────────
-
-            ''' <summary>
-            ''' Interroge Reaper pour les niveaux peak stéréo de toutes les pistes
-            ''' surveillées via la connexion pipe persistante.
-            ''' <br/>
-            ''' <b>À appeler depuis un timer externe</b> toutes les ~50 ms.
-            ''' <br/>
-            ''' Chaque piste = 1 requête <c>GET_TRACK_PEAK_STEREO</c> sur le pipe
-            ''' persistant (L+R en une seule réponse).
-            ''' La connexion est réutilisée entre les appels et se reconnecte
-            ''' automatiquement en cas de déconnexion.
-            ''' <br/>
-            ''' Déclenche :
-            ''' <list type="bullet">
-            ''' <item><see cref="On_PeakChange"/> si L ou R ont changé.</item>
-            ''' <item><see cref="On_PeakHoldChange"/> si un nouveau max est atteint.</item>
-            ''' <item><see cref="On_Clip"/> si L ou R ≥ 1.0 (0 dBFS).</item>
-            ''' </list>
-            ''' </summary>
-            Public Sub Refresh()
-                ' ── Snapshot hors lock pour ne pas bloquer pendant les requêtes ─
-                Dim snapshot As (trackIndex As Integer, isSuspended As Boolean)()
-                SyncLock _lock
-                    Dim tmp As New List(Of (Integer, Boolean))
-                    For Each kvp In _tracks
-                        tmp.Add((kvp.Key, kvp.Value))
-                    Next
-                    snapshot = tmp.ToArray()
-                End SyncLock
-
-                Dim ic = CultureInfo.InvariantCulture
-
-                For Each entry In snapshot
-                    Dim tIdx = entry.trackIndex
-
-                    ' ── L + R en 1 requête sur le pipe persistant ─────────────
-                    Dim raw = _pipe.Request($"GET_TRACK_PEAK_STEREO|{tIdx}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
-                        Continue For
-                    End If
-
-                    Dim parts = raw.Split("|"c)
-                    If parts.Length < 2 Then Continue For
-
-                    Dim newL As Double = 0, newR As Double = 0
-                    Double.TryParse(parts(0), NumberStyles.Any, ic, newL)
-                    Double.TryParse(parts(1), NumberStyles.Any, ic, newR)
-
-                    ' ── Piste suspendue → lecture faite, cache ignoré ─────────
-                    If entry.isSuspended Then Continue For
-
-                    ' ── Mise à jour des caches (sous lock) ───────────────────
-                    Dim peakChg As Boolean
-                    Dim holdChg As Boolean
-                    Dim newHoldL As Double = 0, newHoldR As Double = 0
-
-                    SyncLock _lock
-                        Dim prevL As Double = 0, prevR As Double = 0
-                        _peakL.TryGetValue(tIdx, prevL)
-                        _peakR.TryGetValue(tIdx, prevR)
-                        peakChg = prevL <> newL OrElse prevR <> newR
-                        If peakChg Then
-                            _peakL(tIdx) = newL
-                            _peakR(tIdx) = newR
-                        End If
-
-                        ' ── Peak hold : mémoriser le max observé ──────────────
-                        Dim curHoldL As Double = 0, curHoldR As Double = 0
-                        _holdL.TryGetValue(tIdx, curHoldL)
-                        _holdR.TryGetValue(tIdx, curHoldR)
-                        newHoldL = Math.Max(curHoldL, newL)
-                        newHoldR = Math.Max(curHoldR, newR)
-                        holdChg = newHoldL <> curHoldL OrElse newHoldR <> curHoldR
-                        If holdChg Then
-                            _holdL(tIdx) = newHoldL
-                            _holdR(tIdx) = newHoldR
-                        End If
-                    End SyncLock
-
-                    ' ── Déclencher HORS lock ──────────────────────────────────
-                    If peakChg Then
-                        RaiseEvent On_PeakChange(tIdx, newL, newR)
-                    End If
-                    If holdChg Then
-                        RaiseEvent On_PeakHoldChange(tIdx, newHoldL, newHoldR)
-                    End If
-                    If newL >= 1.0 OrElse newR >= 1.0 Then
-                        RaiseEvent On_Clip(tIdx, newL >= 1.0, newR >= 1.0)
-                    End If
-                Next
-            End Sub
-
-            ' ── Lecture d'état ────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Retourne les derniers niveaux peak stéréo d'une piste.
-            ''' Valeurs linéaires [0..1+] — 1.0 = 0 dBFS.
-            ''' Retourne (0, 0) si la piste n'est pas surveillée.
-            ''' </summary>
-            Public Function GetPeak(trackIndex As Integer) As (L As Double, R As Double)
-                SyncLock _lock
-                    Dim l As Double = 0, r As Double = 0
-                    _peakL.TryGetValue(trackIndex, l)
-                    _peakR.TryGetValue(trackIndex, r)
-                    Return (l, r)
-                End SyncLock
-            End Function
-
-            ''' <summary>
-            ''' Retourne les niveaux peak en dB d'une piste.
-            ''' Retourne (-150, -150) si la piste n'est pas surveillée.
-            ''' </summary>
-            Public Function GetPeakDB(trackIndex As Integer) As (L As Double, R As Double)
-                Dim peak = GetPeak(trackIndex)
-                Return (utility.SLIDER2DB(peak.L), utility.SLIDER2DB(peak.R))
-            End Function
-
-            ''' <summary>
-            ''' Retourne les valeurs peak-hold stéréo d'une piste.
-            ''' Valeurs linéaires [0..1+].
-            ''' Retourne (0, 0) si la piste n'est pas surveillée.
-            ''' </summary>
-            Public Function GetPeakHold(trackIndex As Integer) As (L As Double, R As Double)
-                SyncLock _lock
-                    Dim l As Double = 0, r As Double = 0
-                    _holdL.TryGetValue(trackIndex, l)
-                    _holdR.TryGetValue(trackIndex, r)
-                    Return (l, r)
-                End SyncLock
-            End Function
-
-            ''' <summary>
-            ''' Retourne les valeurs peak-hold en dB d'une piste.
-            ''' Retourne (-150, -150) si la piste n'est pas surveillée.
-            ''' </summary>
-            Public Function GetPeakHoldDB(trackIndex As Integer) As (L As Double, R As Double)
-                Dim hold = GetPeakHold(trackIndex)
-                Return (utility.SLIDER2DB(hold.L), utility.SLIDER2DB(hold.R))
-            End Function
-
-            ''' <summary>
-            ''' Retourne les peaks de toutes les pistes surveillées pour un
-            ''' rafraîchissement groupé de la surface (ex: mise à jour de N VU-mètres).
-            ''' </summary>
-            Public Function GetAllPeaks() As Dictionary(Of Integer, (L As Double, R As Double))
-                Dim result As New Dictionary(Of Integer, (Double, Double))
-                SyncLock _lock
-                    For Each tIdx In _tracks.Keys
-                        Dim l As Double = 0, r As Double = 0
-                        _peakL.TryGetValue(tIdx, l)
-                        _peakR.TryGetValue(tIdx, r)
-                        result(tIdx) = (l, r)
-                    Next
-                End SyncLock
-                Return result
-            End Function
-
-            ' ── Réinitialisation peak hold ────────────────────────────────────
-
-            ''' <summary>
-            ''' Réinitialise le peak-hold de toutes les pistes surveillées.
-            ''' </summary>
-            Public Sub ResetAllPeakHold()
-                SyncLock _lock
-                    For Each tIdx In _tracks.Keys
-                        _holdL(tIdx) = 0
-                        _holdR(tIdx) = 0
-                    Next
-                End SyncLock
-            End Sub
-
-            ''' <summary>
-            ''' Réinitialise le peak-hold d'une seule piste.
-            ''' </summary>
-            Public Sub ResetPeakHold(trackIndex As Integer)
-                SyncLock _lock
-                    If _holdL.ContainsKey(trackIndex) Then
                         _holdL(trackIndex) = 0
                         _holdR(trackIndex) = 0
                     End If
                 End SyncLock
             End Sub
+
+            ''' <summary>True si la piste est suspendue.</summary>
+            Public Function IsTrackSuspended(trackIndex As Integer) As Boolean
+                SyncLock _lock
+                    Dim s As Boolean = False
+                    _tracks.TryGetValue(trackIndex, s)
+                    Return s
+                End SyncLock
+            End Function
+
+            ' ── Hold ─────────────────────────────────────────────────────────
+
+            ''' <summary>Réinitialise le peak-hold de toutes les pistes et du Master.</summary>
+            Public Sub ResetHold()
+                SyncLock _lock
+                    For Each tIdx In _holdL.Keys.ToArray()
+                        _holdL(tIdx) = 0
+                        _holdR(tIdx) = 0
+                    Next
+                    _masterHoldL = 0
+                    _masterHoldR = 0
+                End SyncLock
+            End Sub
+
+            ''' <summary>Réinitialise le peak-hold d'une piste spécifique.</summary>
+            Public Sub ResetHold(trackIndex As Integer)
+                SyncLock _lock
+                    If trackIndex = MasterTrackIndex Then
+                        _masterHoldL = 0
+                        _masterHoldR = 0
+                    ElseIf _holdL.ContainsKey(trackIndex) Then
+                        _holdL(trackIndex) = 0
+                        _holdR(trackIndex) = 0
+                    End If
+                End SyncLock
+            End Sub
+
+            ' ── Rafraîchissement ──────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Envoie la commande <c>GET_PEAKS_STATE|t0|t1|…</c> au bridge via le pipe
+            ''' persistant et retourne un <see cref="PeakSnapshot"/> immutable contenant :
+            ''' <list type="bullet">
+            ''' <item>La position de lecture courante.</item>
+            ''' <item>Les peaks et hold stéréo de la piste Master.</item>
+            ''' <item>Les peaks et hold stéréo des pistes surveillées non suspendues.</item>
+            ''' </list>
+            ''' Format de réponse bridge :
+            ''' <c>playPos|masterL|masterR|t0L|t0R|t1L|t1R|…</c>
+            ''' </summary>
+            Public Function Refresh() As PeakSnapshot
+                ' ── Snapshot de la liste surveillée ───────────────────────────
+                Dim tracked As (trackIndex As Integer, isSuspended As Boolean)()
+                SyncLock _lock
+                    Dim tmp As New List(Of (Integer, Boolean))
+                    For Each kvp In _tracks
+                        tmp.Add((kvp.Key, kvp.Value))
+                    Next
+                    tracked = tmp.ToArray()
+                End SyncLock
+
+                ' ── Construction de la commande ───────────────────────────────
+                ' GET_PEAKS_STATE|t0|t1|...  (pistes non suspendues uniquement)
+                Dim activeTracks = tracked.Where(Function(e) Not e.isSuspended).ToArray()
+                Dim ic = CultureInfo.InvariantCulture
+
+                Dim query = "GET_PEAKS_STATE|" & String.Join("|",
+                    activeTracks.Select(Function(e) e.trackIndex.ToString(ic)))
+
+                Dim raw = _pipe.Request(query)
+
+                ' ── Valeurs par défaut si le bridge est indisponible ──────────
+                Dim playPos As Double = -1
+                Dim mL As Double = 0, mR As Double = 0
+                Dim mHoldL As Double = 0, mHoldR As Double = 0
+                Dim peaks As New Dictionary(Of Integer, (L As Double, R As Double))
+                Dim holds As New Dictionary(Of Integer, (L As Double, R As Double))
+
+                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
+                    Dim p = raw.Split("|"c)
+
+                    ' Format : playPos|masterL|masterR|t0L|t0R|t1L|t1R|...
+                    If p.Length >= 3 Then
+                        Double.TryParse(p(0), Globalization.NumberStyles.Any, ic, playPos)
+                        Double.TryParse(p(1), Globalization.NumberStyles.Any, ic, mL)
+                        Double.TryParse(p(2), Globalization.NumberStyles.Any, ic, mR)
+
+                        ' ── Hold Master ───────────────────────────────────────
+                        SyncLock _lock
+                            _masterHoldL = Math.Max(_masterHoldL, mL)
+                            _masterHoldR = Math.Max(_masterHoldR, mR)
+                            mHoldL = _masterHoldL
+                            mHoldR = _masterHoldR
+                        End SyncLock
+
+                        ' ── Peaks pistes (4 champs : L|R par piste) ───────────
+                        For i = 0 To activeTracks.Length - 1
+                            Dim offset = 3 + i * 2
+                            If offset + 1 >= p.Length Then Exit For
+
+                            Dim tIdx = activeTracks(i).trackIndex
+                            Dim tL As Double = 0, tR As Double = 0
+                            Double.TryParse(p(offset), Globalization.NumberStyles.Any, ic, tL)
+                            Double.TryParse(p(offset + 1), Globalization.NumberStyles.Any, ic, tR)
+
+                            peaks(tIdx) = (tL, tR)
+
+                            SyncLock _lock
+                                Dim hL As Double = 0, hR As Double = 0
+                                _holdL.TryGetValue(tIdx, hL)
+                                _holdR.TryGetValue(tIdx, hR)
+                                hL = Math.Max(hL, tL)
+                                hR = Math.Max(hR, tR)
+                                _holdL(tIdx) = hL
+                                _holdR(tIdx) = hR
+                                holds(tIdx) = (hL, hR)
+                            End SyncLock
+                        Next
+                    End If
+                End If
+
+                Return New PeakSnapshot(playPos, mL, mR, mHoldL, mHoldR, peaks, holds)
+            End Function
 
             ' ── IDisposable ───────────────────────────────────────────────────
 
@@ -6714,30 +6552,95 @@ Namespace Reaper
 
         End Class
 
+        ' ── Pipe persistant dédié aux peaks ───────────────────────────────────
+        Friend Class ReaperPeakPipe
+            Implements IDisposable
 
-        Namespace PageManagers
+            Private _pipe As IO.Pipes.NamedPipeClientStream
+            Private _writer As IO.StreamWriter
+            Private _reader As IO.StreamReader
+            Private _disposed As Boolean = False
+            Private ReadOnly _connectLock As New Object()
 
-            ' ══════════════════════════════════════════════════════════════════════════
-            '  REAPER AUTOMATION MANAGER — armement et suspension d'enveloppes
-            ' ══════════════════════════════════════════════════════════════════════════
+            Public ReadOnly Property IsConnected As Boolean
+                Get
+                    Return _pipe IsNot Nothing AndAlso _pipe.IsConnected
+                End Get
+            End Property
 
-            ''' <summary>
-            ''' Gère l'armement et la suspension des enveloppes d'automation pour une
-            ''' liste fixe de pistes.
-            ''' <list type="table">
-            ''' <item><term>Vol / Pan / Mute</term>
-            '''       <description>Arme et crée si absente (optionnel).</description></item>
-            ''' <item><term>Send Vol / Send Mute</term>
-            '''       <description>Arme et crée si absente (optionnel).</description></item>
-            ''' <item><term>FX params</term>
-            '''       <description>Arme uniquement les enveloppes déjà existantes
-            '''                    — jamais de création.</description></item>
-            ''' </list>
-            ''' Appeler <see cref="SuspendAll"/> pour désarmer temporairement toutes les
-            ''' enveloppes trackées (contrôle manuel), <see cref="ResumeAll"/> pour
-            ''' les réarmer.
-            ''' </summary>
-            Public Class ReaperAutomationManager
+            Public Function Connect() As Boolean
+                SyncLock _connectLock
+                    Try
+                        Disconnect()
+                        _pipe = New IO.Pipes.NamedPipeClientStream(
+                            ".", "c24_reaper_peaks", IO.Pipes.PipeDirection.InOut)
+                        _pipe.Connect(500)
+                        _writer = New IO.StreamWriter(_pipe) With {.AutoFlush = True}
+                        _reader = New IO.StreamReader(_pipe)
+                        Return True
+                    Catch
+                        Disconnect()
+                        Return False
+                    End Try
+                End SyncLock
+            End Function
+
+            Public Sub Disconnect()
+                Try
+                    _writer = Nothing
+                    _reader = Nothing
+                    If _pipe IsNot Nothing Then
+                        _pipe.Dispose()
+                        _pipe = Nothing
+                    End If
+                Catch
+                End Try
+            End Sub
+
+            Public Function Request(query As String) As String
+                If Not IsConnected Then
+                    If Not Connect() Then Return String.Empty
+                End If
+                Try
+                    _writer.WriteLine(query)
+                    Return If(_reader.ReadLine(), String.Empty)
+                Catch
+                    Disconnect()
+                    Return String.Empty
+                End Try
+            End Function
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If Not _disposed Then
+                    Disconnect()
+                    _disposed = True
+                End If
+            End Sub
+
+        End Class
+
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER AUTOMATION MANAGER — armement et suspension d'enveloppes
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Gère l'armement et la suspension des enveloppes d'automation pour une
+        ''' liste fixe de pistes.
+        ''' <list type="table">
+        ''' <item><term>Vol / Pan / Mute</term>
+        '''       <description>Arme et crée si absente (optionnel).</description></item>
+        ''' <item><term>Send Vol / Send Mute</term>
+        '''       <description>Arme et crée si absente (optionnel).</description></item>
+        ''' <item><term>FX params</term>
+        '''       <description>Arme uniquement les enveloppes déjà existantes
+        '''                    — jamais de création.</description></item>
+        ''' </list>
+        ''' Appeler <see cref="SuspendAll"/> pour désarmer temporairement toutes les
+        ''' enveloppes trackées (contrôle manuel), <see cref="ResumeAll"/> pour
+        ''' les réarmer.
+        ''' </summary>
+        Public Class ReaperAutomationManager
 
                 ' ── Liste source de pistes (fixe) ────────────────────────────────────
                 Private ReadOnly _tracks As IReadOnlyList(Of ReaperTrack)
@@ -7348,28 +7251,400 @@ Namespace Reaper
 
             End Class
 
-        End Namespace
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER TRACK SENDS EDITOR — liste, ajout, suppression de sends sur une piste
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Gère les sends d'une piste source unique :
+        ''' <list type="bullet">
+        ''' <item>Liste les pistes disponibles comme destinations.</item>
+        ''' <item>Crée un envoi vers une piste de destination.</item>
+        ''' <item>Supprime un envoi existant.</item>
+        ''' </list>
+        ''' La liste des pistes disponibles est construite depuis <see cref="ReaperProject"/>
+        ''' et exclut automatiquement la piste source.
+        ''' </summary>
+        Public Class ReaperTrackSendsEditor
+            Implements IDisposable
+
+            Private ReadOnly _trackIndex As Integer
+            Private ReadOnly _category As Integer
+            Private ReadOnly _sourceTracks As IReadOnlyList(Of ReaperTrack)
+            Private ReadOnly _sends As New List(Of ReaperSend)
+            Private ReadOnly _availableDestinations As New List(Of ReaperTrack)
+            Private disposedValue As Boolean
+            Private ReadOnly _trackNames As New Dictionary(Of Integer, String)
+
+            ' ── Index → Nom des pistes disponibles comme destinations ─────────
+            ''' <summary>
+            ''' Dictionnaire indexé par <c>TrackIndex</c> retournant le nom de chaque
+            ''' piste disponible comme destination (la piste source est exclue).
+            ''' Mis à jour par <see cref="RefreshAvailableTracks"/>.
+            ''' </summary>
+            Public ReadOnly Property TrackNames As IReadOnlyDictionary(Of Integer, String)
+                Get
+                    Return _trackNames
+                End Get
+            End Property
+
+
+            ' ── Événements ────────────────────────────────────────────────────
+
+            ''' <summary>Déclenché quand un send est ajouté avec succès.</summary>
+            Public Event On_SendAdded(sendIndex As Integer, destTrackIndex As Integer)
+
+            ''' <summary>Déclenché quand un send est supprimé avec succès.</summary>
+            Public Event On_SendRemoved(sendIndex As Integer)
+
+            ''' <summary>Déclenché quand la liste des sends est rechargée.</summary>
+            Public Event On_SendsRefreshed(count As Integer)
+
+            ''' <summary>Déclenché quand la liste des destinations disponibles change.</summary>
+            Public Event On_AvailableTracksRefreshed(count As Integer)
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Initialise l'éditeur pour la piste source donnée.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste source.</param>
+            ''' <param name="allTracks">
+            ''' Liste complète des pistes du projet — sert à construire la liste
+            ''' des destinations disponibles (la piste source est exclue).
+            ''' </param>
+            ''' <param name="category"><see cref="SendCategory"/> (défaut : Sends).</param>
+            Public Sub New(trackIndex As Integer,
+                           allTracks As IReadOnlyList(Of ReaperTrack),
+                           Optional category As SendCategory = SendCategory.Sends)
+                _trackIndex = trackIndex
+                _category = CInt(category)
+                _sourceTracks = allTracks
+                RefreshAvailableTracks()
+                Refresh()
+            End Sub
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+            ''' <summary>
+            ''' Noms des pistes destination des sends actifs, dans le même ordre
+            ''' que <see cref="Sends"/>.
+            ''' Basé sur <see cref="_trackNames"/> — aucun appel pipe.
+            ''' Mis à jour après <see cref="Refresh"/> et <see cref="RefreshAvailableTracks"/>.
+            ''' </summary>
+            Public ReadOnly Property Sends_Names As IReadOnlyList(Of String)
+                Get
+                    Dim names As New List(Of String)
+                    For Each send In _sends
+                        Dim name As String = String.Empty
+                        _trackNames.TryGetValue(send.DestTrackIndex, name)
+                        names.Add(name)
+                    Next
+                    Return names
+                End Get
+            End Property
+            ''' <summary>Index 0-based de la piste source.</summary>
+            Public ReadOnly Property TrackIndex As Integer
+                Get
+                    Return _trackIndex
+                End Get
+            End Property
+
+            ''' <summary>Catégorie des envois gérés.</summary>
+            Public ReadOnly Property Category As SendCategory
+                Get
+                    Return CType(_category, SendCategory)
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Sends actifs sur la piste source.
+            ''' Mettre à jour via <see cref="Refresh"/>.
+            ''' </summary>
+            Public ReadOnly Property Sends As IReadOnlyList(Of ReaperSend)
+                Get
+                    Return _sends
+                End Get
+            End Property
+
+            ''' <summary>Nombre de sends actifs sur la piste source.</summary>
+            Public ReadOnly Property SendCount As Integer
+                Get
+                    Return _sends.Count
+                End Get
+            End Property
+            ''' <summary>
+            ''' Noms des pistes disponibles comme destinations, dans le même ordre
+            ''' que <see cref="AvailableDestinations"/>.
+            ''' Mis à jour par <see cref="RefreshAvailableTracks"/>.
+            ''' </summary>
+            Public ReadOnly Property AvailableDestinations_Names As IReadOnlyList(Of String)
+                Get
+                    Dim names As New List(Of String)
+                    For Each trk In _availableDestinations
+                        names.Add(trk.Name)
+                    Next
+                    Return names
+                End Get
+            End Property
+            ''' <summary>
+            ''' Pistes disponibles comme destinations d'envoi
+            ''' (toutes les pistes sauf la source).
+            ''' Mettre à jour via <see cref="RefreshAvailableTracks"/>.
+            ''' </summary>
+            Public ReadOnly Property AvailableDestinations As IReadOnlyList(Of ReaperTrack)
+                Get
+                    Return _availableDestinations
+                End Get
+            End Property
+
+            ''' <summary>Nombre de destinations disponibles.</summary>
+            Public ReadOnly Property AvailableDestinationCount As Integer
+                Get
+                    Return _availableDestinations.Count
+                End Get
+            End Property
+
+            ' ── Synchronisation ───────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Recharge la liste des sends actifs sur la piste source depuis Reaper.
+            ''' Déclenche <see cref="On_SendsRefreshed"/>.
+            ''' </summary>
+            Public Sub Refresh()
+                Dim raw = utility.CallReaperBridge(
+                    $"GET_NUM_SENDS|{_trackIndex}|{_category}")
+                Dim count As Integer = 0
+                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
+                    Integer.TryParse(raw, count)
+                End If
+
+                _sends.Clear()
+                For i = 0 To count - 1
+                    Dim send As New ReaperSend(_trackIndex, _category, i)
+                    send.Refresh()
+                    _sends.Add(send)
+                Next
+
+                RaiseEvent On_SendsRefreshed(_sends.Count)
+            End Sub
+            ''' <summary>
+            ''' Recalcule la liste des pistes disponibles comme destinations
+            ''' en excluant la piste source.
+            ''' Déclenche <see cref="On_AvailableTracksRefreshed"/>.
+            ''' </summary>
+            Public Sub RefreshAvailableTracks()
+                _availableDestinations.Clear()
+                _trackNames.Clear()
+                For Each trk In _sourceTracks
+                    If trk.TrackIndex <> _trackIndex Then
+                        _availableDestinations.Add(trk)
+                        _trackNames(trk.TrackIndex) = trk.Name
+                    End If
+                Next
+                RaiseEvent On_AvailableTracksRefreshed(_availableDestinations.Count)
+            End Sub
+
+            ' ── Ajout d'un send ───────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Crée un envoi depuis la piste source vers la piste destination
+            ''' à l'index donné dans <see cref="AvailableDestinations"/>.
+            ''' <br/>
+            ''' Vérifie qu'un send vers cette destination n'existe pas déjà
+            ''' avant de créer.
+            ''' Retourne True si la création a réussi.
+            ''' </summary>
+            ''' <param name="destinationListIndex">
+            ''' Index 0-based dans <see cref="AvailableDestinations"/>.
+            ''' </param>
+            Public Function AddSend(destinationListIndex As Integer) As Boolean
+                If destinationListIndex < 0 OrElse
+                   destinationListIndex >= _availableDestinations.Count Then Return False
+
+                Dim destTrack = _availableDestinations(destinationListIndex)
+                Dim destIndex = destTrack.TrackIndex
+
+                ' ── Vérifier l'absence de doublon ─────────────────────────────
+                If SendExistsToTrack(destIndex) Then Return False
+
+                Dim sendIdx = utility.CreateTrackSend(_trackIndex, destIndex)
+                If sendIdx < 0 Then Return False
+
+                Dim send As New ReaperSend(_trackIndex, _category, sendIdx)
+                send.Refresh()
+                _sends.Add(send)
+
+                RaiseEvent On_SendAdded(sendIdx, destIndex)
+                Return True
+            End Function
+
+            ''' <summary>
+            ''' Crée un envoi depuis la piste source vers la piste destination
+            ''' identifiée par son index absolu dans le projet.
+            ''' Retourne True si la création a réussi.
+            ''' </summary>
+            ''' <param name="destTrackIndex">Index 0-based absolu de la piste destination.</param>
+            Public Function AddSendToTrack(destTrackIndex As Integer) As Boolean
+                If destTrackIndex = _trackIndex Then Return False
+                If SendExistsToTrack(destTrackIndex) Then Return False
+
+                Dim sendIdx = utility.CreateTrackSend(_trackIndex, destTrackIndex)
+                If sendIdx < 0 Then Return False
+
+                Dim send As New ReaperSend(_trackIndex, _category, sendIdx)
+                send.Refresh()
+                _sends.Add(send)
+
+                RaiseEvent On_SendAdded(sendIdx, destTrackIndex)
+                Return True
+            End Function
+
+            ' ── Suppression d'un send ─────────────────────────────────────────
+
+            ''' <summary>
+            ''' Supprime le send à l'index donné dans <see cref="Sends"/>.
+            ''' Les indices des sends suivants sont décalés et la liste interne
+            ''' est reconstruite.
+            ''' Retourne True si la suppression a réussi.
+            ''' </summary>
+            ''' <param name="sendIndex">Index 0-based dans <see cref="Sends"/>.</param>
+            Public Function RemoveSend(sendIndex As Integer) As Boolean
+                If sendIndex < 0 OrElse sendIndex >= _sends.Count Then Return False
+
+                Dim ok = utility.RemoveTrackSend(
+                    _trackIndex, CType(_category, SendCategory), sendIndex)
+                If Not ok Then Return False
+
+                _sends.RemoveAt(sendIndex)
+
+                ' ── Corriger les indices des sends décalés ─────────────────────
+                For i = sendIndex To _sends.Count - 1
+                    Dim corrected As New ReaperSend(_trackIndex, _category, i)
+                    corrected.Refresh()
+                    _sends(i) = corrected
+                Next
+
+                RaiseEvent On_SendRemoved(sendIndex)
+                Return True
+            End Function
+
+            ''' <summary>
+            ''' Supprime le send vers la piste destination identifiée par son index
+            ''' absolu dans le projet.
+            ''' Retourne True si la suppression a réussi.
+            ''' </summary>
+            ''' <param name="destTrackIndex">Index 0-based absolu de la piste destination.</param>
+            Public Function RemoveSendToTrack(destTrackIndex As Integer) As Boolean
+                Dim sendIndex = FindSendIndexToTrack(destTrackIndex)
+                If sendIndex < 0 Then Return False
+                Return RemoveSend(sendIndex)
+            End Function
+
+            ' ── Lecture d'état ────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Retourne True si un send vers la piste destination existe déjà.
+            ''' </summary>
+            ''' <param name="destTrackIndex">Index 0-based absolu de la piste destination.</param>
+            Public Function SendExistsToTrack(destTrackIndex As Integer) As Boolean
+                Return FindSendIndexToTrack(destTrackIndex) >= 0
+            End Function
+
+            ''' <summary>
+            ''' Retourne l'index 0-based du send vers la piste destination,
+            ''' ou -1 si aucun send n'existe vers cette piste.
+            ''' </summary>
+            ''' <param name="destTrackIndex">Index 0-based absolu de la piste destination.</param>
+            Public Function FindSendIndexToTrack(destTrackIndex As Integer) As Integer
+                ' I_DSTCHAN ne suffit pas — on lit la piste destination via le bridge
+                For i = 0 To _sends.Count - 1
+                    Dim raw = utility.CallReaperBridge(
+                        $"GET_SEND_INFO|{_trackIndex}|{_category}|{i}|IP_DSTTRKIDX")
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+                    Dim idx As Integer = -1
+                    Integer.TryParse(raw, idx)
+                    If idx = destTrackIndex Then Return i
+                Next
+                Return -1
+            End Function
+
+            ''' <summary>
+            ''' Retourne le send à l'index donné, ou Nothing si hors limite.
+            ''' </summary>
+            Public Function GetSend(sendIndex As Integer) As ReaperSend
+                If sendIndex < 0 OrElse sendIndex >= _sends.Count Then Return Nothing
+                Return _sends(sendIndex)
+            End Function
+            ''' <summary>
+            ''' Recherche la première piste disponible comme destination dont le nom
+            ''' correspond à <paramref name="trackName"/> et retourne son index
+            ''' 0-based dans <see cref="AvailableDestinations"/>.
+            ''' La comparaison est insensible à la casse.
+            ''' Retourne -1 si aucune piste ne correspond.
+            ''' </summary>
+            ''' <param name="trackName">Nom de la piste destination à rechercher.</param>
+            Public Function AvailableDestinationsIndexByName(trackName As String) As Integer
+                For i = 0 To _availableDestinations.Count - 1
+                    If _availableDestinations(i).Name.Equals(trackName, StringComparison.OrdinalIgnoreCase) Then
+                        Return i
+                    End If
+                Next
+                Return -1
+            End Function
+            ''' <summary>
+            ''' Recherche le premier send dont la piste destination correspond à
+            ''' <paramref name="trackName"/> et retourne son index 0-based dans
+            ''' <see cref="Sends"/>.
+            ''' La comparaison est insensible à la casse.
+            ''' Utilise <see cref="_trackNames"/> — aucun appel pipe.
+            ''' Retourne -1 si aucun send ne correspond.
+            ''' </summary>
+            ''' <param name="trackName">Nom de la piste destination à rechercher.</param>
+            Public Function SendsIndexByName(trackName As String) As Integer
+                For i = 0 To _sends.Count - 1
+                    Dim name As String = String.Empty
+                    _trackNames.TryGetValue(_sends(i).DestTrackIndex, name)
+                    If name.Equals(trackName, StringComparison.OrdinalIgnoreCase) Then
+                        Return i
+                    End If
+                Next
+                Return -1
+            End Function
+            ' ── IDisposable ───────────────────────────────────────────────────
+
+            Protected Overridable Sub Dispose(disposing As Boolean)
+                If Not disposedValue Then
+                    disposedValue = True
+                End If
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dispose(disposing:=True)
+                GC.SuppressFinalize(Me)
+            End Sub
+
+        End Class
 
     End Namespace
 
     Namespace Managers
-        Namespace Managers
 
-            ' ══════════════════════════════════════════════════════════════════════════
-            '  REAPER TRANSPORT MANAGER — pilotage complet du transport Reaper
-            ' ══════════════════════════════════════════════════════════════════════════
 
-            ''' <summary>
-            ''' Gère et pilote l'état de transport Reaper :
-            ''' <list type="bullet">
-            ''' <item>Surveillance en temps réel via <see cref="Monitors.ReaperTransportMonitor"/>.</item>
-            ''' <item>Commandes : Play / Stop / Pause / Record / Loop / Quick Punch /
-            '''       Go to Start / Go to End / Rewind / Fast Forward.</item>
-            ''' <item>Gestion des points de boucle et de la sélection temporelle.</item>
-            ''' </list>
-            ''' Appeler <see cref="Start"/> pour démarrer la surveillance.
-            ''' </summary>
-            Public Class ReaperTransportManager
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER TRANSPORT MANAGER — pilotage complet du transport Reaper
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Gère et pilote l'état de transport Reaper :
+        ''' <list type="bullet">
+        ''' <item>Surveillance en temps réel via <see cref="Monitors.ReaperTransportMonitor"/>.</item>
+        ''' <item>Commandes : Play / Stop / Pause / Record / Loop / Quick Punch /
+        '''       Go to Start / Go to End / Rewind / Fast Forward.</item>
+        ''' <item>Gestion des points de boucle et de la sélection temporelle.</item>
+        ''' </list>
+        ''' Appeler <see cref="Start"/> pour démarrer la surveillance.
+        ''' </summary>
+        Public Class ReaperTransportManager
                 Implements IDisposable
 
                 Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
@@ -7742,37 +8017,37 @@ Namespace Reaper
                 ZoomVertical = 4
             End Enum
 
-            Namespace Managers
 
-                ' ══════════════════════════════════════════════════════════════════════════
-                '  REAPER JOG WHEEL MANAGER — interface jogwheel multi-modes
-                ' ══════════════════════════════════════════════════════════════════════════
 
-                ''' <summary>
-                ''' Interface entre la jogwheel d'une surface de contrôle et Reaper.
-                ''' Gère plusieurs modes :
-                ''' <list type="table">
-                ''' <item><term><see cref="JogWheelMode.Cursor"/></term>
-                '''       <description>Déplace le curseur d'édition avant/arrière.</description></item>
-                ''' <item><term><see cref="JogWheelMode.SelectionIn"/></term>
-                '''       <description>Déplace le point In de la sélection temporelle.</description></item>
-                ''' <item><term><see cref="JogWheelMode.SelectionOut"/></term>
-                '''       <description>Déplace le point Out de la sélection temporelle.</description></item>
-                ''' <item><term><see cref="JogWheelMode.ZoomHorizontal"/></term>
-                '''       <description>Zoom horizontal de la timeline (vue arrangement).</description></item>
-                ''' <item><term><see cref="JogWheelMode.ZoomVertical"/></term>
-                '''       <description>Zoom vertical de la piste sélectionnée.</description></item>
-                ''' </list>
-                ''' Appeler <see cref="Jog"/> à chaque tick détecté de la jogwheel.
-                ''' Un tick positif correspond à une rotation dans le sens horaire
-                ''' (forward / zoom in / point +) ; un tick négatif à une rotation
-                ''' anti-horaire (backward / zoom out / point -).
-                ''' <br/>
-                ''' Fournir un <see cref="ReaperTransportManager"/> via le constructeur ou
-                ''' <see cref="TransportManager"/> pour lire <c>IsPlaying</c> et la sélection
-                ''' temporelle depuis le cache (évite une requête pipe).
-                ''' </summary>
-                Public Class ReaperJogWheelManager
+            ' ══════════════════════════════════════════════════════════════════════════
+            '  REAPER JOG WHEEL MANAGER — interface jogwheel multi-modes
+            ' ══════════════════════════════════════════════════════════════════════════
+
+            ''' <summary>
+            ''' Interface entre la jogwheel d'une surface de contrôle et Reaper.
+            ''' Gère plusieurs modes :
+            ''' <list type="table">
+            ''' <item><term><see cref="JogWheelMode.Cursor"/></term>
+            '''       <description>Déplace le curseur d'édition avant/arrière.</description></item>
+            ''' <item><term><see cref="JogWheelMode.SelectionIn"/></term>
+            '''       <description>Déplace le point In de la sélection temporelle.</description></item>
+            ''' <item><term><see cref="JogWheelMode.SelectionOut"/></term>
+            '''       <description>Déplace le point Out de la sélection temporelle.</description></item>
+            ''' <item><term><see cref="JogWheelMode.ZoomHorizontal"/></term>
+            '''       <description>Zoom horizontal de la timeline (vue arrangement).</description></item>
+            ''' <item><term><see cref="JogWheelMode.ZoomVertical"/></term>
+            '''       <description>Zoom vertical de la piste sélectionnée.</description></item>
+            ''' </list>
+            ''' Appeler <see cref="Jog"/> à chaque tick détecté de la jogwheel.
+            ''' Un tick positif correspond à une rotation dans le sens horaire
+            ''' (forward / zoom in / point +) ; un tick négatif à une rotation
+            ''' anti-horaire (backward / zoom out / point -).
+            ''' <br/>
+            ''' Fournir un <see cref="ReaperTransportManager"/> via le constructeur ou
+            ''' <see cref="TransportManager"/> pour lire <c>IsPlaying</c> et la sélection
+            ''' temporelle depuis le cache (évite une requête pipe).
+            ''' </summary>
+            Public Class ReaperJogWheelManager
 
                     Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
 
@@ -8132,9 +8407,9 @@ Namespace Reaper
 
                 End Class
 
-            End Namespace
 
-        End Namespace
+
+
     End Namespace
 
     ' ══════════════════════════════════════════════════════════════════════════
@@ -9306,6 +9581,16 @@ Namespace Reaper
                 RaiseEvent On_RecArmChange(_recArm)
             End If
         End Sub
+        ''' <summary>
+        ''' Met à jour le cache de solo defeat sans écrire dans Reaper.
+        ''' Déclenche <see cref="On_SoloDefeatChange"/> si l'état a changé.
+        ''' </summary>
+        Public Sub SetSoloDefeatFromMonitor(soloDefeat As Boolean)
+            If _soloDefeat <> soloDefeat Then
+                _soloDefeat = soloDefeat
+                RaiseEvent On_SoloDefeatChange(_soloDefeat)
+            End If
+        End Sub
 
         ' ── Événements ────────────────────────────────────────────────────────
 
@@ -9328,6 +9613,7 @@ Namespace Reaper
         Public Event On_RecInputChange(_recInput As Integer)
         Public Event On_RecModeChange(_recMode As Integer)
         Public Event On_NChannelsChange(_nChannels As Integer)
+        Public Event On_SoloDefeatChange(_soloDefeat As Boolean)
 
         ' ── Chargement ─────────────────────────────────────────────────────────
 
@@ -9339,10 +9625,11 @@ Namespace Reaper
         ''' <code>
         '''  [0]  D_VOL            [1]  D_PAN           [2]  D_WIDTH
         '''  [3]  D_DUALPANL       [4]  D_DUALPANR      [5]  D_PANLAW
-        '''  [6]  D_PLAY_OFFSET    [7]  B_MUTE          [8]  B_PHASE
-        '''  [9]  B_SOLO_DEFEAT    [10] B_AUTO_RECARM   [11] B_HEIGHTLOCK
-        '''  [12] B_SHOWINMIXER    [13] B_SHOWINTCP      [14] B_TCPPIN
-        '''  [15] B_MAINSEND       [16] B_RECMON_IN_EFFECT [17] IP_TRACKNUMBER
+        '''  [6]  D_PLAY_OFFSET    [7]  B_MUTE          [8]  B_PHASE            
+        '''  [9]  B_RECMON_IN_EFFECT
+        '''  [10] B_SOLO_DEFEAT       [11] B_AUTO_RECARM      [12] B_HEIGHTLOCK
+        '''  [13] B_SHOWINMIXER       [14] B_SHOWINTCP        [15] B_TCPPIN
+        '''  [16] B_MAINSEND          [17] IP_TRACKNUMBER
         '''  [18] I_SOLO           [19] I_FXEN          [20] I_RECARM
         '''  [21] I_RECINPUT       [22] I_RECMODE       [23] I_RECMODE_FLAGS
         '''  [24] I_RECMON         [25] I_RECMONITEMS   [26] I_VUMODE
@@ -9358,18 +9645,25 @@ Namespace Reaper
         '''  [54] I_NUMFIXEDLANES
         ''' </code>
         ''' </summary>
-       ' ── Chargement ─────────────────────────────────────────────────────────
+        ' ── Chargement ─────────────────────────────────────────────────────────
 
-        Public Sub Refresh()
+        Public Sub Refresh(Optional pipe As ReaperPollPipe = Nothing)
+            Dim nameRaw As String
+            Dim raw As String
+
+            If pipe IsNot Nothing Then
+                ' ── Appel via le pipe dédié du monitor ────────────────────────
+                nameRaw = pipe.Request($"GET_TRACK_NAME|{_index}")
+                raw = pipe.Request($"GET_TRACK_ALL_INFO|{_index}")
+            Else
+                ' ── Appel direct via le bridge (CallReaperBridge) ─────────────
+                nameRaw = utility.CallReaperBridge($"GET_TRACK_NAME|{_index}")
+                raw = utility.CallReaperBridge($"GET_TRACK_ALL_INFO|{_index}")
+            End If
             ' ── Nom ───────────────────────────────────────────────────────────
-            Dim nameRaw = utility.CallReaperBridge($"GET_TRACK_NAME|{_index}")
             If Not String.IsNullOrEmpty(nameRaw) AndAlso Not nameRaw.StartsWith("ERROR") Then
                 _name = nameRaw
             End If
-
-            ' ── Tous les paramètres numériques (1 seul appel pipe) ─────────────
-            Dim raw = utility.CallReaperBridge($"GET_TRACK_ALL_INFO|{_index}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
 
             Dim p = raw.Split("|"c)
             If p.Length < 55 Then Return
@@ -9401,14 +9695,29 @@ Namespace Reaper
             If _mute <> new_mute Then : _mute = new_mute : RaiseEvent On_MuteChange(_mute) : End If
 
             _phase = p(8) <> "0"
-            _soloDefeat = p(9) <> "0"
-            _autoRecArm = p(10) <> "0"
-            _heightLock = p(11) <> "0"
-            _showInMixer = p(12) <> "0"
-            _showInTCP = p(13) <> "0"
-            _tcpPin = p(14) <> "0"
-            _mainSend = p(15) <> "0"
-            _recMonInEffect = p(16) <> "0"
+
+            ' [9]  B_RECMON_IN_EFFECT (lecture seule)
+            _recMonInEffect = p(9) <> "0"
+
+            ' [10] B_SOLO_DEFEAT
+            Dim new_soloDefeat = ParseD(p(10)) <> 0.0
+            If _soloDefeat <> new_soloDefeat Then
+                _soloDefeat = new_soloDefeat
+                RaiseEvent On_SoloDefeatChange(_soloDefeat)
+            End If
+
+            ' [11] B_AUTO_RECARM
+            _autoRecArm = p(11) <> "0"
+            ' [12] B_HEIGHTLOCK
+            _heightLock = p(12) <> "0"
+            ' [13] B_SHOWINMIXER
+            _showInMixer = p(13) <> "0"
+            ' [14] B_SHOWINTCP
+            _showInTCP = p(14) <> "0"
+            ' [15] B_TCPPIN
+            _tcpPin = p(15) <> "0"
+            ' [16] B_MAINSEND
+            _mainSend = p(16) <> "0"
 
             _trackNumber = ParseI(p(17))
 
@@ -9639,12 +9948,15 @@ Namespace Reaper
                 _solo = Value : SetI("I_SOLO", Value) : End Set
         End Property
 
-        ''' <summary>B_SOLO_DEFEAT — Si vrai, joue même quand d'autres pistes sont solotées</summary>
+        ''' <summary>B_SOLO_DEFEAT — Si vrai, joue même quand d'autres pistes sont solotées.</summary>
         Public Property SoloDefeat As Boolean
             Get
-                Return _soloDefeat : End Get
+                Return _soloDefeat
+            End Get
             Set
-                _soloDefeat = Value : SetB("B_SOLO_DEFEAT", Value) : End Set
+                _soloDefeat = Value
+                SetB("B_SOLO_DEFEAT", Value)
+            End Set
         End Property
 
         ''' <summary>I_SELECTED — Piste sélectionnée (0/1)</summary>
@@ -10030,17 +10342,16 @@ Namespace Reaper
         Private _mute As Boolean = False
         Private _phase As Boolean = False
         Private _mono As Boolean = False
-        Private _sendMode As Integer = 0   ' 0=post-fader  1=pre-fx  3=pre-fader
+        Private _sendMode As Integer = 0
         Private _srcChan As Integer = 0
         Private _dstChan As Integer = 0
         Private _midiFlags As Integer = 0
+        Private _destTrackIndex As Integer = -1  ' IP_DSTTRKIDX — -1 = HW output
 
         ' ── Événements ────────────────────────────────────────────────────────
         Public Event On_VolChange(_vol As Double)
         Public Event On_PanChange(_pan As Double)
         Public Event On_MuteChange(_mute As Boolean)
-
-        ' ── Constructeur ───────────────────────────────────────────────────────
 
         Public Sub New(trackIndex As Integer, category As Integer, sendIndex As Integer)
             _trackIndex = trackIndex
@@ -10050,22 +10361,42 @@ Namespace Reaper
 
         Public ReadOnly Property TrackIndex As Integer
             Get
-                Return _trackIndex : End Get
+                Return _trackIndex
+            End Get
         End Property
 
         Public ReadOnly Property Category As Integer
             Get
-                Return _category : End Get
+                Return _category
+            End Get
         End Property
 
         Public ReadOnly Property SendIndex As Integer
             Get
-                Return _sendIndex : End Get
+                Return _sendIndex
+            End Get
         End Property
+
         ''' <summary>
-        ''' Met à jour le cache de volume depuis le moniteur sans écrire dans Reaper.
-        ''' Déclenche <see cref="On_VolChange"/> si la valeur a changé.
+        ''' Index 0-based de la piste destination de cet envoi.
+        ''' Retourne -1 pour un envoi vers une sortie hardware.
+        ''' Chargé par <see cref="Refresh"/>.
         ''' </summary>
+        Public ReadOnly Property DestTrackIndex As Integer
+            Get
+                Return _destTrackIndex
+            End Get
+        End Property
+
+        ''' <summary>
+        ''' True si cet envoi est vers une sortie hardware (pas une piste).
+        ''' </summary>
+        Public ReadOnly Property IsHardwareOutput As Boolean
+            Get
+                Return _destTrackIndex = -1 AndAlso _category = CInt(SendCategory.Hardware)
+            End Get
+        End Property
+
         Public Sub SetVolFromMonitor(vol As Double)
             If _vol <> vol Then
                 _vol = vol
@@ -10073,10 +10404,6 @@ Namespace Reaper
             End If
         End Sub
 
-        ''' <summary>
-        ''' Met à jour le cache de pan depuis le moniteur sans écrire dans Reaper.
-        ''' Déclenche <see cref="On_PanChange"/> si la valeur a changé.
-        ''' </summary>
         Public Sub SetPanFromMonitor(pan As Double)
             If _pan <> pan Then
                 _pan = pan
@@ -10084,17 +10411,12 @@ Namespace Reaper
             End If
         End Sub
 
-        ''' <summary>
-        ''' Met à jour le cache de mute depuis le moniteur sans écrire dans Reaper.
-        ''' Déclenche <see cref="On_MuteChange"/> si l'état a changé.
-        ''' </summary>
         Public Sub SetMuteFromMonitor(mute As Boolean)
             If _mute <> mute Then
                 _mute = mute
                 RaiseEvent On_MuteChange(_mute)
             End If
         End Sub
-        ' ── Chargement ─────────────────────────────────────────────────────────
 
         ''' <summary>
         ''' Charge tous les paramètres de l'envoi en un seul appel pipe.
@@ -10106,7 +10428,7 @@ Namespace Reaper
             If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
 
             Dim p = raw.Split("|"c)
-            If p.Length < 10 Then Return
+            If p.Length < 11 Then Return
 
             Dim new_vol = ParseD(p(0))
             If _vol <> new_vol Then
@@ -10134,16 +10456,14 @@ Namespace Reaper
             _srcChan = ParseI(p(7))
             _dstChan = ParseI(p(8))
             _midiFlags = ParseI(p(9))
+            _destTrackIndex = ParseI(p(10))
         End Sub
-        ''' <summary>
-        ''' Met à jour les champs depuis les données d'un appel batch.
-        ''' Déclenche uniquement les événements dont la valeur a changé.
-        ''' Appelé par <see cref="ReaperTracksSend.Refresh"/>.
-        ''' </summary>
+
         Friend Sub UpdateFromParts(vol As Double, pan As Double, panLaw As Double,
                                     mute As Boolean, phase As Boolean, mono As Boolean,
                                     sendMode As Integer, srcChan As Integer,
-                                    dstChan As Integer, midiFlags As Integer)
+                                    dstChan As Integer, midiFlags As Integer,
+                                    Optional destTrackIndex As Integer = -1)
             If _vol <> vol Then : _vol = vol : RaiseEvent On_VolChange(_vol) : End If
             If _pan <> pan Then : _pan = pan : RaiseEvent On_PanChange(_pan) : End If
             _panLaw = panLaw
@@ -10154,8 +10474,8 @@ Namespace Reaper
             _srcChan = srcChan
             _dstChan = dstChan
             _midiFlags = midiFlags
+            _destTrackIndex = destTrackIndex
         End Sub
-        ' ── Helpers privés ─────────────────────────────────────────────────────
 
         Private Shared Function ParseD(s As String) As Double
             Dim v As Double = 0
@@ -10180,86 +10500,104 @@ Namespace Reaper
             SetD(param, CDbl(value))
         End Sub
 
-        ' ── Propriétés ─────────────────────────────────────────────────────────
-
-        ''' <summary>D_VOL — Volume de l'envoi (0..4  1.0=0dB)</summary>
         Public Property Vol As Double
             Get
-                Return _vol : End Get
+                Return _vol
+            End Get
             Set
-                _vol = Value : SetD("D_VOL", Value) : End Set
+                _vol = Value
+                SetD("D_VOL", Value)
+            End Set
         End Property
 
-        ''' <summary>D_PAN — Pan de l'envoi (-1=L  0=C  1=R)</summary>
         Public Property Pan As Double
             Get
-                Return _pan : End Get
+                Return _pan
+            End Get
             Set
-                _pan = Value : SetD("D_PAN", Value) : End Set
+                _pan = Value
+                SetD("D_PAN", Value)
+            End Set
         End Property
 
-        ''' <summary>D_PANLAW — Pan law (&lt;0=projet défaut)</summary>
         Public Property PanLaw As Double
             Get
-                Return _panLaw : End Get
+                Return _panLaw
+            End Get
             Set
-                _panLaw = Value : SetD("D_PANLAW", Value) : End Set
+                _panLaw = Value
+                SetD("D_PANLAW", Value)
+            End Set
         End Property
 
-        ''' <summary>D_MUTE — Envoi muet</summary>
         Public Property Mute As Boolean
             Get
-                Return _mute : End Get
+                Return _mute
+            End Get
             Set
-                _mute = Value : SetB("D_MUTE", Value) : End Set
+                _mute = Value
+                SetB("B_MUTE", Value)
+            End Set
         End Property
 
-        ''' <summary>B_PHASE — Phase inversée</summary>
         Public Property Phase As Boolean
             Get
-                Return _phase : End Get
+                Return _phase
+            End Get
             Set
-                _phase = Value : SetB("B_PHASE", Value) : End Set
+                _phase = Value
+                SetB("B_PHASE", Value)
+            End Set
         End Property
 
-        ''' <summary>B_MONO — Mono</summary>
         Public Property Mono As Boolean
             Get
-                Return _mono : End Get
+                Return _mono
+            End Get
             Set
-                _mono = Value : SetB("B_MONO", Value) : End Set
+                _mono = Value
+                SetB("B_MONO", Value)
+            End Set
         End Property
 
-        ''' <summary>I_SENDMODE — 0=post-fader  1=pre-fx  3=pre-fader</summary>
         Public Property SendMode As Integer
             Get
-                Return _sendMode : End Get
+                Return _sendMode
+            End Get
             Set
-                _sendMode = Value : SetI("I_SENDMODE", Value) : End Set
+                _sendMode = Value
+                SetI("I_SENDMODE", Value)
+            End Set
         End Property
 
-        ''' <summary>I_SRCCHAN — Canal source (bit10=stéréo  bit11=phase inversée)</summary>
         Public Property SrcChan As Integer
             Get
-                Return _srcChan : End Get
+                Return _srcChan
+            End Get
             Set
-                _srcChan = Value : SetI("I_SRCCHAN", Value) : End Set
+                _srcChan = Value
+                SetI("I_SRCCHAN", Value)
+            End Set
         End Property
 
-        ''' <summary>I_DSTCHAN — Canal destination</summary>
         Public Property DstChan As Integer
             Get
-                Return _dstChan : End Get
+                Return _dstChan
+            End Get
             Set
-                _dstChan = Value : SetI("I_DSTCHAN", Value) : End Set
+                _dstChan = Value
+                SetI("I_DSTCHAN", Value)
+            End Set
         End Property
 
-        ''' <summary>I_MIDIFLAGS — Flags MIDI</summary>
         Public Property MidiFlags As Integer
             Get
-                Return _midiFlags : End Get
+                Return _midiFlags
+            End Get
             Set
-                _midiFlags = Value : SetI("I_MIDIFLAGS", Value) : End Set
+                _midiFlags = Value
+                SetI("I_MIDIFLAGS", Value)
+            End Set
         End Property
 
     End Class
@@ -10409,6 +10747,7 @@ Namespace Reaper
                        Optional category As SendCategory = SendCategory.Sends)
             _trackIndex = trackIndex
             _category = CInt(category)
+            Refresh()
         End Sub
 
         ' ── Propriétés ─────────────────────────────────────────────────────────
@@ -12128,6 +12467,7 @@ Namespace Reaper
                              "; Copier un nom depuis la section [Interfaces] ci-dessous")
             writer.SetBoolean("Driver", "VSDebug", _vsDebug,
                               "; Active le débogage Visual Studio au démarrage du driver (défaut : False)")
+            writer.SetString("Driver", "NetworkInterface", _selectedInterface, "; Simulation d'une console Control24 NETWORKINTERFACE=TestWithoutC24")
 
             writer.AddSection("Interfaces",
                               "; Liste de toutes les interfaces réseau détectées sur cet ordinateur." &

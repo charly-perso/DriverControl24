@@ -95,10 +95,6 @@ Public Class Main
 
     End Sub
 
-    ''' <summary>
-    ''' Lit et exécute les commandes tapées dans la console.
-    ''' Taper <c>help</c> pour afficher la liste des commandes disponibles.
-    ''' </summary>
     Private Shared Sub RunConsoleLoop(controller As C24ReaperController)
         Console.WriteLine("Driver Control24 démarré. Tapez 'help' pour la liste des commandes.")
 
@@ -107,8 +103,9 @@ Public Class Main
             Dim input = Console.ReadLine()
             If input Is Nothing Then Continue While
 
-            Dim parts = input.Trim().Split(" "c, StringSplitOptions.RemoveEmptyEntries)
-            If parts.Length = 0 Then Continue While
+            Dim parts = ParseCommandParts(input.Trim())
+
+            If parts.Count = 0 Then Continue While
 
             Dim cmd = parts(0)
 
@@ -129,12 +126,11 @@ Public Class Main
                     Console.WriteLine($"ReaperPollHub connecté : {ReaperPollHub.Instance.IsConnected}")
 
                 Case "bridge"
-                    If parts.Length < 2 Then
+                    If parts.Count < 2 Then
                         Console.WriteLine("Usage : bridge <commande>")
                         Console.WriteLine("Exemple : bridge COUNT_TRACKS")
                     Else
-                        ' ── Reconstituer la commande depuis les tokens restants ─
-                        Dim bridgeCmd = String.Join(" ", parts, 1, parts.Length - 1)
+                        Dim bridgeCmd = String.Join(" ", parts.Skip(1))
                         Dim result = Reaper.CallReaperBridge(bridgeCmd)
                         Console.WriteLine($"→ {If(String.IsNullOrEmpty(result), "(vide)", result)}")
                     End If
@@ -146,12 +142,10 @@ Public Class Main
                     DisplayInterfaceName()
 
                 Case "C24desk_OnButtonReleased"
-                    If parts.Length < 2 Then
+                    If parts.Count < 3 Then
                         Console.WriteLine("Usage : C24desk_OnButtonReleased <Group> <Name>")
                         Console.WriteLine("Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
                     Else
-
-                        Dim C24_cpn = String.Join(" ", parts, 1, parts.Length - 1)
                         Dim group = desk.GroupComponents(parts(1))
                         If group IsNot Nothing Then
                             For Each cpn In group
@@ -166,28 +160,81 @@ Public Class Main
                         Else
                             Console.WriteLine("?" & "|" & "?")
                         End If
-
                     End If
 
-                        Case Else
+                Case "ConvertTxt2Csv"
+                    If parts.Count < 3 Then
+                        Console.WriteLine("Usage : ConvertTxt2Csv ""<inputTxtPath>"" ""<outputCsvPath>""")
+                        Console.WriteLine("Exemple : ConvertTxt2Csv ""C:\mon dossier\capture.txt"" ""C:\mon dossier\output.csv""")
+                    Else
+                        Dim inputTxtPath As String = parts(1)
+                        Dim outputCsvPath As String = parts(2)
+                        If Not IO.File.Exists(inputTxtPath) Then
+                            Console.WriteLine($"Erreur : fichier introuvable '{inputTxtPath}'")
+                        Else
+                            Try
+                                Dim parser As New WiresharkLogParser()
+                                parser.ConvertToCsv(inputTxtPath, outputCsvPath)
+                                Console.WriteLine($"Conversion terminée → {outputCsvPath}")
+                            Catch ex As Exception
+                                Console.WriteLine($"Erreur lors de la conversion : {ex.Message}")
+                            End Try
+                        End If
+                    End If
+
+                Case Else
                     Console.WriteLine($"Commande inconnue : '{cmd}'. Tapez 'help'.")
 
             End Select
 
         End While
     End Sub
+    ''' <summary>
+    ''' Découpe une ligne de commande en tokens en respectant les guillemets.
+    ''' Les chaînes entre guillemets doubles sont traitées comme un seul token
+    ''' (les guillemets sont retirés).
+    ''' Exemple : <c>cmd "C:\mon dossier\fichier.txt" out.csv</c>
+    ''' → ["cmd", "C:\mon dossier\fichier.txt", "out.csv"]
+    ''' </summary>
+    Private Shared Function ParseCommandParts(input As String) As List(Of String)
+        Dim result As New List(Of String)
+        Dim current As New System.Text.StringBuilder()
+        Dim inQuotes As Boolean = False
 
+        For Each c As Char In input
+            If c = """"c Then
+                inQuotes = Not inQuotes
+            ElseIf c = " "c AndAlso Not inQuotes Then
+                If current.Length > 0 Then
+                    result.Add(current.ToString())
+                    current.Clear()
+                End If
+            Else
+                current.Append(c)
+            End If
+        Next
+
+        If current.Length > 0 Then
+            result.Add(current.ToString())
+        End If
+
+        Return result
+    End Function
     ''' <summary>Affiche la liste des commandes disponibles.</summary>
     Private Shared Sub PrintHelp()
         Console.WriteLine("Commandes disponibles :")
-        Console.WriteLine("  help                  — Affiche cette aide")
-        Console.WriteLine("  status                — État du controller et de la session Reaper")
-        Console.WriteLine("  hub                   — État de la connexion ReaperPollHub")
-        Console.WriteLine("  bridge <commande>     — Envoie une commande brute au bridge Reaper")
-        Console.WriteLine("                          Exemple : bridge COUNT_TRACKS")
-        Console.WriteLine("  tracks                — Liste les pistes du projet actif")
-        Console.WriteLine("  interfaces            — Liste les interfaces réseau disponibles")
-        Console.WriteLine("  quit / exit           — Arrête le driver")
+        Console.WriteLine("  help                                        — Affiche cette aide")
+        Console.WriteLine("  status                                      — État du controller et de la session Reaper")
+        Console.WriteLine("  hub                                         — État de la connexion ReaperPollHub")
+        Console.WriteLine("  bridge <commande>                           — Envoie une commande brute au bridge Reaper")
+        Console.WriteLine("                                                Exemple : bridge COUNT_TRACKS")
+        Console.WriteLine("  tracks                                      — Liste les pistes du projet actif")
+        Console.WriteLine("  interfaces                                  — Liste les interfaces réseau disponibles")
+        Console.WriteLine("  C24desk_OnButtonReleased <Group> <Name>     — Simule le relâchement d'un bouton C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
+        Console.WriteLine("  ConvertTxt2Csv <input> <output>             — Convertit un log Wireshark TXT en CSV")
+        Console.WriteLine("                                                Exemple : ConvertTxt2Csv ""C:\cap.txt"" ""C:\out.csv""")
+        Console.WriteLine("  quit / exit                                 — Arrête le driver")
     End Sub
 
     ''' <summary>Affiche l'état général du controller.</summary>
