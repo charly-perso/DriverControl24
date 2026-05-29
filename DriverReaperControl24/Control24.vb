@@ -44,7 +44,7 @@ Namespace Control24
             Private ReadOnly _IdsToC24Components As Concurrent.ConcurrentDictionary(Of String, C24_Component) = New Concurrent.ConcurrentDictionary(Of String, C24_Component)
             Private ReadOnly _NameToC24Components As Dictionary(Of String, C24_Component) = New Dictionary(Of String, C24_Component)
             Private ReadOnly _AutoRefresh_C24_Components As List(Of C24_Component) = New List(Of C24_Component)
-            Private ReadOnly _CmdToSendQueue As ConcurrentQueue(Of Byte()) = New ConcurrentQueue(Of Byte())
+            Private ReadOnly _CmdToSendLatest As New ConcurrentDictionary(Of String, Byte())
             Private ReadOnly _GroupComponents As Dictionary(Of String, List(Of C24_Component)) = New Dictionary(Of String, List(Of C24_Component))
             Public Event BlinkStateChange(State As Boolean)
 
@@ -64,11 +64,7 @@ Namespace Control24
                     Return _AutoRefresh_C24_Components
                 End Get
             End Property
-            Public ReadOnly Property CmdToSendQueue As Concurrent.ConcurrentQueue(Of Byte())
-                Get
-                    Return _CmdToSendQueue
-                End Get
-            End Property
+
             Public ReadOnly Property GroupComponents As Dictionary(Of String, List(Of C24_Component))
                 Get
                     Return _GroupComponents
@@ -94,7 +90,11 @@ Namespace Control24
                     AddHandler Me.BlinkStateChange, AddressOf C24_button.BlinkingLed
                 End If
 
-
+                ' ── ScribbleStrip clignotant ───────────────────────────────────
+                Dim C24_scribble As C24_ScribbleStrip = TryCast(C24_Component, C24_ScribbleStrip)
+                If C24_scribble IsNot Nothing Then
+                    AddHandler Me.BlinkStateChange, AddressOf C24_scribble.BlinkingScribble
+                End If
 
             End Sub
             ''' <summary>
@@ -108,11 +108,7 @@ Namespace Control24
                 AddTogroupName(GroupName, C24_Component)
 
             End Sub
-            Private Sub EnqueueCmd(Cmd As Commands.Cmd)
-                Dim _bytes(Cmd.Cmd.Length - 1) As Byte
-                Cmd.Cmd.CopyTo(_bytes, 0)
-                CmdToSendQueue.Enqueue(_bytes)
-            End Sub
+
 
             Public Sub AddTogroupName(GroupName As String, C24_Component As C24_Component)
                 If GroupName IsNot Nothing AndAlso GroupName <> "" Then
@@ -126,7 +122,27 @@ Namespace Control24
             Public Sub OnBlinkStateChange(state As Boolean)
                 RaiseEvent BlinkStateChange(state)
             End Sub
+            Private Sub EnqueueCmd(Cmd As Commands.Cmd)
+                Dim _bytes(Cmd.Cmd.Length - 1) As Byte
+                Cmd.Cmd.CopyTo(_bytes, 0)
+                ' ── AddOrUpdate : le dernier état gagne toujours ──────────────
+                _CmdToSendLatest(Cmd.Cmd_Id) = _bytes
+            End Sub
 
+            ''' <summary>
+            ''' Draine toutes les dernières valeurs en attente et retourne la liste.
+            ''' Atomic : vide le dictionnaire en une seule opération.
+            ''' </summary>
+            Public Function DrainLatestCmds() As List(Of Byte())
+                Dim result As New List(Of Byte())
+                For Each key In _CmdToSendLatest.Keys
+                    Dim bytes As Byte() = Nothing
+                    If _CmdToSendLatest.TryRemove(key, bytes) Then
+                        result.Add(bytes)
+                    End If
+                Next
+                Return result
+            End Function
         End Class
         Public MustInherit Class C24_Component
 
@@ -252,22 +268,19 @@ Namespace Control24
                 End Get
                 Set
                     _IsBlinking = Value
+
                     If Value = False Then
                         Led = False
                     End If
                 End Set
             End Property
 
-            ''' <summary>
-            ''' État de la LED.
-            ''' En lecture : reflète l'état courant du bouton.
-            ''' En écriture : envoie la commande LED vers le C24.
-            ''' </summary>
             Public Property Led As Boolean
                 Get
                     Return _Led
                 End Get
                 Set
+                    '_IsBlinking = False
                     _Led = Value
                     ButtonCmd.Is_On = _Led
                     ButtonCmd.SendCmd()
@@ -400,6 +413,8 @@ Namespace Control24
             Private ReadOnly _ClockCmd As Commands.Clock_Cmd
             Private _ClockMode As Commands.ClockModes = Commands.ClockModes.HourMinuteSecondMS
             Private _Clock_Value As String = ""
+            Private _bpm As Integer = 120
+            Private _beatsPerBar As Integer = 4
 
             ' ── Constantes FeetFrames ─────────────────────────────────────────
             ''' <summary>Fréquence d'images pour le mode FeetFrames (35mm = 24 fps).</summary>
@@ -412,6 +427,23 @@ Namespace Control24
             Public Const HmsfFps As Integer = 30
 
             ' ── Propriétés ────────────────────────────────────────────────────
+            Public Property beatsPerBar As Integer
+                Get
+                    Return _beatsPerBar
+                End Get
+                Set
+                    _beatsPerBar = Value
+                End Set
+            End Property
+
+            Public Property bpm As Integer
+                Get
+                    Return _bpm
+                End Get
+                Set
+                    _bpm = Value
+                End Set
+            End Property
 
             ''' <summary>
             ''' Mode d'affichage de l'horloge.
@@ -425,6 +457,10 @@ Namespace Control24
                     _ClockMode = Value
                     _ClockLedCmd.ClockMode = _ClockMode
                     _ClockCmd.ClockMode = _ClockMode
+                    ' ── Renvoie la valeur courante avec le nouveau mode ────────
+                    If _Clock_Value IsNot Nothing AndAlso _Clock_Value.Length > 0 Then
+                        _ClockCmd.Clock_Value = _Clock_Value
+                    End If
                 End Set
             End Property
 
@@ -528,9 +564,7 @@ Namespace Control24
             ''' Nombre de temps par mesure, utilisé uniquement en mode <see cref="Commands.ClockModes.BarBeats"/>.
             ''' Défaut : 4.
             ''' </param>
-            Public Sub Set_Time_Ms(ms As Long,
-                                               Optional bpm As Integer = 120,
-                                               Optional beatsPerBar As Integer = 4)
+            Public Sub Set_Time_Ms(ms As Long)
                 Dim totalMs As Long = Math.Max(0, ms)
                 Dim value As String
 
@@ -610,6 +644,48 @@ Namespace Control24
             Private _TempTimer As System.Threading.Timer
             Private Const TempDisplayMs As Integer = 2000
 
+            ' ── Clignotement ──────────────────────────────────────────────────
+            Private _IsBlinking As Boolean = False
+            Private _BlinkOriginalText As String = String.Empty
+            Private _prevBlinkingState As Boolean = False
+
+            ''' <summary>
+            ''' Active ou désactive le clignotement du texte du ScribbleStrip.
+            ''' Quand activé, le texte alterne entre le texte courant et des espaces
+            ''' au rythme du timer blink du <see cref="C24_Desk"/>.
+            ''' Quand désactivé, restaure immédiatement le texte original.
+            ''' </summary>
+            Public Property IsBlinking As Boolean
+                Get
+                    Return _IsBlinking
+                End Get
+                Set
+                    If _IsBlinking = Value Then
+                        Return
+                    End If
+                    _IsBlinking = Value
+                    If _IsBlinking Then
+                        _BlinkOriginalText = _ScribbleStripCmd.Text
+                    Else
+                        _ScribbleStripCmd.Text = _BlinkOriginalText
+                    End If
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Appelé par le timer de blink du <see cref="C24_Desk"/>.
+            ''' Fait clignoter le texte si <see cref="IsBlinking"/> est activé.
+            ''' </summary>
+            Public Sub BlinkingScribble(Blink_State As Boolean)
+                If _IsBlinking Then
+                    If Blink_State Then
+                        _ScribbleStripCmd.Text = _BlinkOriginalText
+                    Else
+                        _ScribbleStripCmd.Text = "    "
+                    End If
+                End If
+            End Sub
+
             Public Property Text As String
                 Get
                     _Text = _ScribbleStripCmd.Text
@@ -618,6 +694,10 @@ Namespace Control24
                 Set
                     _Text = Value
                     _ScribbleStripCmd.Text = _Text
+                    ' ── Met à jour le texte de référence du blink ─────────────
+                    If _IsBlinking Then
+                        _BlinkOriginalText = _Text
+                    End If
                 End Set
             End Property
 
@@ -650,7 +730,8 @@ Namespace Control24
                     _OriginalText = _ScribbleStripCmd.Text
                     _IsShowingTemp = True
                 End If
-
+                _prevBlinkingState = IsBlinking
+                IsBlinking = False
                 _ScribbleStripCmd.Text = tempText
                 _TempTimer.Change(TempDisplayMs, System.Threading.Timeout.Infinite)
             End Sub
@@ -659,6 +740,7 @@ Namespace Control24
             Private Sub OnTempTimer(state As Object)
                 _IsShowingTemp = False
                 _ScribbleStripCmd.Text = _OriginalText
+                IsBlinking = _prevBlinkingState
             End Sub
 
             Sub New(Name As String, Track_Nb As Integer)
@@ -697,15 +779,47 @@ Namespace Control24
             Private _TrackNb As Integer? = Nothing
             Private _Display_Value2 As Boolean = False
 
+            ' ── Strips étendus pour l'affichage long (4 + n×4 caractères) ────
+            Private _ExtendedScribbles As New List(Of C24_ScribbleStrip)
+
             ' ── Temporisation ScribbleStrip ───────────────────────────────────
             Private _OriginalScribbleText As String = ""
             Private _IsShowingValue As Boolean = False
             Private _RestoreTimer As System.Threading.Timer
+            Private _ScribbleScriptsBlinking As Boolean = False
+            Private _FxParam_SmallStepValue As Double? = Nothing
+            Private _FxParam_LargeStepValue As Double? = Nothing
+            Private _FxParamValueToDisplay As String
             Private Const RestoreDelayMs As Integer = 2000
 
             Public Event OnVpotValueChange(TrackNb As Integer, Value As Double)
             Public Event OnVpotValue2Change(TrackNb As Integer, Value2 As Double)
             Public Event OnVpotSelectedItemChange(TrackNb As Integer, SelectedItem_Index As Integer)
+
+            Public Property FxParamValueToDisplay As String
+                Get
+                    Return _FxParamValueToDisplay
+                End Get
+                Set
+                    _FxParamValueToDisplay = Value
+                    RefreshScribbleStrip(Nothing)
+                End Set
+            End Property
+
+            Public Property ScribbleScriptsBlinking As Boolean
+                Get
+                    Return _ScribbleScriptsBlinking
+                End Get
+                Set
+                    _ScribbleScriptsBlinking = Value
+
+                    ScribbleStrip.IsBlinking = Value
+                    For Each es In ExtendedScribbles
+                        es.IsBlinking = Value
+                    Next
+
+                End Set
+            End Property
 
             Public ReadOnly Property VpotCmd As Commands.Vpot_Cmd
                 Get
@@ -718,9 +832,33 @@ Namespace Control24
                     Return _VpotLedCmd
                 End Get
             End Property
+
             Public ReadOnly Property ScribbleStrip As C24_ScribbleStrip
                 Get
                     Return _ScribbleStrip
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Strips supplémentaires pour étendre l'affichage du Vpot au-delà de 4 caractères.
+            ''' La capacité totale devient (1 + Count) × 4 caractères.
+            ''' Le texte est réparti automatiquement sur le strip principal puis sur chaque strip étendu.
+            ''' </summary>
+            Public Property ExtendedScribbles As List(Of C24_ScribbleStrip)
+                Get
+                    Return _ExtendedScribbles
+                End Get
+                Set
+                    _ExtendedScribbles = Value
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Capacité totale d'affichage en caractères : 4 + (ExtendedScribbles.Count × 4).
+            ''' </summary>
+            Public ReadOnly Property ScribbleCapacity As Integer
+                Get
+                    Return 4 + _ExtendedScribbles.Count * 4
                 End Get
             End Property
 
@@ -747,7 +885,9 @@ Namespace Control24
                 VolumeLinear
                 Value
                 TextList
+                FxParamLinear
             End Enum
+
             Public Property Display_Value2 As Boolean
                 Get
                     Return _Display_Value2
@@ -784,13 +924,16 @@ Namespace Control24
                         Case VpotModeType.TextList
                             LedMode = LedModeType.Dot
                             _Min_Value = 0
-                            ' ── Max_Value sera mis à jour au premier accès ou
-                            '    via SelectedItem_Index dès que la liste est assignée
                             If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
                                 _Max_Value = Value_TextList.Count - 1
                             Else
                                 _Max_Value = 0
                             End If
+                        Case VpotModeType.FxParamLinear
+                            _Min_Value = 0
+                            _Max_Value = 1
+
+                            LedMode = LedModeType.Gauge
                         Case Else
                             LedMode = LedModeType.Dot
                             _Min_Value = 0
@@ -804,9 +947,7 @@ Namespace Control24
                     Return _Min_Value
                 End Get
                 Set
-
                     _Min_Value = Math.Round(Value, 1)
-
                 End Set
             End Property
 
@@ -815,41 +956,64 @@ Namespace Control24
                     Return _Max_Value
                 End Get
                 Set
-
                     _Max_Value = Math.Round(Value, 1)
-
+                End Set
+            End Property
+            Public Property FxParam_SmallStepValue As Double?
+                Get
+                    Return _FxParam_SmallStepValue
+                End Get
+                Set
+                    _FxParam_SmallStepValue = Value
+                End Set
+            End Property
+            Public Property FxParam_LargeStepValue As Double?
+                Get
+                    Return _FxParam_LargeStepValue
+                End Get
+                Set
+                    _FxParam_LargeStepValue = Value
                 End Set
             End Property
 
             Public ReadOnly Property Step_Value As Double
                 Get
                     If Velocity_sensible Then
-                        _Step_Value = 1 / Fine_Step
+                        If _FxParam_SmallStepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
+                            _Step_Value = _FxParam_SmallStepValue
+                        Else
+                            _Step_Value = 1 / Fine_Step
+                        End If
+
                     Else
-                        _Step_Value = 1 / Large_Step
+                        If _FxParam_SmallStepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
+                            _Step_Value = _FxParam_LargeStepValue
+                        Else
+                            _Step_Value = 1 / Large_Step
+                        End If
+
                     End If
+
                     Return _Step_Value
                 End Get
-
             End Property
+
             Public Property Value As Double
                 Get
                     Return _Value
                 End Get
                 Set
-                    '_Value += Value
                     _Value = Math.Round(Math.Min(Math.Max(Value, Min_Value), Max_Value), 1)
-
                     RefreshLedStatus()
                 End Set
             End Property
+
             Public Property Value2 As Double
                 Get
                     Return _Value2
                 End Get
                 Set
                     _Value2 = Math.Round(Math.Min(Math.Max(Value, Min_Value), Max_Value), 1)
-
                     RefreshLedStatus()
                 End Set
             End Property
@@ -869,9 +1033,9 @@ Namespace Control24
                 End Get
                 Set
                     _Value_TextList = Value
-
                 End Set
             End Property
+
 
             Public Enum LedModeType
                 off
@@ -890,6 +1054,7 @@ Namespace Control24
                     _LedMode = Value
                 End Set
             End Property
+
             Public Property SelectedItem_Index As Integer
                 Get
                     Return _SelectedItem_Index
@@ -897,7 +1062,6 @@ Namespace Control24
                 Set
                     _SelectedItem_Index = Value
                     RefreshSelectedItem()
-                    ' ── Synchronise _Value et les LEDs ───────────────────────
                     If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
                         _Min_Value = 0
                         _Max_Value = Value_TextList.Count - 1
@@ -907,25 +1071,80 @@ Namespace Control24
                 End Set
             End Property
 
+            ' ── Affichage réparti sur tous les strips disponibles ─────────────
+
+            ''' <summary>
+            ''' Affiche un texte sur le strip principal et les strips étendus.
+            ''' Le texte est découpé en tranches de 4 caractères.
+            ''' La capacité totale est <see cref="ScribbleCapacity"/>.
+            ''' </summary>
+            ''' <param name="text">Texte à afficher (tronqué à <see cref="ScribbleCapacity"/> caractères).</param>
+            Public Sub SetAllScribbleText(text As String)
+                Dim padded As String = text.PadRight(ScribbleCapacity).Substring(0, ScribbleCapacity)
+                _ScribbleStrip.Text = padded.Substring(0, 4)
+                For i As Integer = 0 To _ExtendedScribbles.Count - 1
+                    _ExtendedScribbles(i).Text = padded.Substring(4 + i * 4, 4)
+                Next
+            End Sub
+            ''' <summary>
+            ''' Affiche un texte temporaire sur le strip principal et tous les strips étendus
+            ''' pendant <see cref="RestoreDelayMs"/> ms, puis restaure le texte précédent.
+            ''' La capacité totale est <see cref="ScribbleCapacity"/> caractères.
+            ''' </summary>
+            ''' <param name="tempText">Texte temporaire à afficher (tronqué à <see cref="ScribbleCapacity"/> caractères).</param>
+            Public Sub ShowTempAllScribbleText(tempText As String)
+                Dim padded As String = tempText.PadRight(ScribbleCapacity).Substring(0, ScribbleCapacity)
+                _ScribbleStrip.ShowTempText(padded.Substring(0, 4))
+                For i As Integer = 0 To _ExtendedScribbles.Count - 1
+                    _ExtendedScribbles(i).ShowTempText(padded.Substring(4 + i * 4, 4))
+                Next
+            End Sub
+            ''' <summary>
+            ''' Efface le strip principal et tous les strips étendus.
+            ''' </summary>
+            Public Sub ClearAllScribbles()
+                _ScribbleStrip.Text = "    "
+                For Each strip In _ExtendedScribbles
+                    strip.Text = "    "
+                Next
+            End Sub
+            Public Sub ResetStepValues()
+                FxParam_SmallStepValue = Nothing
+                FxParam_LargeStepValue = Nothing
+            End Sub
+
             Private Sub RefreshSelectedItem()
                 If Value_TextList IsNot Nothing AndAlso
                    _SelectedItem_Index >= 0 AndAlso
                    _SelectedItem_Index < Value_TextList.Count Then
                     Dim item_text = Value_TextList.Item(_SelectedItem_Index).item
                     Dim item_checked = Value_TextList.Item(_SelectedItem_Index).Checked
-                    If item_checked Then
-                        ScribbleStrip.Text = ">" & item_text.Substring(0, Math.Min(3, item_text.Length))
+
+                    If _ExtendedScribbles.Count = 0 Then
+                        ' ── Mode compact (4 car. uniquement) ─────────────────
+                        If item_checked Then
+                            _ScribbleStrip.Text = ">" & item_text.Substring(0, Math.Min(3, item_text.Length))
+                        Else
+                            _ScribbleStrip.Text = item_text.Substring(0, Math.Min(4, item_text.Length))
+                        End If
                     Else
-                        ScribbleStrip.Text = item_text
+                        ' ── Mode étendu : préfixe ">" puis texte complet ─────
+                        If item_checked Then
+                            SetAllScribbleText(">" & item_text)
+                        Else
+                            SetAllScribbleText(item_text)
+                        End If
                     End If
                 End If
             End Sub
+
             Public Sub CheckSelectedItem(Status As Boolean)
                 Dim item = Value_TextList.Item(SelectedItem_Index)
                 item.Checked = Status
                 Value_TextList.Item(SelectedItem_Index) = item
                 RefreshSelectedItem()
             End Sub
+
             Public Sub CheckAllItems(Status As Boolean)
                 For i = 0 To Value_TextList.Count - 1
                     Dim item = Value_TextList.Item(i)
@@ -933,11 +1152,11 @@ Namespace Control24
                     Value_TextList.Item(i) = item
                 Next
             End Sub
+
             ''' <summary>
             ''' Retourne la liste des textes de tous les éléments cochés dans <see cref="Value_TextList"/>.
             ''' Retourne une liste vide si la liste n'est pas initialisée.
             ''' </summary>
-            ''' <returns>Liste des textes cochés.</returns>
             Public Function GetCheckedItems() As List(Of String)
                 Dim result As New List(Of String)
                 If Value_TextList Is Nothing Then
@@ -950,6 +1169,7 @@ Namespace Control24
                 Next
                 Return result
             End Function
+
             ''' <summary>
             ''' Sélectionne l'élément dont le texte correspond à <paramref name="itemText"/>
             ''' et met à jour les LEDs et le ScribbleStrip.
@@ -970,12 +1190,9 @@ Namespace Control24
                 Return False
             End Function
 
-
             Private Sub UpdateValueFromCmd() Handles _VpotCmd.OnCmdChange
-
                 Select Case VpotMode
                     Case VpotModeType.Pan
-
                         If Adjust_Value2 Then
                             If Math.Abs(_Value2) <> 0 AndAlso Math.Abs(_Value2) <= 0.05 Then
                                 _Value2 = 0
@@ -993,52 +1210,51 @@ Namespace Control24
                                 _Value += _VpotCmd.Rotate_Velocity * Step_Value
                                 _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
                             End If
-
                             RefreshLedStatus()
-                        RefreshScribbleStrip(_Value * 100)
-                        RaiseEvent OnVpotValueChange(_TrackNb, _Value)
-
+                            RefreshScribbleStrip(_Value * 100)
+                            RaiseEvent OnVpotValueChange(_TrackNb, _Value)
                         End If
 
                     Case VpotModeType.VolumeLinear
                         _Value += _VpotCmd.Rotate_Velocity * Step_Value
                         _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
-
                         RefreshLedStatus()
                         RefreshScribbleStrip(Reaper.SLIDER2DB(_Value))
                         RaiseEvent OnVpotValueChange(_TrackNb, _Value)
+
+                    Case VpotModeType.FxParamLinear
+                        _Value += _VpotCmd.Rotate_Velocity * Step_Value
+                        _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
+                        RefreshLedStatus()
+                        RaiseEvent OnVpotValueChange(_TrackNb, _Value)
+
 
                     Case VpotModeType.TextList
                         LedMode = LedModeType.Dot
                         If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
                             Min_Value = 0
                             Max_Value = Value_TextList.Count - 1
-                            ' ── +1 ou -1 par cran, quelle que soit la vélocité ───────
                             Dim [step] As Integer = Math.Sign(_VpotCmd.Rotate_Velocity)
                             Dim newIdx As Integer = Math.Min(
                                 Math.Max(_SelectedItem_Index + [step], 0),
                                 Value_TextList.Count - 1)
                             If newIdx <> _SelectedItem_Index Then
                                 SelectedItem_Index = newIdx
-                                ' ── Synchronise _Value pour le rendu des LEDs ─────────
                                 _Value = newIdx
                                 RefreshLedStatus()
                                 RaiseEvent OnVpotSelectedItemChange(_TrackNb, SelectedItem_Index)
                             End If
                         End If
-
                 End Select
-
-
             End Sub
+
             ' ── Temporisation ScribbleStrip ───────────────────────────────────
 
             ''' <summary>
-            ''' Définit le texte permanent du ScribbleStrip (le nom de la piste, etc.).
+            ''' Définit le texte permanent du ScribbleStrip principal.
             ''' Ce texte est restauré automatiquement après <see cref="RestoreDelayMs"/> ms
             ''' d'inactivité du Vpot.
             ''' </summary>
-            ''' <param name="text">Texte permanent à afficher au repos.</param>
             Public Sub SetScribbleText(text As String)
                 _OriginalScribbleText = text
                 If Not _IsShowingValue Then
@@ -1046,14 +1262,12 @@ Namespace Control24
                 End If
             End Sub
 
-            ''' <summary>Restaure le texte permanent après l'expiration du timer.</summary>
             Private Sub OnRestoreTimer(state As Object)
                 _IsShowingValue = False
                 _ScribbleStrip.Text = _OriginalScribbleText
             End Sub
 
-            Private Sub RefreshScribbleStrip(Value As Double)
-                ' ── Mémoriser le texte original avant le premier affichage ────
+            Private Sub RefreshScribbleStrip(Value As Double?)
                 If Not _IsShowingValue Then
                     _OriginalScribbleText = _ScribbleStrip.Text
                     _IsShowingValue = True
@@ -1072,17 +1286,19 @@ Namespace Control24
                         ElseIf Value_int < 0 Then
                             _ScribbleStrip.Text = "<" & Math.Abs(Value_int)
                         End If
+                    Case VpotModeType.FxParamLinear
+                        _ScribbleStrip.Text = FxParamValueToDisplay
+
                 End Select
 
-                ' ── Réarmer le timer à chaque mouvement ───────────────────────
                 _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
             End Sub
+
             ''' <summary>
             ''' Initialise <see cref="Value_TextList"/> à partir de deux listes parallèles.
             ''' </summary>
-            ''' <param name="items">Textes des éléments (max 4 caractères chacun).</param>
-            ''' <param name="checkedItems">Textes des éléments qui doivent être cochés.
-            ''' Un élément est coché si son texte figure dans cette liste.</param>
+            ''' <param name="items">Textes des éléments.</param>
+            ''' <param name="checkedItems">Textes des éléments cochés.</param>
             Public Sub InitTextList(items As IReadOnlyList(Of String), checkedItems As IReadOnlyList(Of String))
                 Dim list As New List(Of (item As String, Checked As Boolean))
                 For Each txt In items
@@ -1090,17 +1306,15 @@ Namespace Control24
                 Next
                 Value_TextList = list
             End Sub
+
 #Region "Led"
             Private Sub RefreshLedStatus()
-
                 Dim ValueLedStatus As BitArray = GetLedsStatus(_Value)
                 If Display_Value2 Then
                     Dim Value2LedStatus As BitArray = GetLedsStatus(_Value2)
                     ValueLedStatus = ValueLedStatus.Or(Value2LedStatus)
                 End If
                 VpotLedCmd.Leds_Status = ValueLedStatus
-
-
             End Sub
 
             Public Sub SetLedsOff()
@@ -1114,34 +1328,24 @@ Namespace Control24
                 If LedMode = LedModeType.off Then
                     Return LedsStatus
                 ElseIf LedMode = LedModeType.Dot Then
-
                     LedsStatus.Item(DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)) = True
-
                 ElseIf LedMode = LedModeType.Gauge Then
                     Dim LedIndex As Integer = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
                     For i = 0 To LedIndex - 1
                         LedsStatus.Item(i) = True
                     Next
-
                 ElseIf LedMode = LedModeType.Central_Dot Then
                     Dim roundedValue As Double = Math.Round(Value, 2)
                     Dim Middle As Double = Math.Round((Min_Value + Max_Value) / 2.0, 2)
                     Dim LedIndex As Integer = 0
 
                     If roundedValue <= Math.Round(Min_Value, 2) Then
-                        ' ── Valeur minimum → LED 0 uniquement ────────────────────
                         LedIndex = 0
-
                     ElseIf roundedValue = Middle Then
-                        ' ── Valeur centrale → LED 7 uniquement ───────────────────
                         LedIndex = 7
-
                     ElseIf roundedValue >= Math.Round(Max_Value, 2) Then
-                        ' ── Valeur maximum → LED 14 uniquement ───────────────────
                         LedIndex = 14
-
                     ElseIf roundedValue < Middle Then
-                        ' ── [Min..Middle[ → LEDs 1..6 linéaires ──────────────────
                         Dim span As Double = Middle - Min_Value
                         If span = 0.0 Then
                             LedIndex = 1
@@ -1149,9 +1353,7 @@ Namespace Control24
                             Dim norm As Double = (roundedValue - Min_Value) / span
                             LedIndex = Math.Min(1 + CInt(Math.Floor(norm * 6)), 6)
                         End If
-
                     Else
-                        ' ── ]Middle..Max] → LEDs 8..13 linéaires ─────────────────
                         Dim span As Double = Max_Value - Middle
                         If span = 0.0 Then
                             LedIndex = 8
@@ -1162,7 +1364,6 @@ Namespace Control24
                     End If
 
                     LedsStatus.Item(LedIndex) = True
-
                 ElseIf LedMode = LedModeType.Central_Gauge Then
                     Dim LedIndex As Integer = 0
                     Dim Middle = (Min_Value + Max_Value) / 2
@@ -1171,7 +1372,6 @@ Namespace Control24
                     Else
                         LedIndex = DriverReaperControl24.Utility.GetLedIndex(Value, Middle, Max_Value, 8)
                     End If
-
                     For i = 0 To LedIndex - 1
                         If i >= LedIndex AndAlso i <= 7 Then
                             LedsStatus.Item(i) = True
@@ -1179,7 +1379,6 @@ Namespace Control24
                             LedsStatus.Item(i) = True
                         End If
                     Next
-
                 ElseIf LedMode = LedModeType.Q Then
                     Dim LedIndex As Integer = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, 8)
                     For i = 0 To LedIndex - 1
@@ -1189,7 +1388,6 @@ Namespace Control24
                 End If
 
                 Return LedsStatus
-
             End Function
 #End Region
 
@@ -1541,6 +1739,19 @@ Namespace Control24
                 Dim padded As String = text.PadRight(Capacity).Substring(0, Capacity)
                 For i = 0 To _Strips.Count - 1
                     _Strips(i).Text = padded.Substring(i * 4, 4)
+                Next
+            End Sub
+            ''' <summary>
+            ''' Affiche un texte temporaire sur l'ensemble des strips pendant la durée
+            ''' définie par chaque <see cref="C24_ScribbleStrip"/>, puis restaure
+            ''' automatiquement le texte précédent de chaque strip.
+            ''' Le texte est découpé en tranches de 4 caractères, une par strip.
+            ''' </summary>
+            ''' <param name="tempText">Texte temporaire à afficher (jusqu'à <see cref="Capacity"/> caractères).</param>
+            Public Sub ShowTempText(tempText As String)
+                Dim padded As String = tempText.PadRight(Capacity).Substring(0, Capacity)
+                For i = 0 To _Strips.Count - 1
+                    _Strips(i).ShowTempText(padded.Substring(i * 4, 4))
                 Next
             End Sub
 
@@ -3387,28 +3598,6 @@ Namespace Control24
 
             Sub InitializeComponents()
 
-                'Dim vuemeter1 = New Hardware.C24_VueMeter("VueMeter_1", 1)
-                'Me.Add_AutoRefresh_C24_Component(vuemeter1, "VueMeters")
-
-                '' vuemeter1.Value_Left = 0.5
-                ''vuemeter1.Value_Right = 0.8
-
-                'Me.Add_C24_Component(New Hardware.C24_LedButton("F01", Commands.Btn_Region.Left_Strip, &H1), "Function")
-                'Me.Add_C24_Component(New Hardware.C24_ScribbleStrip("ScribbleStrip_1", 1), "Scribbles")
-                'Me.Add_C24_Component(New Hardware.C24_Vpot("Vpot_1", 1, Me.NameToC24Components("ScribbleStrip_1")), "Vpots")
-
-                'Dim Vpot1 As C24_Vpot = Me.NameToC24Components("Vpot_1")
-                'Dim itemlist As New List(Of (item As String, checked As Boolean)) From {
-                '("ded", False),
-                '("frfr", False),
-                '("sza", True)
-                '}
-
-                'Vpot1.Value_TextList = itemlist
-                'Vpot1.VpotMode = C24_Vpot.VpotModeType.TextList
-
-                'Dim cs1 As New C24_ChannelStrip(1)
-                'cs1.RegisterTo(Me)
 
 
                 '*----------------------------------*
@@ -4220,44 +4409,46 @@ Namespace Control24
                 End While
             End Sub
 
-
             Private Sub SendingInstantQueueLoop()
                 While IsRunning
-                    Dim SendCmdBytes As New List(Of Byte())
-                    Dim BytesToSend As Byte() = Nothing
-
-                    ' ✅ TryDequeue en boucle : thread-safe, évite le TOCTOU de .Count
-                    While CmdToSendQueue.TryDequeue(BytesToSend)
-                        SendCmdBytes.Add(BytesToSend)
-                    End While
+                    ' ── Fenêtre de coalescence : 5ms garantis même sous charge ──
+                    ' Permet d'accumuler plusieurs EnqueueCmd du même composant
+                    ' avant de drainer, réduisant le nombre de paquets envoyés.
+                    Thread.Sleep(InstantQueueTimeout)
+                    ' ── Draine les dernières valeurs par composant (coalescence) ──
+                    Dim SendCmdBytes = DrainLatestCmds()
 
                     If SendCmdBytes.Count > 0 Then
                         _AllCmdBytesQueue.Enqueue(SendCmdBytes)
-                        ' Pas de Sleep → reboucle immédiatement si la queue se remplit vite
                     Else
-                        Thread.Sleep(InstantQueueTimeout)   ' ✅ attente uniquement si la queue est vide
+                        Thread.Sleep(InstantQueueTimeout)
                     End If
                 End While
             End Sub
 
             Private Sub SendingAllCmdBytesQueueLoop()
                 While IsRunning
+                    Dim allCmds As New List(Of Byte())
                     Dim cmdBatch As List(Of Byte()) = Nothing
-                    Dim hasSent As Boolean = False
 
-                    ' ✅ TryDequeue en boucle : vide toute la queue accumulée en un seul passage
+                    ' ── Fusionne TOUS les batches en attente en une seule liste ──
+                    ' SendCmdBytes se charge de les grouper en paquets de Max_PacketData_Length.
+                    ' Résultat : 1 à 2 paquets max au lieu de N paquets séquentiels.
                     While _AllCmdBytesQueue.TryDequeue(cmdBatch)
-                        If cmdBatch IsNot Nothing AndAlso cmdBatch.Count > 0 Then
-                            _PacketManager.SendCmdBytes(cmdBatch)
-                            hasSent = True
+                        If cmdBatch IsNot Nothing Then
+                            allCmds.AddRange(cmdBatch)
                         End If
                     End While
 
-                    If Not hasSent Then
-                        Thread.Sleep(1)   ' ✅ cède le CPU uniquement si rien à envoyer
+                    If allCmds.Count > 0 Then
+                        _PacketManager.SendCmdBytes(allCmds)
+                    Else
+                        Thread.Sleep(1)
                     End If
                 End While
             End Sub
+
+
 
             Private Sub ReceivedC24PacketLoop()
                 While IsRunning
@@ -4277,7 +4468,49 @@ Namespace Control24
                 _packetCapture.SendPacket(CmdC24Packet)
             End Sub
 
+            ''' <summary>
+            ''' Arrête proprement tous les threads, timers et la capture réseau.
+            ''' Idempotent : sans effet si déjà appelé.
+            ''' </summary>
+            Public Sub Shutdown()
+                If Not _IsRunning Then Return
+                _IsRunning = False
 
+                ' ── Arrêt du timer de clignotement ───────────────────────────────
+                If _BlinkTimer IsNot Nothing Then
+                    _BlinkTimer.Change(Threading.Timeout.Infinite, Threading.Timeout.Infinite)
+                    _BlinkTimer.Dispose()
+                    _BlinkTimer = Nothing
+                End If
+
+                ' ── Arrêt de la capture réseau ────────────────────────────────────
+                If _isCapturing Then
+                    _isCapturing = False
+                    If _packetCapture IsNot Nothing Then
+                        _packetCapture.StopCapture()
+                        _packetCapture.Dispose()
+                        _packetCapture = Nothing
+                    End If
+                End If
+
+                ' ── Attente de fin des threads (500 ms max chacun) ────────────────
+                Dim threads As Threading.Thread() = {
+                    ReceivedC24PacketThread,
+                    SendingInstantQueueThread,
+                    SendingTimingQueueThread,
+                    SendingAllCmdBytesQueueThread
+                }
+                For Each t In threads
+                    If t IsNot Nothing AndAlso t.IsAlive Then
+                        t.Join(500)
+                    End If
+                Next
+
+                ReceivedC24PacketThread = Nothing
+                SendingInstantQueueThread = Nothing
+                SendingTimingQueueThread = Nothing
+                SendingAllCmdBytesQueueThread = Nothing
+            End Sub
 
 
         End Class
@@ -4294,6 +4527,7 @@ Namespace Control24
             Private WithEvents _FaderCmd As Commands.Fader_Cmd
             Private ReadOnly _FaderTouch As C24_Button
             Private ReadOnly _ScribbleStrip As C24_ScribbleStrip
+            Private _FaderNormValue As Double
 
             Private _DbVolume As Double = 0
 
@@ -4328,6 +4562,7 @@ Namespace Control24
             ''' pendant que le fader est touché par un humain.
             ''' </summary>
             Public Event On_FaderHumanChangeDbValue(TrackNb As Integer, DbValue As Double)
+            Public Event On_FaderChangeNormValue(TrackNb As Integer, NormValue As Double)
 
             ' ── Propriétés ────────────────────────────────────────────────────
 
@@ -4368,7 +4603,23 @@ Namespace Control24
                     _FaderCmd.FaderValue = Math.Min(Math.Max(Value, FaderMin), FaderMax)
                 End Set
             End Property
-
+            ''' <summary>
+            ''' Valeur normalisée du fader entre 0.0 et 1.0.
+            ''' Convertit automatiquement vers/depuis la valeur brute [0..1023].
+            ''' </summary>
+            Public Property FaderNormValue As Double
+                Get
+                    Return _FaderNormValue
+                End Get
+                Set
+                    If _FaderNormValue = Value Then
+                        Return
+                    End If
+                    _FaderNormValue = Value
+                    Dim rawValue As Integer = CInt(Math.Round(Math.Min(Math.Max(Value, 0.0), 1.0) * FaderMax))
+                    SendAndArmVerify(rawValue)
+                End Set
+            End Property
             ''' <summary>
             ''' Volume en dB.
             ''' Affiche la valeur sur le <see cref="ScribbleStrip"/> uniquement si elle change.
@@ -4469,7 +4720,9 @@ Namespace Control24
             Private Sub OnFaderCmdChange() Handles _FaderCmd.OnCmdChange
                 If IsTouched Then
                     DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
+                    _FaderNormValue = Math.Round(_FaderCmd.FaderValue / CDbl(FaderMax), 4)
                     RaiseEvent On_FaderHumanChangeDbValue(FaderCmd.Track_Number, DbVolume)
+                    RaiseEvent On_FaderChangeNormValue(FaderCmd.Track_Number, FaderNormValue)
                 End If
             End Sub
 
@@ -5176,38 +5429,52 @@ Namespace Control24
             End Sub
 
             'Gestion des retry
+            ''' <summary>
+            ''' Envoie les paquets en pipeline : ne bloque PAS l'envoi du paquet suivant
+            ''' en attendant l'ACK. Le retry n'intervient que si la queue est vide et
+            ''' que le dernier paquet n'a pas été acquitté dans les 50 ms.
+            ''' Garantit que les commandes d'affichage (VuMeter, Clock) partent
+            ''' toutes les 50 ms même sous charge jogwheel.
+            ''' </summary>
             Private Sub Pending_C24_Packets_QueueLoop()
                 While Desk.IsRunning
+                    Dim nextPacket As C24_Packet = Nothing
 
-                    If AckReceived AndAlso _Pending_C24_Packets.TryDequeue(Pending_C24_Packet) Then
+                    If _Pending_C24_Packets.TryDequeue(nextPacket) Then
+                        ' ── Pipeline : envoi immédiat sans attendre l'ACK du précédent ──
+                        ' Une brève pause (5 ms max) évite de noyer le C24 si l'ACK
+                        ' du paquet précédent n'est pas encore arrivé.
+                        If Not AckReceived Then
+                            _AckEvent.WaitOne(5)
+                        End If
+
                         Retry_Counter = 0
-                        _PendingPacketCounter = Pending_C24_Packet.C24Header.SendCounterInt   ' ✅ sauvegarde AVANT envoi
-                        _AckEvent.Reset()   ' ✅ reset AVANT envoi → élimine la race condition
+                        Pending_C24_Packet = nextPacket
+                        _PendingPacketCounter = nextPacket.C24Header.SendCounterInt
+                        _AckEvent.Reset()
                         AckReceived = False
-                        Desk.Send_Cmd_C24Packet(Pending_C24_Packet.C24Packet)
+                        Desk.Send_Cmd_C24Packet(nextPacket.C24Packet)
 
-                    ElseIf Pending_C24_Packet IsNot Nothing AndAlso Retry_Counter <= Max_Retry Then
-                        Dim ackInTime As Boolean = _AckEvent.WaitOne(AckTimeoutBeforeRetry)
-
+                    ElseIf Pending_C24_Packet IsNot Nothing AndAlso Not AckReceived Then
+                        ' ── Queue vide : attendre l'ACK du dernier paquet (50 ms max) ──
+                        Dim ackInTime As Boolean = _AckEvent.WaitOne(50)
                         If ackInTime Then
                             Pending_C24_Packet = Nothing
                             Retry_Counter = 0
-                        Else
-                            If Pending_C24_Packet.C24Header.CmdType(0) <> CByte(Packet.CmdType.Init) Then
-                                Interlocked.Increment(_Retry_Counter)
-                                Pending_C24_Packet.C24Header.Retry = ByteManager.UInt16ToBytesLErev(Retry_Counter)
-                                Pending_C24_Packet.RebuildPacket()
-                            End If
+                        ElseIf Retry_Counter < Max_Retry Then
+                            Interlocked.Increment(_Retry_Counter)
+                            Pending_C24_Packet.C24Header.Retry = ByteManager.UInt16ToBytesLErev(Retry_Counter)
+                            Pending_C24_Packet.RebuildPacket()
                             Desk.Send_Cmd_C24Packet(Pending_C24_Packet.C24Packet)
+                        Else
+                            ' ── Abandon après Max_Retry ───────────────────────────────
+                            Pending_C24_Packet = Nothing
+                            AckReceived = True
+                            Retry_Counter = 0
                         End If
-
-                    ElseIf Retry_Counter > Max_Retry Then
-                        Pending_C24_Packet = Nothing
-                        AckReceived = True
-                        Retry_Counter = 0
+                    Else
+                        Thread.Sleep(0)
                     End If
-
-                    Thread.Sleep(0)
                 End While
             End Sub
             Public Sub _ReceiveBytes(ReceivedBytes As Byte())
@@ -5906,7 +6173,7 @@ Namespace Control24
                 'set defaut cmd
                 Cmd = ByteManager.ConcatBytes(Display_Header, {&H0}, {&H0}, {&H0}, {Display_Ender})
                 DisplayCommand = DisplayCommands.AutoModeLed
-                Track_Number = 25
+                Track_Number = 26
                 ClockMode = ClockModes.HourMinuteSecondMS
                 'set Id             
 
@@ -5935,9 +6202,9 @@ Namespace Control24
             Inherits Track_Display_Cmd
 
             Private ClockModesDots As New Dictionary(Of ClockModes, Byte) From {
-                {ClockModes.HourMinuteSecondMS, &H18},
+                {ClockModes.HourMinuteSecondMS, &H15},
                 {ClockModes.HourMinuteSecondFrames, &H2A},
-                {ClockModes.FeetFrames, &H0},
+                {ClockModes.FeetFrames, &H8},
                 {ClockModes.BarBeats, &H14}
             }
             Private ClockModesDotsRev As Dictionary(Of Byte, ClockModes) = Utility.ReverseDictionary(Of ClockModes, Byte)(ClockModesDots)
@@ -6003,6 +6270,11 @@ Namespace Control24
             Private Sub SetClockMode()
                 If _Cmd Is Nothing OrElse _Cmd.Length < 6 Then Return
                 _Cmd(5) = ClockModesDots(ClockMode)
+
+                ' ── Invalide le cache pour forcer le renvoi complet des 8 digits ──
+                ' au prochain Set_Time_Ms, tous les digits seront inclus avec le nouveau mode.
+                Array.Clear(_prevSevenSegFull, 0, _prevSevenSegFull.Length)
+
                 SendCmd()
             End Sub
 

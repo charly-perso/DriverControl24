@@ -11,6 +11,10 @@ public static unsafe class ReaperEntry
     // ── CancellationTokenSource partagé pour tous les serveurs pipe ───────────
     private static readonly CancellationTokenSource _cts = new();
 
+    // ── File d'attente pour les opérations UI (thread principal uniquement) ──────
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<Action> _uiQueue
+        = new();
+
     delegate IntPtr GetFuncRawDelegate(IntPtr name);
     delegate int RegisterRawDelegate(IntPtr name, IntPtr infostruct);
 
@@ -85,12 +89,16 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetExePath = GetDel<ReaperAPI.GetExePathDel>(getFn, "GetExePath");
 
             // Projet
+            ReaperAPI.InsertTrackAtIndex = GetDel<ReaperAPI.InsertTrackAtIndexDel>(getFn, "InsertTrackAtIndex");
+            ReaperAPI.main_openProject = GetDel<ReaperAPI.main_openProjectDel>(getFn, "main_openProject");
+            ReaperAPI.MarkProjectDirty = GetDel<ReaperAPI.MarkProjectDirtyDel>(getFn, "MarkProjectDirty");
             ReaperAPI.GetNumTracks = GetDel<ReaperAPI.GetNumTracksDel>(getFn, "GetNumTracks");
             ReaperAPI.CountTracks = GetDel<ReaperAPI.CountTracksDel>(getFn, "CountTracks");
             ReaperAPI.EnumProjects = GetDel<ReaperAPI.EnumProjectsDel>(getFn, "EnumProjects");
             ReaperAPI.GetProjectPath = GetDel<ReaperAPI.GetProjectPathDel>(getFn, "GetProjectPath");
             ReaperAPI.GetProjectPathEx = GetDel<ReaperAPI.GetProjectPathExDel>(getFn, "GetProjectPathEx");
             ReaperAPI.GetProjectLength = GetDel<ReaperAPI.GetProjectLengthDel>(getFn, "GetProjectLength");
+            ReaperAPI.DeleteTrack = GetDel<ReaperAPI.DeleteTrackDel>(getFn, "DeleteTrack");
 
             // Transport
             ReaperAPI.GetPlayState = GetDel<ReaperAPI.GetPlayStateDel>(getFn, "GetPlayState");
@@ -171,6 +179,14 @@ public static unsafe class ReaperEntry
             ReaperAPI.TrackFX_GetOpen = GetDel<ReaperAPI.TrackFX_GetOpenDel>(getFn, "TrackFX_GetOpen");
             ReaperAPI.EnumInstalledFX = GetDel<ReaperAPI.EnumInstalledFXDel>(getFn, "EnumInstalledFX");
             ReaperAPI.TrackFX_CopyToTrack = GetDel<ReaperAPI.TrackFX_CopyToTrackDel>(getFn, "TrackFX_CopyToTrack");
+            ReaperAPI.TrackFX_GetParamStepSizes = GetDel<ReaperAPI.TrackFX_GetParamStepSizesDel>(getFn, "TrackFX_GetParameterStepSizes");
+            ReaperAPI.TrackFX_GetParamEx = GetDel<ReaperAPI.TrackFX_GetParamExDel>(getFn, "TrackFX_GetParamEx");
+            ReaperAPI.TrackFX_FormatParamValueNormalized = GetDel<ReaperAPI.TrackFX_FormatParamValueNormalizedDel>(getFn, "TrackFX_FormatParamValueNormalized");
+            ReaperAPI.TrackFX_Show = GetDel<ReaperAPI.TrackFX_ShowDel>(getFn, "TrackFX_Show");
+
+
+            // ── Exposer EnqueueUIAction via ReaperAPI ─────────────────────────
+            ReaperAPI.EnqueueUIAction = action => _uiQueue.Enqueue(action);
 
             // Items / Takes
             ReaperAPI.GetTrackNumMediaItems = GetDel<ReaperAPI.GetTrackNumMediaItemsDel>(getFn, "GetTrackNumMediaItems");
@@ -274,6 +290,12 @@ public static unsafe class ReaperEntry
                 Name = "PeakPipeServer"
             }.Start();
 
+            // ── Enregistrer le timer main-thread pour les opérations UI ──────
+            // Le delegate doit pointer sur OnReaperTimer (UnmanagedCallersOnly).
+            // "timer" est le nom de hook Reaper pour le callback periodique (~30 ms).
+            delegate* unmanaged<void> timerPtr = &OnReaperTimer;
+            RegisterAnsi(reg, "timer", (nint)timerPtr);
+
             return ReaperBridge.Initialize(rec, dllDir);
         }
         catch (Exception ex)
@@ -322,30 +344,125 @@ public static unsafe class ReaperEntry
 
     // ── Dispatcher des commandes du pipe peaks ────────────────────────────────
 
-    private static string HandlePeakRequest(string line)
+    // Nouveau format de réponse :
+    // playPos|masterL|masterR|masterHoldL|masterHoldR|t0L|t0R|t0HoldL|t0HoldR|…
+
+    // ── Dernière seconde de lecture où les holds ont été réinitialisés ─────────
+    private static long _lastHoldResetSecond = -1;
+
+    private static string HandlePeakRequest(string request)
     {
-        if (string.IsNullOrEmpty(line))
-            return "ERROR:EmptyRequest";
-
-        // Format : COMMANDE|param1|param2|...
-        var sep = line.IndexOf('|');
-        var cmd = sep < 0 ? line : line[..sep];
-
-        return cmd switch
+        try
         {
-            // ── GET_PEAKS_STATE|t0|t1|... ─────────────────────────────────────
-            // Réponse : playPos|masterL|masterR|t0L|t0R|t1L|t1R|...
-            // Commande principale : position de lecture + master + pistes en 1 seul échange.
-            "GET_PEAKS_STATE" => HandleGetPeaksState(line),
+            var ic = System.Globalization.CultureInfo.InvariantCulture;
+            var parts = request.Split('|');
 
-            // ── GET_ALL_PEAKS|t0|t1|... ───────────────────────────────────────
-            // Réponse : t0L|t0R|t1L|t1R|...  (rétro-compatibilité)
-            "GET_ALL_PEAKS" => HandleGetAllPeaks(line),
+            if (parts[0] != "GET_PEAKS_STATE")
+                return ReaperBridge.HandleRequest(request);
 
-            _ => "ERROR:UnknownCommand"
-        };
+            var getPeakInfo = ReaperAPI.Track_GetPeakInfo;
+            var getPeakHold = ReaperAPI.Track_GetPeakHoldDB;
+
+            if (getPeakInfo is null || getPeakHold is null)
+                return "ERROR:API unavailable";
+
+            // ── Position de lecture : GetPlayPosition pendant la lecture ──────
+            int playState = ReaperAPI.GetPlayState?.Invoke() ?? 0;
+            double playPosSeconds = playState != 0 && ReaperAPI.GetPlayPosition != null
+                ? ReaperAPI.GetPlayPosition()
+                : ReaperAPI.GetCursorPosition?.Invoke() ?? 0.0;
+
+            string playPos = playPosSeconds.ToString("G", ic);
+
+            // ── Reset des holds à chaque nouvelle seconde entière de lecture ──
+            if (playState != 0)
+            {
+                long currentSecond = (long)Math.Floor(playPosSeconds);
+                if (currentSecond != _lastHoldResetSecond)
+                {
+                    _lastHoldResetSecond = currentSecond;
+
+                    var master = ReaperAPI.GetMasterTrack?.Invoke(IntPtr.Zero) ?? IntPtr.Zero;
+                    if (master != IntPtr.Zero)
+                    {
+                        getPeakHold(master, 0, true);
+                        getPeakHold(master, 1, true);
+                    }
+
+                    int count = ReaperAPI.CountTracks?.Invoke(IntPtr.Zero) ?? 0;
+                    for (int i = 0; i < count; i++)
+                    {
+                        var tr = ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, i) ?? IntPtr.Zero;
+                        if (tr == IntPtr.Zero) continue;
+                        getPeakHold(tr, 0, true);
+                        getPeakHold(tr, 1, true);
+                    }
+                }
+            }
+            else
+            {
+                _lastHoldResetSecond = -1;
+            }
+
+            // ── Master ────────────────────────────────────────────────────────
+            string masterL = "0", masterR = "0", masterHoldL = "0", masterHoldR = "0";
+            if (ReaperAPI.GetMasterTrack != null)
+            {
+                var masterTr = ReaperAPI.GetMasterTrack(IntPtr.Zero);
+                if (masterTr != IntPtr.Zero)
+                {
+                    masterL = getPeakInfo(masterTr, 0).ToString("G", ic);
+                    masterR = getPeakInfo(masterTr, 1).ToString("G", ic);
+                    masterHoldL = DbToLinear(getPeakHold(masterTr, 0, false)).ToString("G", ic);
+                    masterHoldR = DbToLinear(getPeakHold(masterTr, 1, false)).ToString("G", ic);
+                }
+            }
+
+            // ── Pistes : L | R | HoldL | HoldR ───────────────────────────────
+            var tokens = new System.Collections.Generic.List<string>
+                { playPos, masterL, masterR, masterHoldL, masterHoldR };
+
+            for (int i = 1; i < parts.Length; i++)
+            {
+                if (!int.TryParse(parts[i], out int tIdx))
+                {
+                    tokens.Add("-1"); tokens.Add("-1");
+                    tokens.Add("-1"); tokens.Add("-1");
+                    continue;
+                }
+
+                var tr = ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, tIdx) ?? IntPtr.Zero;
+                if (tr == IntPtr.Zero)
+                {
+                    tokens.Add("-1"); tokens.Add("-1");
+                    tokens.Add("-1"); tokens.Add("-1");
+                    continue;
+                }
+
+                tokens.Add(getPeakInfo(tr, 0).ToString("G", ic));
+                tokens.Add(getPeakInfo(tr, 1).ToString("G", ic));
+                tokens.Add(DbToLinear(getPeakHold(tr, 0, false)).ToString("G", ic));
+                tokens.Add(DbToLinear(getPeakHold(tr, 1, false)).ToString("G", ic));
+            }
+
+            return string.Join("|", tokens);
+        }
+        catch (Exception ex)
+        {
+            return $"ERROR:{ex.Message}";
+        }
     }
 
+    /// <summary>
+    /// Convertit la valeur retournée par <c>Track_GetPeakHoldDB</c> en amplitude linéaire.
+    /// Reaper retourne la valeur en dB × 0.01, donc on multiplie par 100 pour obtenir les dB réels.
+    /// Retourne 0 pour toute valeur ≤ -150 dB (silence absolu).
+    /// </summary>
+    private static double DbToLinear(double dbScaled)
+    {
+        var db = dbScaled * 100.0;
+        return db <= -150.0 ? 0.0 : Math.Pow(10.0, db / 20.0);
+    }
     // ── GET_PEAKS_STATE ───────────────────────────────────────────────────────
     /// <summary>
     /// Retourne en un seul échange pipe :
@@ -461,5 +578,20 @@ public static unsafe class ReaperEntry
         }
 
         return sb.ToString();
+    }
+
+    // ── Point d'entrée pour différer une action UI depuis ReaperBridge ────────
+    internal static void EnqueueUIAction(Action action)
+        => _uiQueue.Enqueue(action);
+
+    // ── Timer Reaper : vide la file sur le thread principal (≈ toutes les 33 ms) ─
+    [UnmanagedCallersOnly]
+    private static void OnReaperTimer()
+    {
+        while (_uiQueue.TryDequeue(out var action))
+        {
+            try { action(); }
+            catch { }
+        }
     }
 }

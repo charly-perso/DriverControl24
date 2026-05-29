@@ -3,6 +3,8 @@ Imports System.Runtime.InteropServices
 Imports DriverReaperControl24.Reaper.Monitors
 
 Public Class Main
+    Implements IDisposable
+
     <DllImport("kernel32.dll")>
     Private Shared Function GetConsoleWindow() As IntPtr
     End Function
@@ -14,14 +16,14 @@ Public Class Main
     Private Const SW_HIDE As Integer = 0
     Private Const SW_SHOW As Integer = 5
 
+    Private Shared _desk As Control24.Hardware.C24_Desk = Nothing
+    Private Shared _controller As C24ReaperController = Nothing
+    Private disposedValue As Boolean
 
-    Private Shared desk As Control24.Hardware.C24_Desk = Nothing
     ''' <summary>
     ''' Entrée principale — 
     ''' </summary>
     Public Shared Sub Main()
-
-
         Dim _ReaperSessionConfig As New Reaper.ReaperSessionConfig
         Dim interfaceName As String = _ReaperSessionConfig.SelectedNetworkInterface
 
@@ -32,14 +34,11 @@ Public Class Main
                 Environment.Exit(1)
             End If
 
-
-
             If interfaceName = "TestWithoutC24" Then
-                desk = New Control24.Hardware.C24_Desk(Nothing)
+                _desk = New Control24.Hardware.C24_Desk(Nothing)
             Else
-
                 Dim selectedInterface = NetworkInterface.GetAllNetworkInterfaces() _
-                .FirstOrDefault(Function(n) n.Name = interfaceName)
+                    .FirstOrDefault(Function(n) n.Name = interfaceName)
 
                 If selectedInterface Is Nothing Then
                     Dim message As String = $"ERROR: Interface '{interfaceName}' not found." & "Available interfaces are named in ReaperDriver.ini"
@@ -49,50 +48,58 @@ Public Class Main
 
                 Reaper.CallReaperBridge($"SHOW_MESSAGE_BOX|1|Control24 Driver|Starting Control24 driver on '{interfaceName}'...")
 
-                ' ── Création du C24 Desk et démarrage réseau ──────────────────────
-                desk = New Control24.Hardware.C24_Desk(selectedInterface)
-                desk.StartNetworkCommunication()
+                _desk = New Control24.Hardware.C24_Desk(selectedInterface)
+                _desk.StartNetworkCommunication()
 
-
-                ' ── Attente de fin d'initialisation des composants C24 ────────────
-                ' InitializeComponents() est appelé de façon asynchrone par le
-                ' PacketManager dès réception du premier ACK du Control24.
-                ' On bloque ici jusqu'à ce que tous les composants soient prêts.
                 Const InitTimeoutMs As Integer = 30_000
-                Dim initialized As Boolean = desk.WaitForInitialization(InitTimeoutMs)
+                Dim initialized As Boolean = _desk.WaitForInitialization(InitTimeoutMs)
 
                 If Not initialized Then
                     Reaper.CallReaperBridge("SHOW_MESSAGE_BOX|1|Control24 Driver|ERROR: Control24 initialization timeout. Check hardware connection.")
                     Environment.Exit(1)
                 End If
-
             End If
-            ' ── Création du controller Reaper ↔ Control24 ─────────────────────
-            Dim _C24ReaperController As New C24ReaperController(desk)
 
-            ' ── Boucle d'attente — processus headless ─────────────────────────
+            _controller = New C24ReaperController(_desk)
+
+            ' ── Nettoyage ordonné sur Ctrl+C ──────────────────────────────────
             AddHandler Console.CancelKeyPress,
                 Sub(s, e)
                     e.Cancel = True
                     Reaper.CallReaperBridge("SHOW_MESSAGE_BOX|1|Control24 Driver|Stopping...")
+                    Shutdown()
                     Environment.Exit(0)
                 End Sub
 
+            ' ── Nettoyage ordonné sur fermeture du processus ──────────────────
+            AddHandler AppDomain.CurrentDomain.ProcessExit,
+                Sub(s, e)
+                    Shutdown()
+                End Sub
 
             If interfaceName = "TestWithoutC24" Then
-                ' ── Boucle de commandes console ───────────────────────────────────
-                RunConsoleLoop(_C24ReaperController)
+                RunConsoleLoop(_controller)
             Else
-                'hide console
                 ShowWindow(GetConsoleWindow(), SW_HIDE)
                 Threading.Thread.Sleep(Threading.Timeout.Infinite)
             End If
-
-
-
-
         End If
+    End Sub
 
+    ''' <summary>
+    ''' Libère toutes les ressources dans l'ordre correct :
+    ''' controller → desk → hub.
+    ''' Idempotent : sans effet si déjà appelé.
+    ''' </summary>
+    Private Shared Sub Shutdown()
+        If _controller IsNot Nothing Then
+            _controller.Dispose()
+            _controller = Nothing
+        End If
+        If _desk IsNot Nothing Then
+            _desk.Shutdown()
+            _desk = Nothing
+        End If
     End Sub
 
     Private Shared Sub RunConsoleLoop(controller As C24ReaperController)
@@ -104,7 +111,6 @@ Public Class Main
             If input Is Nothing Then Continue While
 
             Dim parts = ParseCommandParts(input.Trim())
-
             If parts.Count = 0 Then Continue While
 
             Dim cmd = parts(0)
@@ -117,6 +123,7 @@ Public Class Main
                 Case "quit", "exit"
                     Console.WriteLine("Arrêt du driver...")
                     Reaper.CallReaperBridge("SHOW_MESSAGE_BOX|1|Control24 Driver|Stopping...")
+                    Shutdown()
                     Environment.Exit(0)
 
                 Case "status"
@@ -141,12 +148,15 @@ Public Class Main
                 Case "interfaces"
                     DisplayInterfaceName()
 
+                Case "components"
+                    PrintComponents(_desk)
+
                 Case "C24desk_OnButtonReleased"
                     If parts.Count < 3 Then
                         Console.WriteLine("Usage : C24desk_OnButtonReleased <Group> <Name>")
                         Console.WriteLine("Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
                     Else
-                        Dim group = desk.GroupComponents(parts(1))
+                        Dim group = _desk.GroupComponents(parts(1))
                         If group IsNot Nothing Then
                             For Each cpn In group
                                 Dim C24_btn = TryCast(cpn, Control24.Hardware.C24_Button)
@@ -186,16 +196,64 @@ Public Class Main
                     Console.WriteLine($"Commande inconnue : '{cmd}'. Tapez 'help'.")
 
             End Select
-
         End While
     End Sub
+
     ''' <summary>
-    ''' Découpe une ligne de commande en tokens en respectant les guillemets.
-    ''' Les chaînes entre guillemets doubles sont traitées comme un seul token
-    ''' (les guillemets sont retirés).
-    ''' Exemple : <c>cmd "C:\mon dossier\fichier.txt" out.csv</c>
-    ''' → ["cmd", "C:\mon dossier\fichier.txt", "out.csv"]
+    ''' Affiche tous les groupes et composants enregistrés dans <paramref name="desk"/>.
+    ''' Pour les 24 ChannelStrips, seul ChannelStrip_1 est développé ;
+    ''' les suivants sont affichés sur une seule ligne condensée.
     ''' </summary>
+    Private Shared Sub PrintComponents(desk As Control24.Hardware.C24_Desk)
+        If desk Is Nothing Then
+            Console.WriteLine("(desk non initialisé)")
+            Return
+        End If
+
+        Dim groups = desk.GroupComponents
+        If groups Is Nothing OrElse groups.Count = 0 Then
+            Console.WriteLine("Aucun groupe enregistré.")
+            Return
+        End If
+
+        Console.WriteLine($"{groups.Count} groupe(s) enregistré(s) :")
+        Console.WriteLine()
+
+        For Each kvp In groups
+            Dim groupName = kvp.Key
+            Dim members = kvp.Value
+
+            ' ── ChannelStrip_2 à ChannelStrip_24 : ligne condensée ────────────
+            If groupName.StartsWith("ChannelStrip_", StringComparison.OrdinalIgnoreCase) AndAlso
+               groupName <> "ChannelStrip_1" Then
+                Console.WriteLine($"  [{groupName}]  ({members.Count} composant(s) — voir ChannelStrip_1)")
+                Continue For
+            End If
+
+            Console.WriteLine($"  [{groupName}]  — {members.Count} composant(s)")
+            For Each cpn In members
+                Console.WriteLine($"      {cpn.Name}  ({cpn.GetType().Name})")
+            Next
+            Console.WriteLine()
+        Next
+    End Sub
+
+    Private Shared Sub PrintHelp()
+        Console.WriteLine("Commandes disponibles :")
+        Console.WriteLine("  help                                        — Affiche cette aide")
+        Console.WriteLine("  status                                      — État du controller et de la session Reaper")
+        Console.WriteLine("  hub                                         — État de la connexion ReaperPollHub")
+        Console.WriteLine("  bridge <commande>                           — Envoie une commande brute au bridge Reaper")
+        Console.WriteLine("                                                Exemple : bridge COUNT_TRACKS")
+        Console.WriteLine("  tracks                                      — Liste les pistes du projet actif")
+        Console.WriteLine("  interfaces                                  — Liste les interfaces réseau disponibles")
+        Console.WriteLine("  components                                  — Liste les composants C24 enregistrés")
+        Console.WriteLine("  C24desk_OnButtonReleased <Group> <Name>     — Simule le relâchement d'un bouton C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
+        Console.WriteLine("  ConvertTxt2Csv <input> <output>             — Convertit un log Wireshark TXT en CSV")
+        Console.WriteLine("                                                Exemple : ConvertTxt2Csv ""C:\cap.txt"" ""C:\out.csv""")
+        Console.WriteLine("  quit / exit                                 — Arrête le driver")
+    End Sub
     Private Shared Function ParseCommandParts(input As String) As List(Of String)
         Dim result As New List(Of String)
         Dim current As New System.Text.StringBuilder()
@@ -220,24 +278,9 @@ Public Class Main
 
         Return result
     End Function
-    ''' <summary>Affiche la liste des commandes disponibles.</summary>
-    Private Shared Sub PrintHelp()
-        Console.WriteLine("Commandes disponibles :")
-        Console.WriteLine("  help                                        — Affiche cette aide")
-        Console.WriteLine("  status                                      — État du controller et de la session Reaper")
-        Console.WriteLine("  hub                                         — État de la connexion ReaperPollHub")
-        Console.WriteLine("  bridge <commande>                           — Envoie une commande brute au bridge Reaper")
-        Console.WriteLine("                                                Exemple : bridge COUNT_TRACKS")
-        Console.WriteLine("  tracks                                      — Liste les pistes du projet actif")
-        Console.WriteLine("  interfaces                                  — Liste les interfaces réseau disponibles")
-        Console.WriteLine("  C24desk_OnButtonReleased <Group> <Name>     — Simule le relâchement d'un bouton C24")
-        Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
-        Console.WriteLine("  ConvertTxt2Csv <input> <output>             — Convertit un log Wireshark TXT en CSV")
-        Console.WriteLine("                                                Exemple : ConvertTxt2Csv ""C:\cap.txt"" ""C:\out.csv""")
-        Console.WriteLine("  quit / exit                                 — Arrête le driver")
-    End Sub
 
-    ''' <summary>Affiche l'état général du controller.</summary>
+
+
     Private Shared Sub PrintStatus(controller As C24ReaperController)
         Console.WriteLine($"Interface C24    : {controller.C24_Desk?.NetworkInterface?.Name}")
         Dim trackCount = Reaper.CallReaperBridge("COUNT_TRACKS")
@@ -247,7 +290,6 @@ Public Class Main
         Console.WriteLine($"PollHub connecté : {ReaperPollHub.Instance.IsConnected}")
     End Sub
 
-    ''' <summary>Affiche la liste des pistes du projet actif.</summary>
     Private Shared Sub PrintTracks(controller As C24ReaperController)
         Dim rawCount = Reaper.CallReaperBridge("COUNT_TRACKS")
         Dim count As Integer = 0
@@ -261,16 +303,6 @@ Public Class Main
             Console.WriteLine($"  [{i}] {If(String.IsNullOrEmpty(name), "(sans nom)", name)}")
         Next
     End Sub
-    Private Shared Function LoadConfigInterfaceName() As String
-        Dim configPath = IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ReaControl24", "control24_config.json")
-
-        If Not IO.File.Exists(configPath) Then Return String.Empty
-        Dim json = IO.File.ReadAllText(configPath)
-        Dim match = Text.RegularExpressions.Regex.Match(json, """interface""\s*:\s*""([^""]+)""")
-        Return If(match.Success, match.Groups(1).Value, String.Empty)
-    End Function
 
     Public Shared Sub DisplayInterfaceName()
         For Each Net_interface In NetworkInterface.GetAllNetworkInterfaces()
@@ -278,4 +310,17 @@ Public Class Main
         Next
     End Sub
 
+    Protected Overridable Sub Dispose(disposing As Boolean)
+        If Not disposedValue Then
+            If disposing Then
+                Shutdown()
+            End If
+            disposedValue = True
+        End If
+    End Sub
+
+    Public Sub Dispose() Implements IDisposable.Dispose
+        Dispose(disposing:=True)
+        GC.SuppressFinalize(Me)
+    End Sub
 End Class

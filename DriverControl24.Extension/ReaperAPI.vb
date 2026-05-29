@@ -7,6 +7,26 @@ Public Class ReaperAPI
     ' Allouer un buffer    : Marshal.AllocHGlobal(size) / Marshal.FreeHGlobal(ptr)
 
     ' ═══════════════════════════════════════════════════════════════
+    '  PROJET — création / fermeture / ouverture
+    ' ═══════════════════════════════════════════════════════════════
+
+    '''' <summary>Exécute une action Reaper par son ID (équivalent Main_OnCommand).</summary>
+    'Public Delegate Sub Main_OnCommandDel(command As Integer, flag As Integer)
+    'Public Shared Main_OnCommand As Main_OnCommandDel
+
+    ''' <summary>Insère une piste à l'index donné (0-based). wantDefaults=True initialise les défauts.</summary>
+    Public Delegate Sub InsertTrackAtIndexDel(idx As Integer, wantDefaults As Boolean)
+    Public Shared InsertTrackAtIndex As InsertTrackAtIndexDel
+
+    ''' <summary>Ouvre un projet .rpp par son chemin complet.</summary>
+    Public Delegate Sub main_openProjectDel(<MarshalAs(UnmanagedType.LPStr)> fname As String)
+    Public Shared main_openProject As main_openProjectDel
+
+    ''' <summary>Marque le projet comme modifié (dirty &lt;&gt; 0) ou non modifié (dirty = 0).</summary>
+    Public Delegate Sub MarkProjectDirtyDel(proj As IntPtr)
+    Public Shared MarkProjectDirty As MarkProjectDirtyDel
+
+    ' ═══════════════════════════════════════════════════════════════
     '  PROJET
     ' ═══════════════════════════════════════════════════════════════
 
@@ -33,6 +53,10 @@ Public Class ReaperAPI
     ''' <summary>Piste maître du projet.</summary>
     Public Delegate Function GetMasterTrackDel(proj As IntPtr) As IntPtr
     Public Shared GetMasterTrack As GetMasterTrackDel
+
+    ''' <summary>Supprime une piste du projet actif par son index 0-based.</summary>
+    Public Delegate Sub DeleteTrackDel(track As IntPtr)
+    Public Shared DeleteTrack As DeleteTrackDel
 
     ' ═══════════════════════════════════════════════════════════════
     '  TRANSPORT
@@ -237,6 +261,50 @@ Public Class ReaperAPI
     Public Delegate Function TrackFX_GetOpenDel(track As IntPtr, fx As Integer) As Boolean
     Public Shared TrackFX_GetOpen As TrackFX_GetOpenDel
 
+    ''' <summary>TrackFX_GetParamStepSizes — retourne les tailles de pas d'un paramètre FX.</summary>
+    Public Delegate Function TrackFX_GetParamStepSizesDel(
+    track As IntPtr,
+    fxIndex As Integer,
+    paramIndex As Integer,
+    ByRef [step] As Double,
+    ByRef smallStep As Double,
+    ByRef largeStep As Double,
+    ByRef isToggle As Boolean) As Boolean
+
+    Public Shared TrackFX_GetParamStepSizes As TrackFX_GetParamStepSizesDel
+    ''' <summary>TrackFX_GetParamEx — valeur brute + min, max, mid d'un paramètre FX.</summary>
+    Public Delegate Function TrackFX_GetParamExDel(
+        track As IntPtr,
+        fxIndex As Integer,
+        paramIndex As Integer,
+        ByRef minVal As Double,
+        ByRef maxVal As Double,
+        ByRef midVal As Double) As Double
+
+    Public Shared TrackFX_GetParamEx As TrackFX_GetParamExDel
+    ''' <summary>TrackFX_FormatParamValueNormalized — formate une valeur normalisée arbitraire.</summary>
+    Public Delegate Function TrackFX_FormatParamValueNormalizedDel(
+        track As IntPtr,
+        fx As Integer,
+        param As Integer,
+        normalizedValue As Double,
+        buf As IntPtr,
+        bufsz As Integer) As Boolean
+
+    Public Shared TrackFX_FormatParamValueNormalized As TrackFX_FormatParamValueNormalizedDel
+
+    ''' <summary>
+    ''' Ouvre ou ferme la fenêtre d'un FX de piste.
+    ''' showFlag : 0=cacher  1=montrer dans chaîne  2=toggle flottant  3=ouvrir flottant.
+    ''' </summary>
+    Public Delegate Sub TrackFX_ShowDel(track As IntPtr, fx As Integer, showFlag As Integer)
+    Public Shared TrackFX_Show As TrackFX_ShowDel
+    ''' <summary>
+    ''' Délègue une action UI vers le thread principal de Reaper.
+    ''' Initialisé par ReaperEntry au démarrage du plugin.
+    ''' </summary>
+    Public Delegate Sub EnqueueUIActionDel(action As Action)
+    Public Shared EnqueueUIAction As EnqueueUIActionDel
     ' ═══════════════════════════════════════════════════════════════
     '  ITEMS / TAKES
     ' ═══════════════════════════════════════════════════════════════

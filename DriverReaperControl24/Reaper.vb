@@ -2,6 +2,7 @@
 Imports System.Threading
 Imports DriverConfig
 Imports DriverReaperControl24.Reaper.Monitors
+Imports DriverReaperControl24.Utility
 
 Namespace Reaper
 
@@ -1631,7 +1632,70 @@ Namespace Reaper
             Return raw = "OK"
         End Function
 
+        ''' <summary>
+        ''' Retourne le tempo Reaper en BPM à la position courante du curseur.
+        ''' Utilise <c>Master_GetTempo</c> via le bridge.
+        ''' Retourne 120 en cas d'erreur.
+        ''' </summary>
+        Public Function GetBpm() As Double
+            Dim ic = Globalization.CultureInfo.InvariantCulture
+            Dim raw = CallReaperBridge("GET_MASTER_TEMPO")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return 120.0
+            End If
+            Dim bpm As Double = 120.0
+            If Double.TryParse(raw, Globalization.NumberStyles.Float, ic, bpm) Then
+                Return bpm
+            End If
+            Return 120.0
+        End Function
 
+        ''' <summary>
+        ''' Retourne le numérateur de la signature rythmique (beats per bar)
+        ''' à la position courante du curseur.
+        ''' Utilise <c>TimeMap_GetTimeSigAtTime</c> via le bridge.
+        ''' Retourne 4 en cas d'erreur.
+        ''' </summary>
+        Public Function GetBeatsPerBar() As Integer
+            Dim raw = CallReaperBridge("GET_TIMESIG_NUMERATOR")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return 4
+            End If
+            Dim num As Integer = 4
+            If Integer.TryParse(raw, num) Then
+                Return num
+            End If
+            Return 4
+        End Function
+
+        ''' <summary>
+        ''' Retourne True si la fenêtre flottante d'un FX de piste est actuellement ouverte.
+        ''' Équivalent de <c>TrackFX_GetOpen</c> via le bridge.
+        ''' Retourne False si le bridge est indisponible ou si la piste/FX est introuvable.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+        Public Function TrackFX_IsOpen(trackIndex As Integer,
+                                       fxIndex As Integer) As Boolean
+            Dim raw = CallReaperBridge($"GET_FX_OPEN|{trackIndex}|{fxIndex}")
+            Return raw = "1"
+        End Function
+        ''' <summary>
+        ''' Ouvre ou ferme la fenêtre flottante d'un FX de piste.
+        ''' Utilise <c>TrackFX_Show</c> (API stable) et non <c>TrackFX_SetOpen</c>
+        ''' qui provoque un crash Reaper.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+        ''' <param name="open">True = ouvrir la fenêtre flottante  False = fermer.</param>
+        Public Sub TrackFX_Show(trackIndex As Integer,
+                                fxIndex As Integer,
+                                open As Boolean)
+            ' showFlag 3 = ouvrir flottant (déterministe, pas de toggle)
+            ' showFlag 0 = cacher
+            Dim showFlag = If(open, 3, 2)
+            CallReaperBridge($"TRACKFX_SHOW|{trackIndex}|{fxIndex}|{showFlag}")
+        End Sub
     End Module
 
     Namespace Monitors
@@ -3433,7 +3497,7 @@ Namespace Reaper
                         _writer = New IO.StreamWriter(_pipe) With {.AutoFlush = True}
                         _reader = New IO.StreamReader(_pipe)
                         Return True
-                    Catch
+                    Catch ex As Exception
                         Disconnect()
                         Return False
                     End Try
@@ -4018,13 +4082,13 @@ Namespace Reaper
             Private Sub On_EnvMonitorValueChange(paramIndex As Integer, normValue As Double)
                 Dim pageIdx = GetPageParmIndex(paramIndex)
                 If pageIdx < 0 OrElse pageIdx >= _ReaperTrackFxParams?.Count Then Return
-                _ReaperTrackFxParams(pageIdx).SetValueFromMonitor(normValue)
+                _ReaperTrackFxParams(pageIdx).SetNormValueFromMonitor(normValue)
             End Sub
 
             Private Sub On_FXParamChange(paramIndex As Integer, normValue As Double)
                 Dim pageIdx = GetPageParmIndex(paramIndex)
                 If pageIdx < 0 OrElse pageIdx >= _ReaperTrackFxParams?.Count Then Return
-                _ReaperTrackFxParams(pageIdx).SetValueFromMonitor(normValue)
+                _ReaperTrackFxParams(pageIdx).SetNormValueFromMonitor(normValue)
                 If _ReaperFxParamEnvelopes(pageIdx) IsNot Nothing Then
                     _ReaperFxParamEnvelopes(pageIdx).Value = normValue
                 End If
@@ -4067,7 +4131,7 @@ Namespace Reaper
         ''' </summary>
         Public Class ReaperTracksManager
             Implements IDisposable
-
+            Private _Tracks As New List(Of ReaperTrack)
             Private ReadOnly _project As ReaperProject
             Private _TrackMonitor As Monitors.ReaperTrackMonitor
             Private _EnvMonitor As Monitors.ReaperTrackEnvelopeMonitor
@@ -4077,7 +4141,7 @@ Namespace Reaper
             Private ReadOnly _all_VolEnvelopes As New List(Of List(Of ReaperTrackVolEnvelope))
             Private ReadOnly _all_PanEnvelopes As New List(Of List(Of ReaperTrackPanEnvelope))
             Private ReadOnly _all_MuteEnvelopes As New List(Of List(Of ReaperTrackMuteEnvelope))
-            Private _Tracks As List(Of ReaperTrack)
+
             Private _VolEnvelopes As List(Of ReaperTrackVolEnvelope)
             Private _PanEnvelopes As List(Of ReaperTrackPanEnvelope)
             Private _MuteEnvelopes As List(Of ReaperTrackMuteEnvelope)
@@ -4167,7 +4231,8 @@ Namespace Reaper
 
             Public Function IsTrackEqFxEmpty(trackIndex As Integer) As Boolean
                 If _sessionConfig Is Nothing Then Return True
-                Dim fxCollection = _project.GetTrackFX(trackIndex)
+                Dim fxCollection = _project.TrackFXList(trackIndex)
+                fxCollection.Refresh()
                 If fxCollection Is Nothing Then Return True
                 For i = 0 To fxCollection.Count - 1
                     If _sessionConfig.IsEQPlugin(fxCollection(i).Name) Then
@@ -4179,7 +4244,8 @@ Namespace Reaper
 
             Public Function IsTrackDynFxEmpty(trackIndex As Integer) As Boolean
                 If _sessionConfig Is Nothing Then Return True
-                Dim fxCollection = _project.GetTrackFX(trackIndex)
+                Dim fxCollection = _project.TrackFXList(trackIndex)
+                fxCollection.Refresh()
                 If fxCollection Is Nothing Then Return True
                 For i = 0 To fxCollection.Count - 1
                     If _sessionConfig.IsDynPlugin(fxCollection(i).Name) Then
@@ -4191,16 +4257,15 @@ Namespace Reaper
 
             Public Function IsTrackGenericFxEmpty(trackIndex As Integer) As Boolean
                 If _sessionConfig Is Nothing Then Return True
-                Dim fxCollection = _project.GetTrackFX(trackIndex)
-                If fxCollection Is Nothing Then Return True
-                For i = 0 To fxCollection.Count - 1
-                    Dim fxName = fxCollection(i).Name
-                    If Not _sessionConfig.IsEQPlugin(fxName) AndAlso
-                       Not _sessionConfig.IsDynPlugin(fxName) Then
-                        Return False
-                    End If
-                Next
-                Return True
+                Dim fxCollection = _project.TrackFXList(trackIndex)
+                fxCollection.Refresh()
+
+                If fxCollection.Count > 0 Then
+                    Return False
+                Else
+                    Return True
+                End If
+
             End Function
 
             ' ── Constructeur ──────────────────────────────────────────────────
@@ -6319,10 +6384,6 @@ Namespace Reaper
         Public Class ReaperPeakLevelManager
             Implements IDisposable
 
-            ''' <summary>
-            ''' Constante représentant la piste Master de Reaper (index -1).
-            ''' Toujours incluse dans le snapshot — pas besoin de <see cref="WatchMaster"/>.
-            ''' </summary>
             Public Const MasterTrackIndex As Integer = -1
 
             Private ReadOnly _pipe As New ReaperPeakPipe()
@@ -6331,25 +6392,14 @@ Namespace Reaper
             ' ── Pistes surveillées : clé = trackIndex, valeur = isSuspended ───
             Private ReadOnly _tracks As New Dictionary(Of Integer, Boolean)
 
-            ' ── Hold cache ────────────────────────────────────────────────────
-            Private ReadOnly _holdL As New Dictionary(Of Integer, Double)
-            Private ReadOnly _holdR As New Dictionary(Of Integer, Double)
-            Private _masterHoldL As Double = 0
-            Private _masterHoldR As Double = 0
-
             Private _disposed As Boolean = False
 
             ' ── Gestion de la collection ──────────────────────────────────────
 
-            ''' <summary>
-            ''' Ajoute la piste Master à la surveillance.
-            ''' La piste Master est toujours incluse dans le <see cref="PeakSnapshot"/>
-            ''' quel que soit l'état de surveillance.
-            ''' </summary>
+            ''' <summary>La piste Master est toujours incluse dans le snapshot.</summary>
             Public Sub WatchMaster()
             End Sub
 
-            ''' <summary>Retire la piste Master — sans effet (toujours incluse).</summary>
             Public Sub UnwatchMaster()
             End Sub
 
@@ -6358,8 +6408,6 @@ Namespace Reaper
                 SyncLock _lock
                     If Not _tracks.ContainsKey(trackIndex) Then
                         _tracks(trackIndex) = False
-                        _holdL(trackIndex) = 0
-                        _holdR(trackIndex) = 0
                     End If
                 End SyncLock
             End Sub
@@ -6371,27 +6419,21 @@ Namespace Reaper
                 Next
             End Sub
 
-            ''' <summary>Retire une piste et efface son hold.</summary>
+            ''' <summary>Retire une piste.</summary>
             Public Sub UnwatchTrack(trackIndex As Integer)
                 SyncLock _lock
                     _tracks.Remove(trackIndex)
-                    _holdL.Remove(trackIndex)
-                    _holdR.Remove(trackIndex)
                 End SyncLock
             End Sub
 
-            ''' <summary>Retire toutes les pistes et réinitialise tous les holds.</summary>
+            ''' <summary>Retire toutes les pistes.</summary>
             Public Sub ClearWatched()
                 SyncLock _lock
                     _tracks.Clear()
-                    _holdL.Clear()
-                    _holdR.Clear()
-                    _masterHoldL = 0
-                    _masterHoldR = 0
                 End SyncLock
             End Sub
 
-            ''' <summary>Suspend une piste — elle sera ignorée dans le snapshot.</summary>
+            ''' <summary>Suspend une piste — ignorée dans le snapshot.</summary>
             Public Sub SuspendTrack(trackIndex As Integer)
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
@@ -6400,13 +6442,11 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            ''' <summary>Réactive une piste et efface son hold pour forcer un resync.</summary>
+            ''' <summary>Réactive une piste.</summary>
             Public Sub ResumeTrack(trackIndex As Integer)
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
                         _tracks(trackIndex) = False
-                        _holdL(trackIndex) = 0
-                        _holdR(trackIndex) = 0
                     End If
                 End SyncLock
             End Sub
@@ -6421,47 +6461,31 @@ Namespace Reaper
             End Function
 
             ' ── Hold ─────────────────────────────────────────────────────────
+            ' Les valeurs hold sont désormais lues directement depuis Reaper
+            ' (canal | 1024 dans Track_GetPeakInfo). Les méthodes ci-dessous
+            ' sont conservées pour compatibilité mais sans effet local.
 
-            ''' <summary>Réinitialise le peak-hold de toutes les pistes et du Master.</summary>
+            ''' <summary>
+            ''' Sans effet — le peak-hold est géré par Reaper (canal | 1024).
+            ''' Conserver uniquement si un reset côté Reaper est implémenté.
+            ''' </summary>
             Public Sub ResetHold()
-                SyncLock _lock
-                    For Each tIdx In _holdL.Keys.ToArray()
-                        _holdL(tIdx) = 0
-                        _holdR(tIdx) = 0
-                    Next
-                    _masterHoldL = 0
-                    _masterHoldR = 0
-                End SyncLock
             End Sub
 
-            ''' <summary>Réinitialise le peak-hold d'une piste spécifique.</summary>
+            ''' <summary>Sans effet — voir <see cref="ResetHold"/>.</summary>
             Public Sub ResetHold(trackIndex As Integer)
-                SyncLock _lock
-                    If trackIndex = MasterTrackIndex Then
-                        _masterHoldL = 0
-                        _masterHoldR = 0
-                    ElseIf _holdL.ContainsKey(trackIndex) Then
-                        _holdL(trackIndex) = 0
-                        _holdR(trackIndex) = 0
-                    End If
-                End SyncLock
             End Sub
 
             ' ── Rafraîchissement ──────────────────────────────────────────────
 
             ''' <summary>
-            ''' Envoie la commande <c>GET_PEAKS_STATE|t0|t1|…</c> au bridge via le pipe
-            ''' persistant et retourne un <see cref="PeakSnapshot"/> immutable contenant :
-            ''' <list type="bullet">
-            ''' <item>La position de lecture courante.</item>
-            ''' <item>Les peaks et hold stéréo de la piste Master.</item>
-            ''' <item>Les peaks et hold stéréo des pistes surveillées non suspendues.</item>
-            ''' </list>
-            ''' Format de réponse bridge :
-            ''' <c>playPos|masterL|masterR|t0L|t0R|t1L|t1R|…</c>
+            ''' Envoie <c>GET_PEAKS_STATE|t0|t1|…</c> au bridge et retourne un
+            ''' <see cref="PeakSnapshot"/> immutable.
+            ''' <br/>
+            ''' Format de réponse :
+            ''' <c>playPos|masterL|masterR|masterHoldL|masterHoldR|t0L|t0R|t0HoldL|t0HoldR|…</c>
             ''' </summary>
             Public Function Refresh() As PeakSnapshot
-                ' ── Snapshot de la liste surveillée ───────────────────────────
                 Dim tracked As (trackIndex As Integer, isSuspended As Boolean)()
                 SyncLock _lock
                     Dim tmp As New List(Of (Integer, Boolean))
@@ -6471,8 +6495,6 @@ Namespace Reaper
                     tracked = tmp.ToArray()
                 End SyncLock
 
-                ' ── Construction de la commande ───────────────────────────────
-                ' GET_PEAKS_STATE|t0|t1|...  (pistes non suspendues uniquement)
                 Dim activeTracks = tracked.Where(Function(e) Not e.isSuspended).ToArray()
                 Dim ic = CultureInfo.InvariantCulture
 
@@ -6481,7 +6503,7 @@ Namespace Reaper
 
                 Dim raw = _pipe.Request(query)
 
-                ' ── Valeurs par défaut si le bridge est indisponible ──────────
+                ' ── Valeurs par défaut ────────────────────────────────────────
                 Dim playPos As Double = -1
                 Dim mL As Double = 0, mR As Double = 0
                 Dim mHoldL As Double = 0, mHoldR As Double = 0
@@ -6491,50 +6513,36 @@ Namespace Reaper
                 If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
                     Dim p = raw.Split("|"c)
 
-                    ' Format : playPos|masterL|masterR|t0L|t0R|t1L|t1R|...
-                    If p.Length >= 3 Then
+                    ' Format : playPos | masterL | masterR | masterHoldL | masterHoldR
+                    '          | t0L | t0R | t0HoldL | t0HoldR | t1L | …
+                    If p.Length >= 5 Then
                         Double.TryParse(p(0), Globalization.NumberStyles.Any, ic, playPos)
                         Double.TryParse(p(1), Globalization.NumberStyles.Any, ic, mL)
                         Double.TryParse(p(2), Globalization.NumberStyles.Any, ic, mR)
+                        Double.TryParse(p(3), Globalization.NumberStyles.Any, ic, mHoldL)
+                        Double.TryParse(p(4), Globalization.NumberStyles.Any, ic, mHoldR)
 
-                        ' ── Hold Master ───────────────────────────────────────
-                        SyncLock _lock
-                            _masterHoldL = Math.Max(_masterHoldL, mL)
-                            _masterHoldR = Math.Max(_masterHoldR, mR)
-                            mHoldL = _masterHoldL
-                            mHoldR = _masterHoldR
-                        End SyncLock
-
-                        ' ── Peaks pistes (4 champs : L|R par piste) ───────────
+                        ' ── Peaks pistes (4 champs par piste : L | R | HoldL | HoldR) ─
                         For i = 0 To activeTracks.Length - 1
-                            Dim offset = 3 + i * 2
-                            If offset + 1 >= p.Length Then Exit For
+                            Dim offset = 5 + i * 4
+                            If offset + 3 >= p.Length Then Exit For
 
                             Dim tIdx = activeTracks(i).trackIndex
                             Dim tL As Double = 0, tR As Double = 0
+                            Dim tHL As Double = 0, tHR As Double = 0
                             Double.TryParse(p(offset), Globalization.NumberStyles.Any, ic, tL)
                             Double.TryParse(p(offset + 1), Globalization.NumberStyles.Any, ic, tR)
+                            Double.TryParse(p(offset + 2), Globalization.NumberStyles.Any, ic, tHL)
+                            Double.TryParse(p(offset + 3), Globalization.NumberStyles.Any, ic, tHR)
 
                             peaks(tIdx) = (tL, tR)
-
-                            SyncLock _lock
-                                Dim hL As Double = 0, hR As Double = 0
-                                _holdL.TryGetValue(tIdx, hL)
-                                _holdR.TryGetValue(tIdx, hR)
-                                hL = Math.Max(hL, tL)
-                                hR = Math.Max(hR, tR)
-                                _holdL(tIdx) = hL
-                                _holdR(tIdx) = hR
-                                holds(tIdx) = (hL, hR)
-                            End SyncLock
+                            holds(tIdx) = (tHL, tHR)
                         Next
                     End If
                 End If
 
                 Return New PeakSnapshot(playPos, mL, mR, mHoldL, mHoldR, peaks, holds)
             End Function
-
-            ' ── IDisposable ───────────────────────────────────────────────────
 
             Protected Overridable Sub Dispose(disposing As Boolean)
                 If Not _disposed Then
@@ -6551,7 +6559,6 @@ Namespace Reaper
             End Sub
 
         End Class
-
         ' ── Pipe persistant dédié aux peaks ───────────────────────────────────
         Friend Class ReaperPeakPipe
             Implements IDisposable
@@ -7625,6 +7632,226 @@ Namespace Reaper
 
         End Class
 
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER TRACK FX EDITOR — édition directe des FX d'une piste unique
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Permet l'édition des FX d'une seule piste (ajout, suppression, bypass).
+        ''' Utilisé depuis la vue Insert de la surface : pas de pagination,
+        ''' opère directement sur la piste <paramref name="trackIndex"/>.
+        ''' <br/>
+        ''' La liste des FX est rechargée depuis Reaper à la construction
+        ''' et après chaque modification structurelle.
+        ''' </summary>
+        Public Class ReaperTrackFxEditor
+
+            Private ReadOnly _trackIndex As Integer
+            Private ReadOnly _sessionConfig As ReaperSessionConfig
+            Private _fxList As ReaperTrackFX
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Crée un éditeur de FX pour la piste <paramref name="trackIndex"/>.
+            ''' Charge immédiatement la liste des FX depuis Reaper.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste cible.</param>
+            ''' <param name="sessionConfig">
+            ''' Config session utilisée pour la classification EQ / DYN / Generic.
+            ''' Peut être Nothing si la classification n'est pas requise.
+            ''' </param>
+            Public Sub New(trackIndex As Integer,
+                           Optional sessionConfig As ReaperSessionConfig = Nothing)
+                _trackIndex = trackIndex
+                _sessionConfig = sessionConfig
+                _fxList = New ReaperTrackFX(trackIndex)
+                _fxList.Refresh()
+            End Sub
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+
+            ''' <summary>Index 0-based de la piste éditée.</summary>
+            Public ReadOnly Property TrackIndex As Integer
+                Get
+                    Return _trackIndex
+                End Get
+            End Property
+
+            ''' <summary>Nombre de FX sur la piste.</summary>
+            Public ReadOnly Property Count As Integer
+                Get
+                    Return _fxList.Count
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Noms des FX de la piste dans l'ordre de la chaîne.
+            ''' </summary>
+            Public ReadOnly Property FxNames As IReadOnlyList(Of String)
+                Get
+                    Dim result(Count - 1) As String
+                    For i = 0 To Count - 1
+                        result(i) = _fxList(i).Name
+                    Next
+                    Return result
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Retourne la liste complète des FX avec nom, état bypass et type.
+            ''' </summary>
+            Public Function GetFxList() As List(Of TrackFxInfo)
+                Dim result As New List(Of TrackFxInfo)
+                For i = 0 To Count - 1
+                    Dim reapFx = _fxList(i)
+                    result.Add(New TrackFxInfo(i, reapFx.Name, reapFx.Enabled, ClassifyFx(reapFx.Name)))
+                Next
+                Return result
+            End Function
+
+            ''' <summary>
+            ''' Retourne les informations d'un FX par index.
+            ''' Retourne un <see cref="TrackFxInfo"/> invalide si hors limite.
+            ''' </summary>
+            ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+            Public Function GetFxInfo(fxIndex As Integer) As TrackFxInfo
+                If fxIndex < 0 OrElse fxIndex >= Count Then
+                    Return New TrackFxInfo(-1, String.Empty, False, TrackFxType.Generic)
+                End If
+                Dim reapFx = _fxList(fxIndex)
+                Return New TrackFxInfo(fxIndex, reapFx.Name, reapFx.Enabled, ClassifyFx(reapFx.Name))
+            End Function
+
+            ''' <summary>
+            ''' Retourne True si le FX est actif (non bypassé).
+            ''' Retourne False si l'index est hors limite.
+            ''' </summary>
+            ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+            Public Function GetFxEnabled(fxIndex As Integer) As Boolean
+                If fxIndex < 0 OrElse fxIndex >= Count Then Return False
+                Return _fxList(fxIndex).Enabled
+            End Function
+
+            ''' <summary>
+            ''' Retourne le type du FX selon la classification EQ / DYN / Generic.
+            ''' Retourne <see cref="TrackFxType.Generic"/> si hors limite ou si
+            ''' <c>sessionConfig</c> est Nothing.
+            ''' </summary>
+            ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+            Public Function GetFxType(fxIndex As Integer) As TrackFxType
+                If fxIndex < 0 OrElse fxIndex >= Count Then Return TrackFxType.Generic
+                Return ClassifyFx(_fxList(fxIndex).Name)
+            End Function
+
+            ' ── Bypass ────────────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Impose l'état bypass du FX à l'index donné.
+            ''' Sans effet si l'index est hors limite.
+            ''' </summary>
+            ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+            ''' <param name="enabled">True = actif  False = bypassé.</param>
+            Public Sub SetFxEnabled(fxIndex As Integer, enabled As Boolean)
+                If fxIndex < 0 OrElse fxIndex >= Count Then Return
+                _fxList(fxIndex).Enabled = enabled
+            End Sub
+
+            ''' <summary>
+            ''' Bascule l'état bypass du FX à l'index donné (toggle actif/bypassé).
+            ''' Sans effet si l'index est hors limite.
+            ''' Retourne le nouvel état (True = actif).
+            ''' </summary>
+            ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+            Public Function ToggleFxEnabled(fxIndex As Integer) As Boolean
+                If fxIndex < 0 OrElse fxIndex >= Count Then Return False
+                Dim newState = Not _fxList(fxIndex).Enabled
+                _fxList(fxIndex).Enabled = newState
+                Return newState
+            End Function
+
+            ' ── Ajout ─────────────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Ajoute un FX à la piste par son nom complet et recharge la liste.
+            ''' Utiliser <see cref="InstalledFXInfo.FullName"/> comme valeur.
+            ''' Retourne l'index 0-based du FX ajouté, ou -1 en cas d'échec.
+            ''' </summary>
+            ''' <param name="fxFullName">
+            ''' Nom complet du FX ex: "VST3: FabFilter Pro-Q 3 (FabFilter)".
+            ''' </param>
+            Public Function AddFx(fxFullName As String) As Integer
+                Dim fxIdx = utility.AddFXByName(_trackIndex, fxFullName)
+                If fxIdx >= 0 Then
+                    _fxList = New ReaperTrackFX(_trackIndex)
+                    _fxList.Refresh()
+                End If
+                Return fxIdx
+            End Function
+
+            ' ── Suppression ───────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Supprime le FX à l'index donné et recharge la liste.
+            ''' Retourne True si la suppression a réussi.
+            ''' </summary>
+            ''' <param name="fxIndex">Index 0-based du FX à supprimer.</param>
+            Public Function DeleteFx(fxIndex As Integer) As Boolean
+                If fxIndex < 0 OrElse fxIndex >= Count Then Return False
+                Dim ok = _fxList.DeleteFX(fxIndex)
+                If ok Then
+                    _fxList = New ReaperTrackFX(_trackIndex)
+                    _fxList.Refresh()
+                End If
+                Return ok
+            End Function
+
+            ' ── Rechargement ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Recharge la liste des FX depuis Reaper.
+            ''' Appeler après une modification externe (ex : ajout via l'UI Reaper).
+            ''' </summary>
+            Public Sub Refresh()
+                _fxList = New ReaperTrackFX(_trackIndex)
+                _fxList.Refresh()
+            End Sub
+
+            ' ── Classification ────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Classifie un FX selon la <see cref="ReaperSessionConfig"/> :
+            ''' <see cref="TrackFxType.EQ"/>, <see cref="TrackFxType.Dyn"/>
+            ''' ou <see cref="TrackFxType.Generic"/>.
+            ''' Retourne <see cref="TrackFxType.Generic"/> si <c>sessionConfig</c> est Nothing.
+            ''' </summary>
+            ''' <param name="fxName">Nom complet du FX.</param>
+            Public Function ClassifyFx(fxName As String) As TrackFxType
+                If _sessionConfig Is Nothing Then Return TrackFxType.Generic
+                If _sessionConfig.IsEQPlugin(fxName) Then Return TrackFxType.EQ
+                If _sessionConfig.IsDynPlugin(fxName) Then Return TrackFxType.Dyn
+                Return TrackFxType.Generic
+            End Function
+
+            ''' <summary>Retourne tous les FX de type EQ de la piste.</summary>
+            Public Function GetEqFxList() As List(Of TrackFxInfo)
+                Dim result As New List(Of TrackFxInfo)
+                For Each info In GetFxList()
+                    If info.FxType = TrackFxType.EQ Then result.Add(info)
+                Next
+                Return result
+            End Function
+
+            ''' <summary>Retourne tous les FX de type DYN de la piste.</summary>
+            Public Function GetDynFxList() As List(Of TrackFxInfo)
+                Dim result As New List(Of TrackFxInfo)
+                For Each info In GetFxList()
+                    If info.FxType = TrackFxType.Dyn Then result.Add(info)
+                Next
+                Return result
+            End Function
+
+        End Class
     End Namespace
 
     Namespace Managers
@@ -10828,13 +11055,24 @@ Namespace Reaper
         Private ReadOnly _paramIndex As Integer
         Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
 
-        ' ── Cache ──────────────────────────────────────────────────────────────
         Public _name As String = String.Empty
-        Public _value As Double = 0       ' normalisé [0..1]
         Public _formatted As String = String.Empty
+        Private _normValue As Double = 0
+        Private _rawValue As Double = 0
+        Private _step As Double? = Nothing
+        Private _smallStep As Double? = Nothing
+        Private _largeStep As Double? = Nothing
+        Private _isToggle As Boolean? = Nothing
+        Private _minValue As Double? = Nothing
+        Private _maxValue As Double? = Nothing
+        Private _midValue As Double? = Nothing
 
-        ' ── Événement ─────────────────────────────────────────────────────────
-        Public Event On_ValueChange(_value As Double)
+
+
+        ''' <summary>Déclenché quand la valeur normalisée [0..1] change.</summary>
+        Public Event On_NormValueChange(normValue As Double)
+        ''' <summary>Déclenché quand la valeur brute native change.</summary>
+        Public Event On_RawValueChange(rawValue As Double)
         Public Event SuspendMonitoring(_paramIndex As Integer, status As Boolean)
 
         Public Sub New(trackIndex As Integer, fxIndex As Integer, paramIndex As Integer)
@@ -10843,85 +11081,270 @@ Namespace Reaper
             _paramIndex = paramIndex
             Refresh()
         End Sub
-        Public Sub RaiseOn_ValueChange(_value As Double)
-            RaiseEvent On_ValueChange(_value)
+
+        Public Sub RaiseOn_NormValueChange(normValue As Double)
+            RaiseEvent On_NormValueChange(normValue)
         End Sub
+
+        Public Sub RaiseOn_RawValueChange(rawValue As Double)
+            RaiseEvent On_RawValueChange(rawValue)
+        End Sub
+
+
+
         Public ReadOnly Property TrackIndex As Integer
             Get
-                Return _trackIndex : End Get
+                Return _trackIndex
+            End Get
         End Property
+
         Public ReadOnly Property FxIndex As Integer
             Get
-                Return _fxIndex : End Get
+                Return _fxIndex
+            End Get
         End Property
+
         Public ReadOnly Property ParamIndex As Integer
             Get
-                Return _paramIndex : End Get
+                Return _paramIndex
+            End Get
         End Property
 
         ''' <summary>Nom du paramètre (chargé par Refresh).</summary>
         Public ReadOnly Property Name As String
             Get
-                Return _name : End Get
+                Return _name
+            End Get
         End Property
 
-        ''' <summary>Valeur normalisée [0..1] — setter écrit dans Reaper.</summary>
-        Public Property Value As Double
+
+        ''' <summary>Pas minimal entre deux valeurs adjacentes.</summary>
+        Public ReadOnly Property [Step] As Double?
             Get
-                Return _value : End Get
+                Return _step
+            End Get
+        End Property
+
+        ''' <summary>Pas fin (déplacement précis).</summary>
+        Public ReadOnly Property SmallStep As Double?
+            Get
+                Return _smallStep
+            End Get
+        End Property
+
+        ''' <summary>Pas large (déplacement rapide).</summary>
+        Public ReadOnly Property LargeStep As Double?
+            Get
+                Return _largeStep
+            End Get
+        End Property
+
+        ''' <summary>True si le paramètre est de type toggle (on/off).</summary>
+        Public ReadOnly Property IsToggle As Boolean?
+            Get
+                Return _isToggle
+            End Get
+        End Property
+
+        ''' <summary>Valeur brute minimale du paramètre (échelle native du plugin).</summary>
+        Public ReadOnly Property MinValue As Double?
+            Get
+                Return _minValue
+            End Get
+        End Property
+
+        ''' <summary>Valeur brute maximale du paramètre (échelle native du plugin).</summary>
+        Public ReadOnly Property MaxValue As Double?
+            Get
+                Return _maxValue
+            End Get
+        End Property
+
+        ''' <summary>
+        ''' Valeur brute médiane du paramètre retournée par <c>TrackFX_GetParamEx</c>.
+        ''' Correspond généralement au point central affiché dans l'UI Reaper.
+        ''' </summary>
+        Public ReadOnly Property MidValue As Double?
+            Get
+                Return _midValue
+            End Get
+        End Property
+
+
+        ''' <summary>Valeur formatée par Reaper ex: "-6.0 dB".</summary>
+        Public ReadOnly Property Formatted As String
+            Get
+                Return _formatted
+            End Get
+        End Property
+
+        ''' <summary>
+        ''' Valeur normalisée [0..1] indépendante de <see cref="RawValue"/>.
+        ''' Le setter écrit dans Reaper via <c>SET_FX_PARAM_NORMALIZED</c>
+        ''' et déclenche <see cref="On_NormValueChange"/>.
+        ''' </summary>
+        Public Property NormValue As Double
+            Get
+                Return _normValue
+            End Get
             Set
-                If _value <> Value Then
-                    _value = Value
+                If _normValue <> Value Then
+                    _normValue = Value
                     RaiseEvent SuspendMonitoring(_paramIndex, True)
                     utility.CallReaperBridge(
-                    $"SET_FX_PARAM_NORMALIZED|{_trackIndex}|{_fxIndex}|{_paramIndex}|{Value.ToString("G", Ic)}")
+                        $"SET_FX_PARAM_NORMALIZED|{_trackIndex}|{_fxIndex}|{_paramIndex}|{_normValue.ToString("G", Ic)}")
+                    'refresh format value:
+                    Dim fmtRaw = utility.CallReaperBridge(
+                $"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+                    If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR") Then
+                        _formatted = fmtRaw
+                    End If
                     RaiseEvent SuspendMonitoring(_paramIndex, False)
-                    RaiseEvent On_ValueChange(_value)
+
                 End If
             End Set
         End Property
 
-        ''' <summary>Valeur formatée par Reaper ex: "-6.0 dB" (chargée par Refresh).</summary>
-        Public ReadOnly Property Formatted As String
+        ''' <summary>
+        ''' Valeur brute native du plugin (échelle réelle ex: dB, Hz…) indépendante de <see cref="NormValue"/>.
+        ''' Le setter écrit dans Reaper via <c>SET_FX_PARAM</c>
+        ''' et déclenche <see cref="On_RawValueChange"/>.
+        ''' </summary>
+        Public Property RawValue As Double
             Get
-                Return _formatted : End Get
+                Return _rawValue
+            End Get
+            Set
+                If _rawValue <> Value Then
+                    _rawValue = Value
+                    RaiseEvent SuspendMonitoring(_paramIndex, True)
+                    utility.CallReaperBridge(
+                        $"SET_FX_PARAM|{_trackIndex}|{_fxIndex}|{_paramIndex}|{_rawValue.ToString("G", Ic)}")
+
+                    RaiseEvent SuspendMonitoring(_paramIndex, False)
+
+                End If
+            End Set
         End Property
 
+        ''' <summary>Convertit une valeur normalisée [0..1] en valeur brute native.</summary>
+        Public Function NormalizedToRaw(normValue As Double) As Double
+            Return _minValue + normValue * (_maxValue - _minValue)
+        End Function
+
         ''' <summary>
-        ''' Charge le nom, la valeur normalisée et la valeur formatée.
-        ''' Déclenche On_ValueChange si la valeur a changé.
+        ''' Convertit une valeur brute native en valeur normalisée [0..1].
+        ''' Retourne 0 si la plage est nulle.
         ''' </summary>
+        Public Function RawToNormalized(rawValue As Double) As Double
+            Dim range = _maxValue - _minValue
+            If range = 0.0 Then
+                Return 0.0
+            End If
+            Return (rawValue - _minValue) / range
+        End Function
+
         Public Sub Refresh()
             Dim nameRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_NAME|{_trackIndex}|{_fxIndex}|{_paramIndex}")
             If Not String.IsNullOrEmpty(nameRaw) AndAlso Not nameRaw.StartsWith("ERROR") Then
                 _name = nameRaw
+                'Console.WriteLine("----------------------")
+                'Console.WriteLine(_name)
+            End If
+
+            ' ── TrackFX_GetParamEx : valeur brute + min, max, mid ─────────────
+            Dim exRaw = utility.CallReaperBridge(
+                $"GET_FX_PARAM_EX|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR") Then
+                Dim p = exRaw.Split("|"c)
+                If p.Length >= 4 Then
+                    Dim new_raw As Double = 0
+                    Double.TryParse(p(0), NumberStyles.Any, Ic, new_raw)
+                    Dim dbl As Double = 0
+                    _minValue = If(Double.TryParse(p(1), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                    _maxValue = If(Double.TryParse(p(2), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                    _midValue = If(Double.TryParse(p(3), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                    Set_NewRawValue(new_raw)
+                    'Console.WriteLine("MinMidMax:" & _minValue.ToString & "|" & _midValue.ToString & "|" & _maxValue.ToString)
+                End If
             End If
 
             Dim valRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_NORMALIZED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
             If Not String.IsNullOrEmpty(valRaw) AndAlso Not valRaw.StartsWith("ERROR") Then
-                Dim new_val As Double = 0
-                Double.TryParse(valRaw, NumberStyles.Any, Ic, new_val)
-                Set_NewValue(new_val)
-
+                Dim new_norm As Double = 0
+                Double.TryParse(valRaw, NumberStyles.Any, Ic, new_norm)
+                Set_NewNormValue(new_norm)
+                'Console.WriteLine("NormValue:" & new_norm)
             End If
 
             Dim fmtRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
             If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR") Then
                 _formatted = fmtRaw
+                'Console.WriteLine("FormatValue:" & _formatted)
+            End If
+
+            Dim stepRaw = utility.CallReaperBridge(
+                $"GET_FX_PARAM_STEP_SIZES|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+            If Not String.IsNullOrEmpty(stepRaw) AndAlso Not stepRaw.StartsWith("ERROR") Then
+                If stepRaw <> "0|0|0|0" Then
+
+                    Dim p = stepRaw.Split("|"c)
+                    If p.Length >= 4 Then
+                        Dim dbl As Double = 0
+                        _step = If(Double.TryParse(p(0), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                        _smallStep = If(Double.TryParse(p(1), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                        _largeStep = If(Double.TryParse(p(2), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                        _isToggle = p(3) = "1"
+                        'Console.WriteLine("steps:" & _step.ToString & "|" & _smallStep.ToString & "|" & _largeStep.ToString & "|" & _isToggle.ToString)
+
+                    End If
+                End If
+
+            End If
+
+            ' ── Détection binaire par sondage de 5 positions ──────────────────
+            ' 0.0 / 0.25 / 0.5 / 0.75 / 1.0 → si ≤ 2 chaînes distinctes → binaire
+            If IsToggle Is Nothing Then
+                Dim probeValues() As Double = {0.0, 0.25, 0.5, 0.75, 1.0}
+                Dim distinctFmt As New System.Collections.Generic.HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                For Each probe In probeValues
+                    Dim probeRaw = utility.CallReaperBridge(
+                        $"GET_FX_PARAM_FORMATTED_AT|{_trackIndex}|{_fxIndex}|{_paramIndex}|{probe.ToString("G", Ic)}")
+                    If Not String.IsNullOrEmpty(probeRaw) AndAlso Not probeRaw.StartsWith("ERROR") Then
+                        distinctFmt.Add(probeRaw.Trim())
+                    End If
+                Next
+                _isToggle = If(distinctFmt.Count > 0 AndAlso distinctFmt.Count <= 2, True, False)
+                'Console.WriteLine("isToggle:" & _isToggle.ToString)
+            End If
+
+
+        End Sub
+
+        ''' <summary>Met à jour <see cref="NormValue"/> depuis le moniteur sans écrire dans Reaper.</summary>
+        Public Sub SetNormValueFromMonitor(newNormValue As Double)
+            Set_NewNormValue(newNormValue)
+        End Sub
+
+        ''' <summary>Met à jour <see cref="RawValue"/> depuis le moniteur sans écrire dans Reaper.</summary>
+        Public Sub SetRawValueFromMonitor(newRawValue As Double)
+            Set_NewRawValue(newRawValue)
+        End Sub
+
+        Private Sub Set_NewNormValue(new_norm As Double)
+            If _normValue <> new_norm Then
+                _normValue = new_norm
+                RaiseEvent On_NormValueChange(_normValue)
             End If
         End Sub
 
-        Public Sub SetValueFromMonitor(newValue As Double)
-            Set_NewValue(newValue)
-        End Sub
-
-        Private Sub Set_NewValue(new_val As Double)
-            If _value <> new_val Then
-                _value = new_val
-                RaiseEvent On_ValueChange(_value)
+        Private Sub Set_NewRawValue(new_raw As Double)
+            If _rawValue <> new_raw Then
+                _rawValue = new_raw
+                RaiseEvent On_RawValueChange(_rawValue)
             End If
         End Sub
 
@@ -10990,12 +11413,10 @@ Namespace Reaper
         ''' </summary>
         Public Property IsOpen As Boolean
             Get
-                Dim raw = utility.CallReaperBridge($"GET_FX_OPEN|{_trackIndex}|{_fxIndex}")
-                Return raw = "1"
+                Return utility.TrackFX_IsOpen(_trackIndex, _fxIndex)
             End Get
             Set
-                utility.CallReaperBridge(
-                    $"SET_FX_OPEN|{_trackIndex}|{_fxIndex}|{If(Value, "1", "0")}")
+                utility.TrackFX_Show(_trackIndex, _fxIndex, Value)
             End Set
         End Property
 
@@ -11078,7 +11499,7 @@ Namespace Reaper
                 Next
             End If
 
-            ' ── GET_FX_ALL_PARAMS : 1 appel pour tous les noms + valeurs ───────
+            ' ── GET_FX_ALL_Raw PARAMS : 1 appel pour tous les noms + valeurs ───────
             If _params.Count = 0 Then Return
             Dim paramsRaw = utility.CallReaperBridge($"GET_FX_ALL_PARAMS|{_trackIndex}|{_fxIndex}")
             If String.IsNullOrEmpty(paramsRaw) OrElse paramsRaw.StartsWith("ERROR") Then Return
@@ -11093,9 +11514,9 @@ Namespace Reaper
                 _params(i)._name = p(nameIdx)   ' ← accès direct au champ pour éviter un appel pipe
                 Dim new_val As Double = 0
                 Double.TryParse(p(valIdx), NumberStyles.Any, Ic, new_val)
-                If _params(i)._value <> new_val Then
-                    _params(i)._value = new_val
-                    _params(i).RaiseOn_ValueChange(new_val)
+                If _params(i).RawValue <> new_val Then
+                    _params(i).RawValue = new_val
+                    _params(i).RaiseOn_RawValueChange(new_val)
                 End If
             Next
         End Sub
@@ -11943,6 +12364,7 @@ Namespace Reaper
             _project?.Dispose()
             _project = New ReaperProject()
             RaiseEvent On_ProjectChanged(_project)
+            _config.GetAllFxParams(_project.TrackFXList)
         End Sub
 
         ' ── Handlers internes ─────────────────────────────────────────────────
@@ -12227,6 +12649,25 @@ Namespace Reaper
 
     End Structure
 
+    ' ── Structure de configuration d'un paramètre FX ─────────────────────────
+    Public Structure FxParamConfig
+        ''' <summary>Index 0-based du paramètre sur le FX (tel que retourné par Reaper).</summary>
+        Public ParamIndex As Integer
+        ''' <summary>Nom complet du paramètre tel que retourné par Reaper.</summary>
+        Public FullName As String
+        ''' <summary>Nom court affiché sur le strip (4 caractères).</summary>
+        Public ShortName As String
+        ''' <summary>Nom long affiché sur l'écran étendu (8 caractères).</summary>
+        Public LongName As String
+        ''' <summary>True si le paramètre est visible sur le Control24.</summary>
+        Public Visible As Boolean
+        ''' <summary>
+        ''' Texte libre affiché à la place de la valeur du paramètre.
+        ''' Nothing si aucun texte n'est défini (affichage normal de la valeur).
+        ''' </summary>
+        Public TextOnly As String
+
+    End Structure
     ' ══════════════════════════════════════════════════════════════════════════
     '  Session Config — configuration de session dans un fichier INI
     ' ══════════════════════════════════════════════════════════════════════════
@@ -12243,63 +12684,73 @@ Namespace Reaper
         Private ReadOnly _plugins As New List(Of String)
         Private ReadOnly _eq As New List(Of String)
         Private ReadOnly _dyn As New List(Of String)
+        ' ── Suppresions explicites (via RemoveEqPlugin / RemoveDynPlugin) ─────
+        ' Empêche la ré-injection depuis le fichier lors du prochain Save().
+        Private ReadOnly _removedEq As New HashSet(Of String)
+        Private ReadOnly _removedDyn As New HashSet(Of String)
+        ' ── Visibilité par plugin : True = affiché dans Control24 ─────────────
+        Private ReadOnly _pluginVisible As New Dictionary(Of String, Boolean)
 
-        Private _autostart As Boolean = False
-        Private _selectedInterface As String = String.Empty
+        Private _autostart As Boolean = True
+        Private _selectedInterface As String = "TestWithoutC24"
         Private _vsDebug As Boolean = False
         Private ReadOnly _allNetworkInterfaces As New List(Of String)
         Private ReadOnly _availableInterfaces As New List(Of String)
 
         Public Event On_PluginsRefreshed(count As Integer)
         Public Event On_InterfacesRefreshed(count As Integer)
+        Private ReadOnly _pluginShortNames As New Dictionary(Of String, String)
+
+        ' ── Configs des paramètres FX : clé = nom complet du plugin ──────────
+        Private ReadOnly _fxParamConfigs As New Dictionary(Of String, List(Of FxParamConfig))
+
+        ' ── Clé de section INI ────────────────────────────────────────────────
+        Private Shared ReadOnly FxParamSectionPrefix As String = "FxParams:"
+        ' ── Lignes brutes des sections FxParams déjà présentes dans le fichier INI ──
+        ' Clé = fullName du plugin  Valeur = lignes originales (header + contenu)
+        ' Permet de réécrire les sections existantes sans les modifier.
+        Private ReadOnly _existingFxParamSectionLines As New Dictionary(Of String, List(Of String))
 
         Public Sub New()
             _iniPath = IO.Path.Combine(AppContext.BaseDirectory, "ReaperDriver.ini")
-
             RefreshNetworkInterfaces()
-
             Dim fileExistedBeforeLoad = IO.File.Exists(_iniPath)
             Load()
-
             If Not fileExistedBeforeLoad Then
                 Save()
             End If
         End Sub
 
-        ' ── Propriétés ────────────────────────────────────────────────────────
+        Public ReadOnly Property fxParamConfigs As Dictionary(Of String, List(Of FxParamConfig))
+            Get
+                Return _fxParamConfigs
+            End Get
+        End Property
 
-        ''' <summary>Chemin complet du fichier INI.</summary>
         Public ReadOnly Property IniPath As String
             Get
                 Return _iniPath
             End Get
         End Property
 
-        ''' <summary>Plugins installés dans Reaper (section [Plugins]).</summary>
         Public ReadOnly Property Plugins As IReadOnlyList(Of String)
             Get
                 Return _plugins
             End Get
         End Property
 
-        ''' <summary>Plugins EQ définis par l'utilisateur (section [EQ]).</summary>
         Public ReadOnly Property EQPlugins As IReadOnlyList(Of String)
             Get
                 Return _eq
             End Get
         End Property
 
-        ''' <summary>Plugins de dynamique définis par l'utilisateur (section [DYN]).</summary>
         Public ReadOnly Property DynPlugins As IReadOnlyList(Of String)
             Get
                 Return _dyn
             End Get
         End Property
 
-        ''' <summary>
-        ''' Si True, le driver démarre automatiquement à l'ouverture de l'application.
-        ''' Persisté dans <c>[Driver] Autostart=</c> du fichier INI.
-        ''' </summary>
         Public Property Autostart As Boolean
             Get
                 Return _autostart
@@ -12310,10 +12761,6 @@ Namespace Reaper
             End Set
         End Property
 
-        ''' <summary>
-        ''' Nom de l'interface réseau sélectionnée pour le driver Control24.
-        ''' Persisté dans <c>[Driver] NetworkInterface=</c> du fichier INI.
-        ''' </summary>
         Public Property SelectedNetworkInterface As String
             Get
                 Return _selectedInterface
@@ -12324,11 +12771,6 @@ Namespace Reaper
             End Set
         End Property
 
-        ''' <summary>
-        ''' Si True, le driver attend qu'un débogueur Visual Studio s'attache
-        ''' au processus au démarrage. Défaut : False.
-        ''' Persisté dans <c>[Driver] VSDebug=</c> du fichier INI.
-        ''' </summary>
         Public Property VSDebug As Boolean
             Get
                 Return _vsDebug
@@ -12339,29 +12781,18 @@ Namespace Reaper
             End Set
         End Property
 
-        ''' <summary>
-        ''' Liste en lecture seule de toutes les interfaces réseau présentes
-        ''' sur l'ordinateur, quel que soit leur type ou leur état.
-        ''' </summary>
         Public ReadOnly Property AllNetworkInterfaces As IReadOnlyList(Of String)
             Get
                 Return _allNetworkInterfaces
             End Get
         End Property
 
-        ''' <summary>
-        ''' Sous-ensemble filtré Ethernet / Wi-Fi à l'état Up ou Unknown.
-        ''' </summary>
         Public ReadOnly Property AvailableInterfaces As IReadOnlyList(Of String)
             Get
                 Return _availableInterfaces
             End Get
         End Property
 
-        ''' <summary>
-        ''' True si <see cref="SelectedNetworkInterface"/> correspond à une interface
-        ''' présente dans <see cref="AllNetworkInterfaces"/>.
-        ''' </summary>
         Public ReadOnly Property IsInterfaceValid As Boolean
             Get
                 If String.IsNullOrEmpty(_selectedInterface) Then Return False
@@ -12377,16 +12808,48 @@ Namespace Reaper
             Return _dyn.Contains(fxFullName)
         End Function
 
-        ' ── Interfaces réseau ─────────────────────────────────────────────────
+        ' ── Visibilité plugin ─────────────────────────────────────────────────
 
         ''' <summary>
-        ''' Interroge le système pour toutes les interfaces réseau et met à jour
-        ''' <see cref="AllNetworkInterfaces"/> et <see cref="AvailableInterfaces"/>.
+        ''' Retourne True si le plugin doit apparaître dans la liste Control24.
+        ''' Retourne True par défaut si le plugin est inconnu.
         ''' </summary>
+        ''' <param name="fullName">Nom complet du plugin tel que retourné par Reaper.</param>
+        Public Function IsPluginVisible(fullName As String) As Boolean
+            Dim visible As Boolean = True
+            _pluginVisible.TryGetValue(fullName, visible)
+            Return visible
+        End Function
+
+        ''' <summary>
+        ''' Définit la visibilité d'un plugin dans la liste Control24 et sauvegarde le fichier INI.
+        ''' </summary>
+        ''' <param name="fullName">Nom complet du plugin tel que retourné par Reaper.</param>
+        ''' <param name="visible">True = affiché dans Control24  False = masqué.</param>
+        Public Sub SetPluginVisible(fullName As String, visible As Boolean)
+            If Not _plugins.Contains(fullName) Then Return
+            _pluginVisible(fullName) = visible
+            Save()
+        End Sub
+
+        ''' <summary>
+        ''' Retourne la liste des plugins marqués comme visibles dans Control24.
+        ''' </summary>
+        Public Function GetVisiblePlugins() As IReadOnlyList(Of String)
+            Dim result As New List(Of String)
+            For Each name In _plugins
+                If IsPluginVisible(name) Then
+                    result.Add(name)
+                End If
+            Next
+            Return result
+        End Function
+
+        ' ── Interfaces réseau ─────────────────────────────────────────────────
+
         Public Sub RefreshNetworkInterfaces()
             _allNetworkInterfaces.Clear()
             _availableInterfaces.Clear()
-
             Dim nics = Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
             For Each nic In nics
                 _allNetworkInterfaces.Add(nic.Name)
@@ -12401,20 +12864,14 @@ Namespace Reaper
                     _availableInterfaces.Add(nic.Name)
                 End If
             Next
-
             RaiseEvent On_InterfacesRefreshed(_allNetworkInterfaces.Count)
         End Sub
 
         ' ── Chargement ────────────────────────────────────────────────────────
 
-        ''' <summary>
-        ''' Lit le fichier INI via <see cref="ReaperConfigReader"/> et peuple
-        ''' les champs internes sans déclencher de <see cref="Save"/> intermédiaire.
-        ''' </summary>
         Private Sub Load()
             Dim reader As New ReaperConfigReader(_iniPath)
             reader.Load()
-
             If Not reader.IsLoaded Then Return
 
             _autostart = reader.GetBoolean("Driver", "Autostart", False)
@@ -12422,36 +12879,587 @@ Namespace Reaper
             _vsDebug = reader.GetBoolean("Driver", "VSDebug", False)
 
             _plugins.Clear()
-            _plugins.AddRange(reader.GetList("Plugins", "Plugin"))
+            _pluginVisible.Clear()
+            For Each entry In reader.GetList("Plugins", "Plugin")
+                Dim sepIdx = entry.IndexOf("|"c)
+                If sepIdx > 0 Then
+                    Dim pluginName = entry.Substring(0, sepIdx)
+                    Dim visible = entry.Substring(sepIdx + 1) <> "0"
+                    _plugins.Add(pluginName)
+                    _pluginVisible(pluginName) = visible
+                Else
+                    _plugins.Add(entry)
+                    _pluginVisible(entry) = True
+                End If
+            Next
 
             _eq.Clear()
             _eq.AddRange(reader.GetList("EQ", "EQ"))
 
             _dyn.Clear()
             _dyn.AddRange(reader.GetList("DYN", "DYN"))
-        End Sub
 
+            _pluginShortNames.Clear()
+            For Each entry In reader.GetList("PluginShortNames", "PluginShortName")
+                Dim sepIdx = entry.IndexOf("|"c)
+                If sepIdx > 0 AndAlso sepIdx < entry.Length - 1 Then
+                    Dim fullName = entry.Substring(0, sepIdx)
+                    Dim shortName = entry.Substring(sepIdx + 1)
+                    _pluginShortNames(fullName) = shortName
+                End If
+            Next
+
+            ' ── FxParams : sections [FxParams:shortName] ──────────────────
+            _fxParamConfigs.Clear()
+            If IO.File.Exists(_iniPath) Then
+                Dim rawLines As IReadOnlyList(Of String) = IO.File.ReadAllLines(_iniPath)
+                LoadFxParams(rawLines)
+            End If
+        End Sub
         ' ── Mise à jour des plugins ───────────────────────────────────────────
 
-        ''' <summary>
-        ''' Interroge Reaper pour la liste des plugins installés et sauvegarde le fichier INI.
-        ''' </summary>
         Public Sub RefreshPlugins()
+            ' ── Snapshot des états existants avant reset ─────────────────────
+            Dim existingVisible As New Dictionary(Of String, Boolean)(_pluginVisible)
+            Dim existingShortNames As New Dictionary(Of String, String)(_pluginShortNames)
+
             _plugins.Clear()
+            _pluginVisible.Clear()
             Dim installed = Reaper.utility.GetInstalledFXList
             For Each fx In installed
                 _plugins.Add(fx.Name)
+                ' ── Conserver la visibilité existante ─────────────────────────
+                ' Pour un nouveau plugin : visible par défaut si VST/VST3/VSTi/VST3i
+                ' On vérifie fx.FxType ET fx.Name car FxType peut être vide selon la source
+                Dim vis As Boolean = False
+                If Not existingVisible.TryGetValue(fx.Name, vis) Then
+                    vis = fx.FxType.StartsWith("VST", StringComparison.OrdinalIgnoreCase) OrElse
+                          fx.Name.StartsWith("VST", StringComparison.OrdinalIgnoreCase)
+                End If
+                _pluginVisible(fx.Name) = vis
             Next
+
+            Dim usedShortNames As New HashSet(Of String)
+
+            For Each fullName In _plugins
+                Dim savedShort As String = Nothing
+                If existingShortNames.TryGetValue(fullName, savedShort) Then
+                    _pluginShortNames(fullName) = savedShort
+                    usedShortNames.Add(savedShort)
+                End If
+            Next
+
+            For Each fullName In _plugins
+                If _pluginShortNames.ContainsKey(fullName) Then
+                    Continue For
+                End If
+                Dim compressed = CompressFxName(fullName)
+                Dim unique = compressed
+                Dim suffix As Integer = 2
+                While usedShortNames.Contains(unique)
+                    Dim suffixStr = suffix.ToString()
+                    Dim baseLen As Integer = Math.Max(1, 8 - suffixStr.Length)
+                    unique = compressed.Substring(0, Math.Min(baseLen, compressed.Length)).TrimEnd() & suffixStr
+                    unique = unique.PadRight(8).Substring(0, 8)
+                    suffix += 1
+                End While
+                _pluginShortNames(fullName) = unique
+                usedShortNames.Add(unique)
+            Next
+
             Save()
             RaiseEvent On_PluginsRefreshed(_plugins.Count)
         End Sub
+        Public Function GetPluginShortName(fullName As String) As String
+            Dim shortName As String = Nothing
+            If _pluginShortNames.TryGetValue(fullName, shortName) Then
+                Return shortName
+            End If
+            Return ReaperFxList.CompressFxName(fullName)
+        End Function
+        ''' <summary>
+        ''' Retourne le nom complet d'un plugin à partir de son nom court (8 car.).
+        ''' Retourne <see cref="String.Empty"/> si le nom court est introuvable.
+        ''' </summary>
+        ''' <param name="shortName">Nom court tel qu'affiché sur le Control24.</param>
+        Public Function GetPluginFullName(shortName As String) As String
+            If shortName = "NoInsert" Then
+                Return "NoInsert"
+            End If
+            For Each kvp In _pluginShortNames
+                If kvp.Value.Equals(shortName, StringComparison.OrdinalIgnoreCase) Then
+                    Return kvp.Key
+                End If
+            Next
+            Return String.Empty
+        End Function
+        ' ────────────────────────────────────────────────────────────────────
+        ' API FxParam
+        ' ────────────────────────────────────────────────────────────────────
 
-        ' ── Sauvegarde ────────────────────────────────────────────────────────
+
 
         ''' <summary>
-        ''' Écrit les cinq sections dans le fichier INI via <see cref="ReaperConfigWriter"/>.
+        ''' Retourne le nom court (4 car.) d'un paramètre FX.
         ''' </summary>
+        Public Function GetFxParamShortName(fxFullName As String, paramIndex As Integer) As String
+            Dim cfg = GetFxParamConfig(fxFullName, paramIndex)
+            If cfg.HasValue Then
+                Return cfg.Value.ShortName
+            End If
+            Return "Prm" & paramIndex.ToString().PadLeft(1)
+        End Function
+
+        ''' <summary>
+        ''' Retourne le nom long (8 car.) d'un paramètre FX.
+        ''' </summary>
+        Public Function GetFxParamLongName(fxFullName As String, paramIndex As Integer) As String
+            Dim cfg = GetFxParamConfig(fxFullName, paramIndex)
+            If cfg.HasValue Then
+                Return cfg.Value.LongName
+            End If
+            Return ("Param" & paramIndex.ToString()).PadRight(8).Substring(0, 8)
+        End Function
+
+        ''' <summary>
+        ''' Retourne True si le paramètre est visible sur le Control24.
+        ''' </summary>
+        Public Function IsFxParamVisible(fxFullName As String, paramIndex As Integer) As Boolean
+            Dim cfg = GetFxParamConfig(fxFullName, paramIndex)
+            If cfg.HasValue Then
+                Return cfg.Value.Visible
+            End If
+            Return True
+        End Function
+
+        ''' <summary>
+        ''' Définit le nom court (4 car.) d'un paramètre et sauvegarde.
+        ''' </summary>
+        Public Sub SetFxParamShortName(fxFullName As String, paramIndex As Integer, shortName As String)
+            EnsureParamExists(fxFullName, paramIndex)
+            Dim cfg = _fxParamConfigs(fxFullName)(paramIndex)
+            cfg.ShortName = shortName.PadRight(4).Substring(0, 4)
+            _fxParamConfigs(fxFullName)(paramIndex) = cfg
+            Save()
+        End Sub
+
+        ''' <summary>
+        ''' Définit le nom long (8 car.) d'un paramètre et sauvegarde.
+        ''' </summary>
+        Public Sub SetFxParamLongName(fxFullName As String, paramIndex As Integer, longName As String)
+            EnsureParamExists(fxFullName, paramIndex)
+            Dim cfg = _fxParamConfigs(fxFullName)(paramIndex)
+            cfg.LongName = longName.PadRight(8).Substring(0, 8)
+            _fxParamConfigs(fxFullName)(paramIndex) = cfg
+            Save()
+        End Sub
+
+        ''' <summary>
+        ''' Définit la visibilité d'un paramètre et sauvegarde.
+        ''' </summary>
+        Public Sub SetFxParamVisible(fxFullName As String, paramIndex As Integer, visible As Boolean)
+            EnsureParamExists(fxFullName, paramIndex)
+            Dim cfg = _fxParamConfigs(fxFullName)(paramIndex)
+            cfg.Visible = visible
+            _fxParamConfigs(fxFullName)(paramIndex) = cfg
+            Save()
+        End Sub
+
+        ''' <summary>
+        ''' Retourne les indices des paramètres visibles pour un plugin donné.
+        ''' </summary>
+        Public Function GetVisibleFxParamIndices(fxFullName As String) As List(Of Integer)
+            Dim result As New List(Of Integer)
+            If Not _fxParamConfigs.ContainsKey(fxFullName) Then
+                Return result
+            End If
+            Dim configs = _fxParamConfigs(fxFullName)
+            For i As Integer = 0 To configs.Count - 1
+                If configs(i).Visible Then
+                    result.Add(i)
+                End If
+            Next
+            Return result
+        End Function
+        ' ── Méthodes de gestion EQ ────────────────────────────────────────────
+
+        ''' <summary>Ajoute un plugin dans la liste EQ et sauvegarde.</summary>
+        Public Sub AddEqPlugin(fullName As String)
+            If String.IsNullOrEmpty(fullName) Then Return
+            If _eq.Contains(fullName) Then Return
+            _eq.Add(fullName)
+            _removedEq.Remove(fullName)
+            Save()
+        End Sub
+
+        ''' <summary>Retire un plugin de la liste EQ et sauvegarde.</summary>
+        Public Sub RemoveEqPlugin(fullName As String)
+            If _eq.Remove(fullName) Then
+                _removedEq.Add(fullName)
+                Save()
+            End If
+        End Sub
+
+        ''' <summary>Bascule l'appartenance d'un plugin à la liste EQ et sauvegarde.</summary>
+        Public Sub ToggleEqPlugin(fullName As String)
+            If _eq.Contains(fullName) Then
+                RemoveEqPlugin(fullName)
+            Else
+                AddEqPlugin(fullName)
+            End If
+        End Sub
+
+        ''' <summary>Ajoute un plugin dans la liste DYN et sauvegarde.</summary>
+        Public Sub AddDynPlugin(fullName As String)
+            If String.IsNullOrEmpty(fullName) Then Return
+            If _dyn.Contains(fullName) Then Return
+            _dyn.Add(fullName)
+            _removedDyn.Remove(fullName)
+            Save()
+        End Sub
+
+        ''' <summary>Retire un plugin de la liste DYN et sauvegarde.</summary>
+        Public Sub RemoveDynPlugin(fullName As String)
+            If _dyn.Remove(fullName) Then
+                _removedDyn.Add(fullName)
+                Save()
+            End If
+        End Sub
+
+        ''' <summary>Bascule l'appartenance d'un plugin à la liste DYN et sauvegarde.</summary>
+        Public Sub ToggleDynPlugin(fullName As String)
+            If _dyn.Contains(fullName) Then
+                RemoveDynPlugin(fullName)
+            Else
+                AddDynPlugin(fullName)
+            End If
+        End Sub
+
+        ' ── Helpers privés ────────────────────────────────────────────────────
+
+        Private Function GetFxParamConfig(fxFullName As String, paramIndex As Integer) As FxParamConfig?
+            If Not _fxParamConfigs.ContainsKey(fxFullName) Then
+                Return Nothing
+            End If
+            For Each cfg In _fxParamConfigs(fxFullName)
+                If cfg.ParamIndex = paramIndex Then
+                    Return cfg
+                End If
+            Next
+            Return Nothing
+        End Function
+
+        Private Sub EnsureParamExists(fxFullName As String, paramIndex As Integer)
+            If Not _fxParamConfigs.ContainsKey(fxFullName) Then
+                _fxParamConfigs(fxFullName) = New List(Of FxParamConfig)
+            End If
+            Dim configs = _fxParamConfigs(fxFullName)
+            If GetFxParamConfig(fxFullName, paramIndex).HasValue Then Return
+            configs.Add(New FxParamConfig With {
+                .ParamIndex = paramIndex,
+                .FullName = String.Empty,
+                .ShortName = "Prm" & paramIndex.ToString().PadLeft(1),
+                .LongName = ("Param" & paramIndex.ToString()).PadRight(8).Substring(0, 8),
+                .Visible = True
+            })
+        End Sub
+        Public Sub RefreshFxParams(fxFullName As String, paramNames As IReadOnlyList(Of String))
+            Dim added = AddMissingFxParams(fxFullName, paramNames)
+            If added Then Save()
+        End Sub
+
+        ''' <summary>
+        ''' Ajoute uniquement les configs de paramètres absentes sans appeler Save.
+        ''' Les configs existantes (modifiées par l'utilisateur) sont conservées.
+        ''' Retourne True si au moins une nouvelle config a été ajoutée.
+        ''' </summary>
+        Private Function AddMissingFxParams(fxFullName As String,
+                                             paramNames As IReadOnlyList(Of String)) As Boolean
+            If Not _fxParamConfigs.ContainsKey(fxFullName) Then
+                _fxParamConfigs(fxFullName) = New List(Of FxParamConfig)
+            End If
+
+            Dim configs = _fxParamConfigs(fxFullName)
+            Dim pairs = ReaperFxParamList.BuildParamNamePairs(paramNames)
+            Dim added As Boolean = False
+
+            For i As Integer = 0 To paramNames.Count - 1
+                If GetFxParamConfig(fxFullName, i).HasValue Then
+                    Continue For
+                End If
+                Dim cfg As New FxParamConfig With {
+                    .ParamIndex = i,
+                    .FullName = paramNames(i),
+                    .ShortName = pairs(i).Short4,
+                    .LongName = pairs(i).Long8,
+                    .Visible = True
+                }
+                configs.Add(cfg)
+                added = True
+            Next
+
+            Return added
+        End Function
+
+        Public Sub GetAllFxParams(allTrackFx As IReadOnlyList(Of ReaperTrackFX))
+            If allTrackFx Is Nothing OrElse allTrackFx.Count = 0 Then Return
+
+            Dim needsSave As Boolean = False
+
+            For Each trackFx In allTrackFx
+                For Each fx In trackFx.FxList
+                    If String.IsNullOrEmpty(fx.Name) Then
+                        Continue For
+                    End If
+
+                    Dim paramNames As New List(Of String)
+                    For Each param In fx.Params
+                        paramNames.Add(param.Name)
+                    Next
+
+                    If paramNames.Count = 0 Then
+                        Continue For
+                    End If
+
+                    ' ── Ajoute uniquement les params manquants (conserve les modifs user) ──
+                    If AddMissingFxParams(fx.Name, paramNames) Then
+                        needsSave = True
+                    End If
+                Next
+            Next
+
+            If needsSave Then Save()
+        End Sub
+
+        ' ── Load : lire les sections [FxParams:shortName] ─────────────────────
+
+        Private Sub LoadFxParams(lines As IReadOnlyList(Of String))
+            _existingFxParamSectionLines.Clear()
+
+            Dim currentFullName As String = Nothing
+            Dim currentConfigs As List(Of FxParamConfig) = Nothing
+            Dim currentRawLines As List(Of String) = Nothing
+
+            ' Préserve l'ordre d'apparition dans le fichier :
+            ' IsText=True → séparateur text=  |  IsText=False → paramètre p{n}
+            Dim orderedSlots As New List(Of (IsText As Boolean, TextValue As String, ParamN As Integer))
+            Dim paramDict As New Dictionary(Of Integer, FxParamConfig)
+
+            For Each line In lines
+                Dim trimmed = line.Trim()
+
+                If trimmed.StartsWith("[") AndAlso trimmed.EndsWith("]") Then
+
+                    ' ── Flush la section FxParams précédente ──────────────────
+                    If currentFullName IsNot Nothing AndAlso currentConfigs IsNot Nothing Then
+                        currentConfigs.Clear()
+                        For Each slot In orderedSlots
+                            If slot.IsText Then
+                                Dim textCfg As New FxParamConfig With {
+                                    .ParamIndex = -1,
+                                    .TextOnly = slot.TextValue
+                                }
+                                currentConfigs.Add(textCfg)
+                            Else
+                                Dim paramCfg As FxParamConfig
+                                If paramDict.TryGetValue(slot.ParamN, paramCfg) Then
+                                    currentConfigs.Add(paramCfg)
+                                End If
+                            End If
+                        Next
+                    End If
+                    orderedSlots.Clear()
+                    paramDict.Clear()
+
+                    If trimmed.StartsWith("[" & FxParamSectionPrefix, StringComparison.OrdinalIgnoreCase) Then
+                        Dim shortName = trimmed.Substring(FxParamSectionPrefix.Length + 1,
+                                                          trimmed.Length - FxParamSectionPrefix.Length - 2)
+                        currentFullName = GetPluginFullName(shortName.Trim())
+                        If String.IsNullOrEmpty(currentFullName) Then
+                            currentFullName = Nothing
+                            currentConfigs = Nothing
+                            currentRawLines = Nothing
+                        Else
+                            If Not _fxParamConfigs.ContainsKey(currentFullName) Then
+                                _fxParamConfigs(currentFullName) = New List(Of FxParamConfig)
+                            End If
+                            currentConfigs = _fxParamConfigs(currentFullName)
+                            currentRawLines = New List(Of String)
+                            currentRawLines.Add(trimmed)
+                            _existingFxParamSectionLines(currentFullName) = currentRawLines
+                        End If
+                    Else
+                        currentFullName = Nothing
+                        currentConfigs = Nothing
+                        currentRawLines = Nothing
+                    End If
+                    Continue For
+                End If
+
+                If currentFullName Is Nothing OrElse currentConfigs Is Nothing Then
+                    Continue For
+                End If
+
+                If currentRawLines IsNot Nothing Then
+                    currentRawLines.Add(trimmed)
+                End If
+
+                Dim eqPos = trimmed.IndexOf("="c)
+                If eqPos < 0 Then Continue For
+
+                Dim key = trimmed.Substring(0, eqPos).Trim().ToLowerInvariant()
+                Dim rawValue = trimmed.Substring(eqPos + 1)
+
+                ' ── Ligne text="..." : extraire le contenu entre guillemets ──
+                If key = "text" Then
+                    Dim firstQuote = rawValue.IndexOf(""""c)
+                    Dim lastQuote = rawValue.LastIndexOf(""""c)
+                    Dim textContent As String
+                    If firstQuote >= 0 AndAlso lastQuote > firstQuote Then
+                        textContent = rawValue.Substring(firstQuote + 1, lastQuote - firstQuote - 1)
+                    Else
+                        textContent = rawValue
+                    End If
+                    orderedSlots.Add((True, textContent, -1))
+                    Continue For
+                End If
+
+                Dim value = rawValue
+
+                ' ── Lignes p{n}_* uniquement ──────────────────────────────────
+                If Not key.StartsWith("p", StringComparison.OrdinalIgnoreCase) Then
+                    Continue For
+                End If
+
+                Dim underPos = key.IndexOf("_"c)
+                If underPos < 2 Then Continue For
+
+                Dim indexStr = key.Substring(1, underPos - 1)
+                Dim suffix = key.Substring(underPos + 1)
+                Dim idx As Integer = -1
+                If Not Integer.TryParse(indexStr, idx) OrElse idx < 0 Then Continue For
+
+                ' Premier attribut de ce p{n} → enregistrer sa position dans l'ordre fichier
+                If Not paramDict.ContainsKey(idx) Then
+                    paramDict(idx) = New FxParamConfig With {
+                        .ShortName = "    ",
+                        .LongName = "        ",
+                        .Visible = True
+                    }
+                    orderedSlots.Add((False, String.Empty, idx))
+                End If
+
+                Dim c = paramDict(idx)
+                Select Case suffix
+                    Case "i"
+                        Dim pi As Integer = -1
+                        If Integer.TryParse(value, pi) Then
+                            c.ParamIndex = pi
+                        End If
+                    Case "n"
+                        c.FullName = value
+                    Case "s"
+                        c.ShortName = value.PadRight(4).Substring(0, 4)
+                    Case "l"
+                        c.LongName = value.PadRight(8).Substring(0, 8)
+                    Case "v"
+                        c.Visible = value = "1"
+                End Select
+                paramDict(idx) = c
+            Next
+
+            ' ── Flush la dernière section ──────────────────────────────────────
+            If currentFullName IsNot Nothing AndAlso currentConfigs IsNot Nothing Then
+                currentConfigs.Clear()
+                For Each slot In orderedSlots
+                    If slot.IsText Then
+                        Dim textCfg As New FxParamConfig With {
+                            .ParamIndex = -1,
+                            .TextOnly = slot.TextValue
+                        }
+                        currentConfigs.Add(textCfg)
+                    Else
+                        Dim paramCfg As FxParamConfig = Nothing
+                        If paramDict.TryGetValue(slot.ParamN, paramCfg) Then
+                            currentConfigs.Add(paramCfg)
+                        End If
+                    End If
+                Next
+            End If
+        End Sub
+
+        ' ── Save : écrire les sections [FxParams:shortName] ──────────────────
+
+        Private Function BuildFxParamSections() As List(Of String)
+            Dim lines As New List(Of String)
+            lines.Add("; L'ordre des lignes p{n}_* détermine l'ordre d'apparition des paramètres")
+            lines.Add("; sur les channel strips du Control24 (de gauche à droite, de haut en bas).")
+            lines.Add("; Réorganiser les blocs p{n}_* pour modifier cet ordre.")
+            lines.Add(";")
+            lines.Add("; Pour insérer un séparateur ou afficher un texte libre sur l'écran d'un")
+            lines.Add("; channel strip (sans paramètre Reaper associé), ajouter une ligne :")
+            lines.Add(";   text=MonTexte")
+
+            For Each kvp In _fxParamConfigs
+                Dim fullName = kvp.Key
+                lines.Add(String.Empty)
+
+                ' ── Section déjà présente dans le fichier INI → reproduction fidèle ──
+                ' Les modifications de l'utilisateur (ordre, noms, visibilité) sont
+                ' conservées exactement telles quelles.
+                If _existingFxParamSectionLines.ContainsKey(fullName) Then
+                    lines.AddRange(_existingFxParamSectionLines(fullName))
+                    Continue For
+                End If
+
+                ' ── Nouvelle section : génération automatique ─────────────────
+                Dim shortName = GetPluginShortName(fullName)
+                lines.Add("[" & FxParamSectionPrefix & shortName & "]")
+
+                Dim configs = kvp.Value
+                For i As Integer = 0 To configs.Count - 1
+                    Dim cfg = configs(i)
+                    If cfg.ParamIndex < 0 Then
+                        If cfg.TextOnly IsNot Nothing Then
+                            lines.Add("text=""" & cfg.TextOnly & """")
+                        End If
+                    Else
+                        lines.Add("p" & i.ToString() & "_i=" & cfg.ParamIndex.ToString())
+                        lines.Add("p" & i.ToString() & "_n=" & cfg.FullName)
+                        lines.Add("p" & i.ToString() & "_s=" & cfg.ShortName)
+                        lines.Add("p" & i.ToString() & "_l=" & cfg.LongName)
+                        lines.Add("p" & i.ToString() & "_v=" & If(cfg.Visible, "1", "0"))
+                    End If
+                Next
+            Next
+
+            Return lines
+        End Function
+        ' ── Sauvegarde ────────────────────────────────────────────────────────
+
         Public Sub Save()
+
+            ' ── Fusionner EQ/DYN depuis le fichier avant d'écrire ────────────────
+            ' Préserve les modifications manuelles faites directement dans le fichier
+            ' INI pendant que l'application tourne (ex : l'utilisateur ajoute un
+            ' plugin dans [Eq] avec un éditeur de texte).
+            ' Les suppressions explicites (RemoveEqPlugin / RemoveDynPlugin) ont
+            ' priorité sur les entrées du fichier grâce aux sets _removedEq/_removedDyn.
+            If IO.File.Exists(_iniPath) Then
+                Dim tmpReader As New ReaperConfigReader(_iniPath)
+                tmpReader.Load()
+                For Each entry In tmpReader.GetList("EQ", "EQ")
+                    If Not _eq.Contains(entry) AndAlso Not _removedEq.Contains(entry) Then
+                        _eq.Add(entry)
+                    End If
+                Next
+                For Each entry In tmpReader.GetList("DYN", "DYN")
+                    If Not _dyn.Contains(entry) AndAlso Not _removedDyn.Contains(entry) Then
+                        _dyn.Add(entry)
+                    End If
+                Next
+            End If
+
             Dim writer As New ReaperConfigWriter(_iniPath)
 
             writer.SetFileHeader("; ReaperDriverControl24 — Configuration de session" &
@@ -12477,19 +13485,50 @@ Namespace Reaper
                               "; Copier un nom dans [Driver] NetworkInterface= pour l'utiliser.")
             writer.SetList("Interfaces", "Interface", _allNetworkInterfaces)
 
-            writer.AddSection("Plugins", "; Mis à jour automatiquement au démarrage — ne pas modifier")
-            writer.SetList("Plugins", "Plugin", _plugins)
+            writer.AddSection("Plugins",
+                              "; Mis à jour automatiquement au démarrage." &
+                              Environment.NewLine &
+                              "; Format : PluginN=NomDuPlugin|Visible  (1=affiché dans Control24  0=masqué)" &
+                              Environment.NewLine &
+                              "; Modifier le chiffre après | pour afficher ou masquer un plugin.")
+            Dim pluginEntries As New List(Of String)
+            For Each name In _plugins
+                Dim visible As Boolean = True
+                _pluginVisible.TryGetValue(name, visible)
+                pluginEntries.Add(name & "|" & If(visible, "1", "0"))
+            Next
+            writer.SetList("Plugins", "Plugin", pluginEntries)
 
-            writer.AddSection("EQ", "; Noms exacts des plugins EQ (copier depuis [Plugins])")
+            writer.AddSection("PluginShortNames",
+                              "; Noms compressés à 8 caractères affichés sur le Control24." &
+                              Environment.NewLine &
+                              "; Format : PluginShortNameN=NomCompletDuPlugin|NomCourt8Car" &
+                              Environment.NewLine &
+                              "; Vous pouvez modifier la partie après le | (max 8 caractères)." &
+                              Environment.NewLine &
+                              "; Les modifications sont conservées lors du prochain démarrage.")
+            Dim shortNameList As New List(Of String)
+            For Each kvp In _pluginShortNames
+                shortNameList.Add(kvp.Key & "|" & kvp.Value)
+            Next
+            writer.SetList("PluginShortNames", "PluginShortName", shortNameList)
+
+            writer.AddSection("EQ", "; Noms exacts des plugins EQ (copier depuis [Plugins]) ex:EQ0=JS: 4-Band EQ")
             writer.SetList("EQ", "EQ", _eq)
 
-            writer.AddSection("DYN", "; Noms exacts des plugins de dynamique (copier depuis [Plugins])")
+            writer.AddSection("DYN", "; Noms exacts des plugins de dynamique (copier depuis [Plugins]) ex:DYN0=VST: ReaComp (Cockos)")
             writer.SetList("DYN", "DYN", _dyn)
 
             writer.Save()
+
+            ' ── FxParams : sections [FxParams:shortName] ──────────────────
+            Dim fxParamLines = BuildFxParamSections()
+            If fxParamLines.Count > 0 Then
+                IO.File.AppendAllLines(_iniPath, fxParamLines)
+            End If
         End Sub
 
-    End Class
 
+    End Class
 
 End Namespace
