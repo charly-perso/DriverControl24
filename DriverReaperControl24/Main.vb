@@ -171,7 +171,34 @@ Public Class Main
                             Console.WriteLine("?" & "|" & "?")
                         End If
                     End If
+                Case "C24desk_OnVpotRotate"
+                    If parts.Count < 4 Then
+                        Console.WriteLine("Usage : C24desk_OnVpotRotate <Group> <Name> <Value>")
+                        Console.WriteLine("Exemple : C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 -1")
+                    Else
+                        Dim group = _desk.GroupComponents(parts(1))
+                        If group IsNot Nothing Then
+                            For Each cpn In group
+                                Dim C24_Vpot = TryCast(cpn, Control24.Hardware.C24_Vpot)
+                                If C24_Vpot IsNot Nothing AndAlso C24_Vpot.Name = parts(2) Then
+                                    Dim value As Integer = 0
 
+                                    If Integer.TryParse(parts(3), value) Then
+
+                                        C24_Vpot.UpdateValueFromCmd(value)
+                                        Console.WriteLine(parts(1) & "|" & parts(2) & "=OK|Value=" & value)
+                                        Exit Select
+                                    Else
+                                        Console.WriteLine("Value " & parts(3) & "is not correct value ! (ex of correct values : -2/-1/1/2 etc...")
+                                    End If
+
+                                End If
+                            Next
+                            Console.WriteLine(parts(1) & "|" & "?")
+                        Else
+                            Console.WriteLine("?" & "|" & "?")
+                        End If
+                    End If
                 Case "ConvertTxt2Csv"
                     If parts.Count < 3 Then
                         Console.WriteLine("Usage : ConvertTxt2Csv ""<inputTxtPath>"" ""<outputCsvPath>""")
@@ -250,6 +277,8 @@ Public Class Main
         Console.WriteLine("  components                                  — Liste les composants C24 enregistrés")
         Console.WriteLine("  C24desk_OnButtonReleased <Group> <Name>     — Simule le relâchement d'un bouton C24")
         Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
+        Console.WriteLine("  C24desk_OnVpotRotate <Group> <Name> <Value> — Simule la rotation d'un composant Vpot C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 -1")
         Console.WriteLine("  ConvertTxt2Csv <input> <output>             — Convertit un log Wireshark TXT en CSV")
         Console.WriteLine("                                                Exemple : ConvertTxt2Csv ""C:\cap.txt"" ""C:\out.csv""")
         Console.WriteLine("  quit / exit                                 — Arrête le driver")

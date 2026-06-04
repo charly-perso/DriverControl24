@@ -643,7 +643,7 @@ Namespace Control24
             Private _IsShowingTemp As Boolean = False
             Private _TempTimer As System.Threading.Timer
             Private Const TempDisplayMs As Integer = 2000
-
+            Event OnOriginaltextBack()
             ' ── Clignotement ──────────────────────────────────────────────────
             Private _IsBlinking As Boolean = False
             Private _BlinkOriginalText As String = String.Empty
@@ -741,6 +741,7 @@ Namespace Control24
                 _IsShowingTemp = False
                 _ScribbleStripCmd.Text = _OriginalText
                 IsBlinking = _prevBlinkingState
+                RaiseEvent OnOriginaltextBack()
             End Sub
 
             Sub New(Name As String, Track_Nb As Integer)
@@ -790,11 +791,13 @@ Namespace Control24
             Private _FxParam_SmallStepValue As Double? = Nothing
             Private _FxParam_LargeStepValue As Double? = Nothing
             Private _FxParamValueToDisplay As String
+            Private _FxParam_StepValue As Double?
             Private Const RestoreDelayMs As Integer = 2000
 
             Public Event OnVpotValueChange(TrackNb As Integer, Value As Double)
             Public Event OnVpotValue2Change(TrackNb As Integer, Value2 As Double)
             Public Event OnVpotSelectedItemChange(TrackNb As Integer, SelectedItem_Index As Integer)
+            Public Event OnScribbleScriptBackToOriginalText()
 
             Public Property FxParamValueToDisplay As String
                 Get
@@ -975,19 +978,31 @@ Namespace Control24
                     _FxParam_LargeStepValue = Value
                 End Set
             End Property
+            Public Property FxParam_StepValue As Double?
+                Get
+                    Return _FxParam_StepValue
+                End Get
+                Set
+                    _FxParam_StepValue = Value
+                End Set
+            End Property
 
             Public ReadOnly Property Step_Value As Double
                 Get
                     If Velocity_sensible Then
                         If _FxParam_SmallStepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
                             _Step_Value = _FxParam_SmallStepValue
+                        ElseIf _FxParam_StepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
+                            _Step_Value = _FxParam_StepValue
                         Else
                             _Step_Value = 1 / Fine_Step
                         End If
 
                     Else
-                        If _FxParam_SmallStepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
+                        If _FxParam_LargeStepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
                             _Step_Value = _FxParam_LargeStepValue
+                        ElseIf _FxParam_StepValue IsNot Nothing AndAlso VpotMode = VpotModeType.FxParamLinear Then
+                            _Step_Value = _FxParam_StepValue
                         Else
                             _Step_Value = 1 / Large_Step
                         End If
@@ -1190,7 +1205,11 @@ Namespace Control24
                 Return False
             End Function
 
-            Private Sub UpdateValueFromCmd() Handles _VpotCmd.OnCmdChange
+            Public Sub UpdateValueFromCmd(Optional Manual_Rotate_Velocity As Integer? = Nothing) Handles _VpotCmd.OnCmdChange
+                If Manual_Rotate_Velocity IsNot Nothing Then
+                    Dim Value As Integer = Manual_Rotate_Velocity
+                    _VpotCmd.Rotate_Velocity = Value
+                End If
                 Select Case VpotMode
                     Case VpotModeType.Pan
                         If Adjust_Value2 Then
@@ -1224,7 +1243,7 @@ Namespace Control24
 
                     Case VpotModeType.FxParamLinear
                         _Value += _VpotCmd.Rotate_Velocity * Step_Value
-                        _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
+                        _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 4)
                         RefreshLedStatus()
                         RaiseEvent OnVpotValueChange(_TrackNb, _Value)
 
@@ -1248,6 +1267,8 @@ Namespace Control24
                 End Select
             End Sub
 
+
+
             ' ── Temporisation ScribbleStrip ───────────────────────────────────
 
             ''' <summary>
@@ -1265,9 +1286,10 @@ Namespace Control24
             Private Sub OnRestoreTimer(state As Object)
                 _IsShowingValue = False
                 _ScribbleStrip.Text = _OriginalScribbleText
+                RaiseEvent OnScribbleScriptBackToOriginalText()
             End Sub
 
-            Private Sub RefreshScribbleStrip(Value As Double?)
+            Public Sub RefreshScribbleStrip(Value As Double?)
                 If Not _IsShowingValue Then
                     _OriginalScribbleText = _ScribbleStrip.Text
                     _IsShowingValue = True
@@ -1275,6 +1297,9 @@ Namespace Control24
 
                 Select Case VpotMode
                     Case VpotModeType.Value, VpotModeType.VolumeLinear
+                        If Value Is Nothing Then
+                            Value = 0
+                        End If
                         _ScribbleStrip.Value = Value
                     Case VpotModeType.Pan
                         LedMode = LedModeType.Central_Dot
@@ -1290,6 +1315,7 @@ Namespace Control24
                         _ScribbleStrip.Text = FxParamValueToDisplay
 
                 End Select
+
 
                 _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
             End Sub
@@ -4527,13 +4553,14 @@ Namespace Control24
             Private WithEvents _FaderCmd As Commands.Fader_Cmd
             Private ReadOnly _FaderTouch As C24_Button
             Private ReadOnly _ScribbleStrip As C24_ScribbleStrip
-            Private _FaderNormValue As Double
+            Private _NormValue As Double
+            Private _NormFormatedValues As Tuple(Of Double, String)
 
             Private _DbVolume As Double = 0
 
             ' ── Restauration ScribbleStrip ─────────────────────────────────────
             Private _OriginalScribbleText As String = ""
-            Private _IsShowingDb As Boolean = False
+            Private _IsShowingValue As Boolean = False
             Private _RestoreTimer As System.Threading.Timer
             Private Const RestoreDelayMs As Integer = 2000
 
@@ -4541,6 +4568,7 @@ Namespace Control24
             Private _TargetFaderValue As Integer = 0
             Private _VerifyRetryCount As Integer = 0
             Private _VerifyTimer As System.Threading.Timer
+            Private _Fader_Mode As Mode = Mode.Fader
             Private Const VerifyDelayMs As Integer = 150
             Private Const MaxVerifyRetry As Integer = 5
 
@@ -4562,9 +4590,23 @@ Namespace Control24
             ''' pendant que le fader est touché par un humain.
             ''' </summary>
             Public Event On_FaderHumanChangeDbValue(TrackNb As Integer, DbValue As Double)
-            Public Event On_FaderChangeNormValue(TrackNb As Integer, NormValue As Double)
+            Public Event On_FaderHumanChangeNormValue(TrackNb As Integer, _NormFormatedValues As Tuple(Of Double, String))
 
+            Enum Mode
+                Fader
+                NormValue
+            End Enum
             ' ── Propriétés ────────────────────────────────────────────────────
+            Public Property Fader_Mode As Mode
+                Get
+                    Return _Fader_Mode
+                End Get
+                Set
+                    _Fader_Mode = Value
+                End Set
+            End Property
+
+
 
             ''' <summary>Commande fader sous-jacente (accès direct aux bytes).</summary>
             Public ReadOnly Property FaderCmd As Commands.Fader_Cmd
@@ -4607,17 +4649,39 @@ Namespace Control24
             ''' Valeur normalisée du fader entre 0.0 et 1.0.
             ''' Convertit automatiquement vers/depuis la valeur brute [0..1023].
             ''' </summary>
-            Public Property FaderNormValue As Double
+            Public Property NormFormatedValues As Tuple(Of Double, String)
                 Get
-                    Return _FaderNormValue
+                    Return _NormFormatedValues
                 End Get
                 Set
-                    If _FaderNormValue = Value Then
-                        Return
+                    'If _NormValue = Value.Item1 Then
+                    '    Return
+                    'End If
+                    _NormValue = Value.Item1
+                    _NormFormatedValues = Value
+
+                    If _IsShowingValue = False Then
+                        _OriginalScribbleText = _ScribbleStrip.Text
+                        _IsShowingValue = True
                     End If
-                    _FaderNormValue = Value
-                    Dim rawValue As Integer = CInt(Math.Round(Math.Min(Math.Max(Value, 0.0), 1.0) * FaderMax))
-                    SendAndArmVerify(rawValue)
+
+                    Dim DblValue As Double = 0
+                    If Double.TryParse(Value.Item2, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, DblValue) Then
+                        _ScribbleStrip.Value = DblValue
+                    ElseIf Value.Item2 IsNot Nothing AndAlso Value.Item2 <> "" Then
+                        _ScribbleStrip.Text = Value.Item2
+                    Else
+                        _ScribbleStrip.Value = Value.Item1
+                    End If
+
+
+
+                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+
+
+
+
+
                 End Set
             End Property
             ''' <summary>
@@ -4637,12 +4701,14 @@ Namespace Control24
 
                     _DbVolume = Value
 
-                    If _IsShowingDb = False Then
+                    If _IsShowingValue = False Then
                         _OriginalScribbleText = _ScribbleStrip.Text
-                        _IsShowingDb = True
+                        _IsShowingValue = True
                     End If
 
                     _ScribbleStrip.Value = _DbVolume
+
+
                     _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
                 End Set
             End Property
@@ -4651,7 +4717,7 @@ Namespace Control24
 
             ''' <summary>Restaure le texte original du ScribbleStrip après 2 s d'inactivité.</summary>
             Private Sub OnRestoreTimer(state As Object)
-                _IsShowingDb = False
+                _IsShowingValue = False
                 _ScribbleStrip.Text = _OriginalScribbleText
             End Sub
 
@@ -4701,6 +4767,11 @@ Namespace Control24
                 DbVolume = Db_Volume
                 SendAndArmVerify(DbToRawFaderCmdValue(Db_Volume))
             End Sub
+            Public Sub SetFaderNormValue(_NormFormatedValues As Tuple(Of Double, String))
+
+                NormFormatedValues = _NormFormatedValues
+                SendAndArmVerify(NormValueToRawFaderCmdValue(_NormFormatedValues.Item1))
+            End Sub
 
             ''' <summary>
             ''' Initialise la position du fader sans vérification d'affichage.
@@ -4719,10 +4790,17 @@ Namespace Control24
             ''' </summary>
             Private Sub OnFaderCmdChange() Handles _FaderCmd.OnCmdChange
                 If IsTouched Then
-                    DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
-                    _FaderNormValue = Math.Round(_FaderCmd.FaderValue / CDbl(FaderMax), 4)
-                    RaiseEvent On_FaderHumanChangeDbValue(FaderCmd.Track_Number, DbVolume)
-                    RaiseEvent On_FaderChangeNormValue(FaderCmd.Track_Number, FaderNormValue)
+                    Select Case Fader_Mode
+                        Case Mode.Fader
+                            DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
+                            RaiseEvent On_FaderHumanChangeDbValue(FaderCmd.Track_Number, DbVolume)
+                        Case Mode.NormValue
+                            _NormValue = RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)
+                            _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
+                            RaiseEvent On_FaderHumanChangeNormValue(FaderCmd.Track_Number, _NormFormatedValues)
+                    End Select
+
+
                 End If
             End Sub
 
@@ -4785,7 +4863,12 @@ Namespace Control24
                 End If
                 Return 0
             End Function
-
+            Private Function RawFaderCmdValueToNormValue(raw As Integer) As Double
+                Return Math.Round(_FaderCmd.FaderValue / CDbl(FaderMax), 4)
+            End Function
+            Private Function NormValueToRawFaderCmdValue(NormValue As Double) As Integer
+                Return CInt(Math.Round(Math.Min(Math.Max(NormValue, 0.0), 1.0) * FaderMax))
+            End Function
             ''' <summary>
             ''' Convertit une valeur brute de commande fader (0–1023) en volume en dB.
             ''' Fonction inverse de <see cref="DbToRawFaderCmdValue"/>.
@@ -6551,7 +6634,13 @@ Namespace Control24
                 _Rotate_Velocity = CInt(Cmd(2) - &H40)
             End Sub
             Private Sub SetRotateVelocity()
-                Cmd(2) = CByte(_Rotate_Velocity) + &H40
+                If _Rotate_Velocity >= 0 Then
+                    _Rotate_Direction = Direction.Right
+                Else
+                    _Rotate_Direction = Direction.Left
+                End If
+                Cmd(2) = CByte((Cmd(2) And Not CByte(&HC0)) Or (_Rotate_Direction And &HC0))
+                Cmd(2) = CByte(Math.Abs(_Rotate_Velocity)) + &H40
                 SendCmd()
             End Sub
         End Class

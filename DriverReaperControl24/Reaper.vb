@@ -11119,24 +11119,33 @@ Namespace Reaper
 
 
         ''' <summary>Pas minimal entre deux valeurs adjacentes.</summary>
-        Public ReadOnly Property [Step] As Double?
+        Public Property [Step] As Double?
             Get
                 Return _step
             End Get
+            Set(value As Double?)
+                _step = value
+            End Set
         End Property
 
         ''' <summary>Pas fin (déplacement précis).</summary>
-        Public ReadOnly Property SmallStep As Double?
+        Public Property SmallStep As Double?
             Get
                 Return _smallStep
             End Get
+            Set(value As Double?)
+                _smallStep = value
+            End Set
         End Property
 
         ''' <summary>Pas large (déplacement rapide).</summary>
-        Public ReadOnly Property LargeStep As Double?
+        Public Property LargeStep As Double?
             Get
                 Return _largeStep
             End Get
+            Set(value As Double?)
+                _largeStep = value
+            End Set
         End Property
 
         ''' <summary>True si le paramètre est de type toggle (on/off).</summary>
@@ -11191,13 +11200,16 @@ Namespace Reaper
                 If _normValue <> Value Then
                     _normValue = Value
                     RaiseEvent SuspendMonitoring(_paramIndex, True)
-                    utility.CallReaperBridge(
-                        $"SET_FX_PARAM_NORMALIZED|{_trackIndex}|{_fxIndex}|{_paramIndex}|{_normValue.ToString("G", Ic)}")
+                    Reaper.SetFxParamNormalizedUI(TrackIndex, FxIndex, ParamIndex, Value)
+
                     'refresh format value:
-                    Dim fmtRaw = utility.CallReaperBridge(
-                $"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+                    Dim fmtRaw =
+                        utility.CallReaperBridge(
+                    $"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
                     If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR") Then
                         _formatted = fmtRaw
+                    Else
+                        _formatted = "err"
                     End If
                     RaiseEvent SuspendMonitoring(_paramIndex, False)
 

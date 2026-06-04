@@ -47,6 +47,7 @@ Public Class C24ReaperController
     Private _InsertParamBtnH As Hardware.C24_Button.OnButtonReleasedEventHandler = Nothing
     Private _SolosHandlers As New List(Of SolosHandlers)
     Private _BankHandlers As New List(Of BankHandlers)
+    Private _ShowHandlers As New List(Of ShowHandlers)
     Private _PageHandlers As New List(Of PageHandlers)
     Private _AssignHandlers As New List(Of AssignHandlers)
     Private _TransportHandlers As New List(Of TransportHandlers)
@@ -161,7 +162,17 @@ Public Class C24ReaperController
         Public BankNudgeBtnH As [Delegate]
 
     End Class
+    Private Class ShowHandlers
+        Public cs0 As Hardware.C24_ChannelStrip
+        Public cs1 As Hardware.C24_ChannelStrip
 
+        Public Vel_Sens_EncodersBtnH As [Delegate]
+        Public Show_ValuesBtnH As [Delegate]
+        Public ScribbleScriptBackToOriginal0H As [Delegate]
+        Public ScribbleScriptBackToOriginal1H As [Delegate]
+
+        Public Show_NamesBtnH As [Delegate]
+    End Class
     Private Class PageHandlers
 
         Public PageLeftBtnH As [Delegate]
@@ -299,12 +310,13 @@ Public Class C24ReaperController
         _ReaperTransportManager.Start()
 
         ' ── Créer et démarrer le ProjectMonitor ───────────────────────────────
-        _ReaperProjectMonitor = New Monitors.ReaperProjectMonitor()
-        AddHandler _ReaperProjectMonitor.On_TrackCountChanged, AddressOf OnProjectMonitor_TrackCountChanged
-        _ReaperProjectMonitor.Start()
+        '_ReaperProjectMonitor = New Monitors.ReaperProjectMonitor()
+        'AddHandler _ReaperProjectMonitor.On_TrackCountChanged, AddressOf OnProjectMonitor_TrackCountChanged
+        '_ReaperProjectMonitor.Start()
 
         RefreshTrackManagerPage()
         AddAllCommonC24Function()
+        RefreshC24HomeViewMode()
     End Sub
 
 
@@ -599,6 +611,7 @@ Public Class C24ReaperController
         AddSolosC24Handlers()
         AddBankC24Handlers()
         AddTransportHandlers()
+        AddShowC24Handlers()
         AddCounterModeHandler()
 
     End Sub
@@ -674,18 +687,13 @@ Public Class C24ReaperController
 
 
     Sub SetFlipMode()
-        If C24_Desk.Flip.Led = False Then
-            'entre en mode flip
-            C24_Desk.Flip.Led = True
-            Flip_Mode = True
-        Else 'retour au mode normal
-            C24_Desk.Flip.Led = False
-            Flip_Mode = False
-        End If
+        C24_Desk.Flip.Led = Not C24_Desk.Flip.Led
+        Flip_Mode = Not Flip_Mode
+
+
     End Sub
     Sub RemoveFlipModeHandler()
-        C24_Desk.Flip.Led = False
-        Flip_Mode = False
+
         RemoveHandler C24_Desk.Flip.OnButtonReleased, FlipBtnH
     End Sub
 
@@ -694,7 +702,7 @@ Public Class C24ReaperController
     Sub SetFadersHandlers()
         For i = 0 To 23
             Dim c24Trk = C24_Desk.ChannelStrips(i)
-
+            c24Trk.Fader.Fader_Mode = C24_Fader.Mode.Fader
             If i < _ReaperTracksManager.Tracks.Count Then
                 Dim reaperTrk = _ReaperTracksManager.Tracks(i)
 
@@ -1163,6 +1171,7 @@ Public Class C24ReaperController
                     _ReaperTracksManager.Set_Prev_Page()
 
                     RefreshTrackManagerPage()
+                    RefreshC24HomeViewMode()
                 End If
             End Sub
         h.BankLeftBtnH = BankLeftBtnH
@@ -1174,6 +1183,7 @@ Public Class C24ReaperController
                     _ReaperTracksManager.Set_Next_Page()
 
                     RefreshTrackManagerPage()
+                    RefreshC24HomeViewMode()
                 End If
             End Sub
         h.BankRightBtnH = BankRightBtnH
@@ -1212,7 +1222,7 @@ Public Class C24ReaperController
         SetCommonStripHandlers()
         RemoveFadersHandlers
         SetFadersHandlers()
-        RefreshC24HomeViewMode()
+        'RefreshC24HomeViewMode()
 
     End Sub
 
@@ -1474,7 +1484,107 @@ Public Class C24ReaperController
         End Select
     End Sub
 #End Region
+#Region "Show"
+    Sub AddShowC24Handlers()
+        RemoveShowC24Handlers()
+        'Show and velocity C24 buttons
+        Dim h As New ShowHandlers
 
+        Dim Vel_Sens_EncodersBtnH As Hardware.C24_LedButton.OnButtonReleasedEventHandler =
+            Sub(TrackNb As Integer?)
+                If C24_Desk.Vel_Sens_Encoders.Led Then
+                    C24_Desk.Vel_Sens_Encoders.Led = False
+                    C24_Desk.ScreenLine.ShowTempText("Velocity sensible :  Off")
+                Else
+                    C24_Desk.ScreenLine.ShowTempText("Velocity sensible :   On")
+                    C24_Desk.Vel_Sens_Encoders.Led = True
+                End If
+                For Each cs In C24_Desk.ChannelStrips
+                    cs.Vpot.Velocity_sensible = C24_Desk.Vel_Sens_Encoders.Led
+                Next
+
+
+            End Sub
+        h.Vel_Sens_EncodersBtnH = Vel_Sens_EncodersBtnH
+        AddHandler C24_Desk.Vel_Sens_Encoders.OnButtonReleased, Vel_Sens_EncodersBtnH
+
+        Dim Show_ValuesBtnH As Hardware.C24_LedButton.OnButtonReleasedEventHandler =
+            Sub(TrackNb As Integer?)
+
+                C24_Desk.Show_Values.Led = True
+                Dim cs0 = C24_Desk.ChannelStrips(0)
+                h.cs0 = cs0
+                Dim ScribbleScriptBackToOriginal0H As Hardware.C24_Vpot.OnScribbleScriptBackToOriginalTextEventHandler =
+                            Sub()
+                                C24_Desk.Show_Values.Led = False
+                                C24_Desk.Show_Channel_Names.Led = False
+                                RemoveHandler cs0.Vpot.OnScribbleScriptBackToOriginalText, ScribbleScriptBackToOriginal0H
+                            End Sub
+                h.ScribbleScriptBackToOriginal0H = ScribbleScriptBackToOriginal0H
+                AddHandler cs0.Vpot.OnScribbleScriptBackToOriginalText, ScribbleScriptBackToOriginal0H
+
+
+                For Each cs In C24_Desk.ChannelStrips
+                    If cs.Vpot.LedMode <> C24_Vpot.LedModeType.off Then
+                        cs.Vpot.RefreshScribbleStrip(cs.Vpot.Value)
+                    End If
+                Next
+
+
+            End Sub
+        h.Show_ValuesBtnH = Show_ValuesBtnH
+        AddHandler C24_Desk.Show_Values.OnButtonReleased, Show_ValuesBtnH
+
+
+
+        Dim Show_NamesBtnH As Hardware.C24_LedButton.OnButtonReleasedEventHandler =
+           Sub(TrackNb As Integer?)
+
+               C24_Desk.Show_Channel_Names.Led = True
+               Dim cs0 = C24_Desk.ChannelStrips(0)
+               h.cs0 = cs0
+               Dim ScribbleScriptBackToOriginal1H As Hardware.C24_ScribbleStrip.OnOriginaltextBackEventHandler =
+                            Sub()
+                                C24_Desk.Show_Values.Led = False
+                                C24_Desk.Show_Channel_Names.Led = False
+                                RemoveHandler cs0.ScribbleStrip.OnOriginaltextBack, ScribbleScriptBackToOriginal1H
+                            End Sub
+               h.ScribbleScriptBackToOriginal1H = ScribbleScriptBackToOriginal1H
+               AddHandler cs0.ScribbleStrip.OnOriginaltextBack, ScribbleScriptBackToOriginal1H
+
+
+               For Each cs In C24_Desk.ChannelStrips
+                   Dim trk_index = _ReaperTracksManager.GetAbsoluteTrackIndex(cs.TrackNumber - 1)
+                   If trk_index <> -1 Then
+                       cs.ScribbleStrip.ShowTempText(_ReaperTracksManager.Tracks(trk_index).Name)
+                   Else
+                       cs.ScribbleStrip.ShowTempText("    ")
+                   End If
+
+               Next
+
+
+           End Sub
+        h.Show_NamesBtnH = Show_NamesBtnH
+        AddHandler C24_Desk.Show_Channel_Names.OnButtonReleased, Show_NamesBtnH
+
+        _ShowHandlers.Add(h)
+
+    End Sub
+    Sub RemoveShowC24Handlers()
+        For Each h In _ShowHandlers
+
+            RemoveHandler C24_Desk.Vel_Sens_Encoders.OnButtonReleased, h.Vel_Sens_EncodersBtnH
+            RemoveHandler C24_Desk.Show_Values.OnButtonReleased, h.Show_ValuesBtnH
+            If h.cs0 IsNot Nothing Then
+                RemoveHandler h.cs0.Vpot.OnScribbleScriptBackToOriginalText, h.ScribbleScriptBackToOriginal0H
+                RemoveHandler h.cs0.ScribbleStrip.OnOriginaltextBack, h.ScribbleScriptBackToOriginal1H
+            End If
+
+        Next
+        _ShowHandlers.Clear()
+    End Sub
+#End Region
 
 #Region "Views"
     Public Enum C24ViewModes
@@ -1519,13 +1629,12 @@ Public Class C24ReaperController
         'FxParam View
         ActualC24ViewMode = C24ViewModes.FxParam
         RemoveViewsStripHandlers()
-        If Fx.IsOpen = False Then
-            Fx.IsOpen = True
-        End If
 
-        Dim totalPages As Integer = Math.Max(1, CInt(Math.Ceiling(Fx.ParamCount / CDbl(24))))
-        C24_Desk.ScreenChannelBarScroll.ShowTempText("Page" & SendPageNb & "/" & totalPages)
+
+        Dim totalPages As Integer = Math.Max(1, CInt(Math.Ceiling(_ReaperSessionConfig.fxParamConfigs(Fx.Name).Count / CDbl(24))))
+
         C24_Desk.ScreenChannelBarScroll.SetText(_ReaperSessionConfig.GetPluginShortName(Fx.Name))
+        C24_Desk.ScreenChannelBarScroll.ShowTempText("Page" & SendPageNb & "/" & totalPages)
         SetFxParamStripHandlers(Fx, SendPageNb)
         AllScribbleScriptBlinking(False)
 
@@ -1633,9 +1742,8 @@ Public Class C24ReaperController
 
             Case C24ViewModes.FxParam
                 C24_Desk.Inserts_Param.Led = False
-                If ActualFxEdited.IsOpen = True Then
-                    ActualFxEdited.IsOpen = False
-                End If
+                ActualFxEdited.IsOpen = False
+
                 RemovePageHandlers()
                 RemoveAssignHandlers()
 
@@ -1666,7 +1774,7 @@ Public Class C24ReaperController
         For i = 0 To 23
             Dim c24Trk = C24_Desk.ChannelStrips(i)
 
-            If i < _ReaperTracksManager.Tracks.Count Then
+            If i <_ReaperTracksManager.Tracks.Count Then
                 Dim reaperTrk = _ReaperTracksManager.Tracks(i)
                 reaperTrk.Refresh()
                 c24Trk.ScribbleStrip.Text = reaperTrk.Name
@@ -1818,12 +1926,7 @@ Public Class C24ReaperController
                         ' Exit Sub
                     End If
 
-                    ''quit Assign Mode et valide les modifs
-                    'C24_Desk.Assign.IsBlinking = False
-                    'C24_Desk.Esc_Group.SetAllBlinking(False)
-                    'C24_Desk.Esc_Group.SetAllOff()
-                    'Assign_Mode = False
-                    'RefreshC24PanSendViewMode(TrackNb, SendPageNb)
+
                 End Sub
             ah.AssignBtnH = AssignBtnH
             AddHandler C24_Desk.Assign.OnButtonReleased, AssignBtnH
@@ -2511,6 +2614,9 @@ Public Class C24ReaperController
 
 #Region "FxParam"
     Private Sub SetFxParamStripHandlers(Fx As ReaperFX, FxParamPageNb As Integer)
+        If Flip_Mode = False Then
+            RefreshTrackManagerPage()
+        End If
         ' ── Stopper l'ancien monitor si changement de page ────────────────────
         If _ReaperFxParamMonitor IsNot Nothing Then
             _ReaperFxParamMonitor.ClearWatched()
@@ -2576,6 +2682,9 @@ Public Class C24ReaperController
 
         ClearC24_MiddleStrip()
 
+        Fx.IsOpen = True
+
+
         ' ── Configurer Faders/Vpots UNE SEULE FOIS avant la boucle ──────────
         If Flip_Mode Then
             RemoveFadersHandlers()
@@ -2584,6 +2693,7 @@ Public Class C24ReaperController
         Else
             RemoveFadersOnVpotHandlers()
             SetFadersHandlers()
+
         End If
 
         Dim _fxParamConfig = _ReaperSessionConfig.fxParamConfigs(Fx.Name)
@@ -2594,14 +2704,14 @@ Public Class C24ReaperController
             Dim FxParamConfigIndex As Integer = i + (24 * (FxParamPageNb - 1))
             Dim fpH As New FxParamHandlers
             fpH.C24Trk = cs
-
+              Dim FxShortName = _fxParamConfig(FxParamConfigIndex).ShortName
             'text separator
             If _fxParamConfig(FxParamConfigIndex).TextOnly IsNot Nothing Then
                 cs.ScribbleStrip.Text = _fxParamConfig(FxParamConfigIndex).TextOnly
                 'fxparam
             ElseIf _fxParamConfig(FxParamConfigIndex).Visible Then
 
-                cs.ScribbleStrip.Text = _fxParamConfig(FxParamConfigIndex).ShortName
+                cs.ScribbleStrip.Text = FxShortName
                 Dim FxParam = Fx.Params(_fxParamConfig(FxParamConfigIndex).ParamIndex)
                 ParamIndexToTrackIndex.Add(FxParam.ParamIndex, i)
                 fpH.ReaperFxParam = FxParam
@@ -2628,28 +2738,45 @@ Public Class C24ReaperController
 
 
 
-                Else 'Le Fx param est géré comme un param dont les valeurs sont brutes.
+                Else 'Le Fx param est géré comme un param dont les valeurs sont Normalisées.
                     If Flip_Mode = False Then
-
-
+                        'init Vpot values
                         cs.Vpot.VpotMode = C24_Vpot.VpotModeType.FxParamLinear
-                        If FxParam.Step IsNot Nothing Then
-                            If FxParam.LargeStep IsNot Nothing Then
-                                cs.Vpot.FxParam_LargeStepValue = FxParam.LargeStep
-                            Else
-                                cs.Vpot.FxParam_LargeStepValue = FxParam.Step
-                            End If
-                            If FxParam.SmallStep IsNot Nothing Then
-                                cs.Vpot.FxParam_SmallStepValue = FxParam.SmallStep
-                            Else
-                                cs.Vpot.FxParam_SmallStepValue = FxParam.Step
+                        cs.Vpot.Value = FxParam.NormValue
+                        cs.Vpot.FxParamValueToDisplay = FxParam.Formatted
+
+                        Dim r = (FxParam.MaxValue - FxParam.MinValue)
+                        If r > 0 Then
+                            If FxParam.Step IsNot Nothing AndAlso FxParam.Step <> 0 Then
+                                'Step paramétré
+                                If r / FxParam.Step > 100 Then
+                                    'step trop petit pour un Vpot --> modification du step volontaire
+                                    Do Until r / FxParam.Step <= 100
+                                        FxParam.Step = FxParam.Step * 10
+                                    Loop
+                                End If
+                                cs.Vpot.FxParam_StepValue = FxParam.Step / r
+                                'Large and Small Step paramétrés
+                                If FxParam.LargeStep IsNot Nothing AndAlso FxParam.LargeStep <> 0 Then
+                                    cs.Vpot.FxParam_LargeStepValue = FxParam.LargeStep / r
+                                Else
+                                    cs.Vpot.FxParam_LargeStepValue = FxParam.Step / r
+                                End If
+                                If FxParam.SmallStep IsNot Nothing AndAlso FxParam.SmallStep <> 0 Then
+                                    cs.Vpot.FxParam_SmallStepValue = FxParam.SmallStep / r
+                                Else
+                                    cs.Vpot.FxParam_SmallStepValue = (FxParam.Step / 10) / r
+                                End If
                             End If
                         End If
 
 
                         Dim VpotValueChangeH As Hardware.C24_Vpot.OnVpotValueChangeEventHandler =
                         Sub(Track_Nb As Integer, Value As Double)
+                            '_ReaperFxParamMonitor.SuspendParam(FxParam.ParamIndex)
                             FxParam.NormValue = Value
+                            '_ReaperFxParamMonitor.ResumeParam(FxParam.ParamIndex)
+                            FxParam.Refresh()
                             cs.Vpot.FxParamValueToDisplay = FxParam.Formatted
 
                         End Sub
@@ -2659,19 +2786,19 @@ Public Class C24ReaperController
 
 
                         Dim FxParamMonitorChangeH As Reaper.Monitors.ReaperFxParamMonitor.On_ParamChangeEventHandler =
-                         Sub(ParamIndex As Integer, NormValue As Double)
-                             If Not ParamIndexToTrackIndex.ContainsKey(ParamIndex) Then Return
-                             Dim Fxp = Fx.Params(ParamIndex)
-                             Dim _cs = C24_Desk.ChannelStrips(ParamIndexToTrackIndex(ParamIndex))
-                             If Fxp.IsToggle Then
-                                 _cs.ScribbleStrip.ShowTempText(If(CInt(NormValue) = 1, "  On", " Off"))
-                                 _cs.SwitchActive.Led = Fxp.RawValue <> 0
-                             Else
-                                 _cs.Vpot.Value = NormValue
-                                 Fxp.Refresh()
-                                 _cs.Vpot.FxParamValueToDisplay = Fxp.Formatted
-                             End If
-                         End Sub
+                     Sub(ParamIndex As Integer, NormValue As Double)
+                         If Not ParamIndexToTrackIndex.ContainsKey(ParamIndex) Then Return
+                         Dim Fxp = Fx.Params(ParamIndex)
+                         Dim _cs = C24_Desk.ChannelStrips(ParamIndexToTrackIndex(ParamIndex))
+                         If Fxp.IsToggle Then
+                             _cs.ScribbleStrip.ShowTempText(If(CInt(NormValue) = 1, "  On", " Off"))
+                             _cs.SwitchActive.Led = Fxp.RawValue <> 0
+                         Else
+                             _cs.Vpot.Value = NormValue
+                             Fxp.Refresh()
+                             _cs.Vpot.FxParamValueToDisplay = Fxp.Formatted
+                         End If
+                     End Sub
                         fpH.ParamMonitorChangeH = FxParamMonitorChangeH
                         AddHandler _ReaperFxParamMonitor.On_ParamChange, FxParamMonitorChangeH
 
@@ -2679,18 +2806,22 @@ Public Class C24ReaperController
 
                     Else 'Flip mode
 
+                        cs.Fader.Fader_Mode = C24_Fader.Mode.NormValue
+                        ' ── Init position + envoi hardware (symétrique avec SetInitFaderDbVolume) ──
+                        cs.Fader.SetFaderNormValue(New Tuple(Of Double, String)(FxParam.NormValue, FxParam.Formatted))
 
-                        cs.Fader.FaderNormValue = FxParam.NormValue
-                        cs.Vpot.FxParamValueToDisplay = FxParam.Formatted
 
-                        Dim FaderValueChangeH As Hardware.C24_Fader.On_FaderChangeNormValueEventHandler =
-                        Sub(Track_Nb As Integer, Value As Double)
-                            FxParam.NormValue = Value
-                            cs.Vpot.FxParamValueToDisplay = FxParam.Formatted
+                        Dim FaderValueChangeH As Hardware.C24_Fader.On_FaderHumanChangeNormValueEventHandler =
+                        Sub(Track_Nb As Integer, NormFormatedValues As Tuple(Of Double, String))
+
+                            FxParam.NormValue = NormFormatedValues.Item1
+                            FxParam.Refresh()
+                            NormFormatedValues = New Tuple(Of Double, String)(FxParam.NormValue, FxParam.Formatted)
+                            cs.Fader.SetFaderNormValue(NormFormatedValues)
 
                         End Sub
                         fpH.FaderValueChangeH = FaderValueChangeH
-                        AddHandler cs.Fader.On_FaderChangeNormValue, FaderValueChangeH
+                        AddHandler cs.Fader.On_FaderHumanChangeNormValue, FaderValueChangeH
 
 
 
@@ -2699,13 +2830,15 @@ Public Class C24ReaperController
                              If Not ParamIndexToTrackIndex.ContainsKey(ParamIndex) Then Return
                              Dim Fxp = Fx.Params(ParamIndex)
                              Dim _cs = C24_Desk.ChannelStrips(ParamIndexToTrackIndex(ParamIndex))
+
                              If Fxp.IsToggle Then
                                  _cs.ScribbleStrip.ShowTempText(If(CInt(NormValue) = 1, "  On", " Off"))
                                  _cs.SwitchActive.Led = Fxp.RawValue <> 0
                              Else
-                                 _cs.Fader.FaderNormValue = NormValue
+                                 ' ── SetFaderNormValue appelle SendAndArmVerify → fader bouge ──
                                  Fxp.Refresh()
-                                 _cs.Vpot.FxParamValueToDisplay = Fxp.Formatted
+                                 _cs.Fader.SetFaderNormValue(New Tuple(Of Double, String)(NormValue, Fxp.Formatted))
+
                              End If
                          End Sub
                         fpH.ParamMonitorChangeH = FxParamMonitorChangeH
@@ -2716,8 +2849,10 @@ Public Class C24ReaperController
                     End If
 
                 End If
-                _FlipFxParamHandlers.Add(fpH)
                 _FxParamHandlers.Add(fpH)
+                If Flip_Mode AndAlso fpH.FaderValueChangeH IsNot Nothing Then
+                    _FlipFxParamHandlers.Add(fpH)
+                End If
             End If
 
 
@@ -2747,17 +2882,11 @@ Public Class C24ReaperController
         _FxParamHandlers.Clear()
     End Sub
     Sub RemoveFlipFxParamHandlers()
+        ' ── Retire UNIQUEMENT FaderValueChangeH (spécifique au mode Flip) ────
+        ' SelectBtnH et ParamMonitorChangeH sont déjà gérés par RemoveFxParamHandlers
         For Each fpH In _FlipFxParamHandlers
-            Dim cs = fpH.C24Trk
-            ' ── En mode Flip : c'est FaderValueChangeH qui est branché, pas VpotValueChangeH ──
             If fpH.FaderValueChangeH IsNot Nothing Then
-                RemoveHandler cs.Fader.On_FaderChangeNormValue, fpH.FaderValueChangeH
-            End If
-            If fpH.SelectBtnH IsNot Nothing Then
-                RemoveHandler cs.SwitchActive.OnButtonReleased, fpH.SelectBtnH
-            End If
-            If fpH.ParamMonitorChangeH IsNot Nothing AndAlso _ReaperFxParamMonitor IsNot Nothing Then
-                RemoveHandler _ReaperFxParamMonitor.On_ParamChange, fpH.ParamMonitorChangeH
+                RemoveHandler fpH.C24Trk.Fader.On_FaderHumanChangeNormValue, fpH.FaderValueChangeH
             End If
         Next
         _FlipFxParamHandlers.Clear()
@@ -2765,6 +2894,111 @@ Public Class C24ReaperController
 
 #End Region
 
+#Region "Sends"
+    Private Sub SetSendsParamStripHandlers(Fx As ReaperFX, FxParamPageNb As Integer)
+        If Flip_Mode = False Then
+            RefreshTrackManagerPage()
+        End If
+
+
+
+        '--------------------------- Sends Mode----------------------------------
+        Const ParamsPerPage As Integer = 24
+        Dim totalPages As Integer = Math.Max(1, CInt(Math.Ceiling(_ReaperSessionConfig.fxParamConfigs(Fx.Name).Count / CDbl(ParamsPerPage))))
+
+        '------------Page Handlers-------------------------------------------------
+        Dim h As New PageHandlers
+
+        ' ── LEDs page ─────────────────────────────────────────────────────────
+        C24_Desk.Cbs_Right.IsBlinking = False
+        C24_Desk.Cbs_Left.IsBlinking = False
+
+        ' ── Page suivante : visible si pas sur la dernière page ───────────────
+        If FxParamPageNb < totalPages Then
+            C24_Desk.Cbs_Right.IsBlinking = True
+
+            Dim PageRightBtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
+                Sub()
+                    RefreshC24FxParamViewMode(Fx, FxParamPageNb + 1)
+                End Sub
+            h.PageRightBtnH = PageRightBtnH
+            AddHandler C24_Desk.Cbs_Right.OnButtonReleased, PageRightBtnH
+        End If
+
+        ' ── Page précédente : visible si pas sur la première page ─────────────
+        If FxParamPageNb > 1 Then
+            C24_Desk.Cbs_Left.IsBlinking = True
+
+            Dim PageLeftBtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
+                Sub()
+                    RefreshC24FxParamViewMode(Fx, FxParamPageNb - 1)
+                End Sub
+            h.PageLeftBtnH = PageLeftBtnH
+            AddHandler C24_Desk.Cbs_Left.OnButtonReleased, PageLeftBtnH
+        End If
+
+        _PageHandlers.Add(h)
+
+        '----------------- Flip Handler -------------------------------------------------
+
+        FlipBtnH =
+                    Sub(trackNb As Integer?)
+                        SetFlipMode()
+                        RefreshC24FxParamViewMode(Fx, FxParamPageNb)
+                    End Sub
+
+        AddHandler C24_Desk.Flip.OnButtonReleased, FlipBtnH
+
+        '----------------- Display + SendsHandlers -------------------------------------------------
+
+        ClearC24_MiddleStrip()
+
+        ' ── Configurer Faders/Vpots UNE SEULE FOIS avant la boucle ──────────
+        If Flip_Mode Then
+            RemoveFadersHandlers()
+            SetFadersOnVpotHandlers()
+            RemoveFxParamHandlers()
+        Else
+            RemoveFadersOnVpotHandlers()
+            SetFadersHandlers()
+
+        End If
+
+
+
+
+
+
+
+
+
+
+    End Sub
+
+
+    Sub RemoveSendsHandlers()
+        For Each fpH In _FxParamHandlers
+            Dim cs = fpH.C24Trk
+            RemoveHandler cs.SwitchActive.OnButtonReleased, fpH.SelectBtnH
+            RemoveHandler cs.Vpot.OnVpotValueChange, fpH.VpotValueChangeH
+            If fpH.ParamMonitorChangeH IsNot Nothing AndAlso _ReaperFxParamMonitor IsNot Nothing Then
+                RemoveHandler _ReaperFxParamMonitor.On_ParamChange, fpH.ParamMonitorChangeH
+            End If
+        Next
+        _FxParamHandlers.Clear()
+    End Sub
+    Sub RemoveFlipSendsHandlers()
+        ' ── Retire UNIQUEMENT FaderValueChangeH (spécifique au mode Flip) ────
+        ' SelectBtnH et ParamMonitorChangeH sont déjà gérés par RemoveFxParamHandlers
+        For Each fpH In _FlipFxParamHandlers
+            If fpH.FaderValueChangeH IsNot Nothing Then
+                RemoveHandler fpH.C24Trk.Fader.On_FaderHumanChangeNormValue, fpH.FaderValueChangeH
+            End If
+        Next
+        _FlipFxParamHandlers.Clear()
+    End Sub
+
+#End Region
 
 
 
