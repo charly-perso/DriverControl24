@@ -1,4 +1,5 @@
 ﻿Imports System.Globalization
+Imports System.Runtime.InteropServices
 Imports System.Threading
 Imports DriverConfig
 Imports DriverReaperControl24.Reaper.Monitors
@@ -823,9 +824,12 @@ Namespace Reaper
                                               fxIndex As Integer,
                                               paramIndex As Integer,
                                               normValue As Double) As Boolean
+
+
             Dim raw = CallReaperBridge(
-                $"SET_FX_PARAM_NORM|{trackIndex}|{fxIndex}|{paramIndex}|{normValue.ToString("G", CultureInfo.InvariantCulture)}")
+                $"SET_FX_PARAM_NORMALIZED|{trackIndex}|{fxIndex}|{paramIndex}|{normValue.ToString("G", CultureInfo.InvariantCulture)}")
             Return raw = "OK"
+
         End Function
 
         ''' <summary>
@@ -841,6 +845,7 @@ Namespace Reaper
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
         End Function
+
 
         ' ── Volume UI (post-automation) ───────────────────────────────────────
 
@@ -877,18 +882,25 @@ Namespace Reaper
         End Function
 
         ''' <summary>
-        ''' Écrit le volume d'une piste via <c>SetTrackUIVolume</c> (surface-safe).
+        ''' Écrit le volume d'une piste via <c>SetTrackUIVolume</c> (UI-safe).
         ''' Déclenche l'enregistrement d'automation si la piste est en Touch/Write/Latch.
-        ''' Retourne True si Reaper a accepté la valeur.
+        ''' Retourne le volume réellement appliqué par Reaper.
         ''' </summary>
-        ''' <param name="vol">Volume 0..4  (1.0 = 0 dB)</param>
-        ''' <param name="isend">0=drag en cours  1=fin de drag/commit (défaut)  -1=écriture directe sans undo</param>
+        ''' <param name="vol">Volume 0..4  (1.0 = 0 dB).</param>
+        ''' <param name="done">False=touch en cours  True=fin de touch/commit (défaut).</param>
+        ''' <param name="igngroupflags">&amp;1=ignore grouping  &amp;2=ignore ganging.</param>
         Public Function SetTrackUIVolume(trackIndex As Integer,
                                          vol As Double,
-                                         Optional isend As Integer = 1) As Boolean
+                                         Optional done As Boolean = True,
+                                         Optional igngroupflags As Integer = 0) As Double
             Dim raw = CallReaperBridge(
-                $"SET_TRACK_UI_VOL|{trackIndex}|{vol.ToString("G", CultureInfo.InvariantCulture)}|{isend}")
-            Return raw = "OK"
+                $"SET_TRACK_UI_VOL|{trackIndex}|{vol.ToString("G", CultureInfo.InvariantCulture)}|0|{If(done, "1", "0")}|{igngroupflags}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return vol
+            End If
+            Dim result As Double = vol
+            Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, result)
+            Return result
         End Function
 
         ' ── Conversion dB ↔ volume linéaire ─────────────────────────────────
@@ -1013,16 +1025,23 @@ Namespace Reaper
         ''' <summary>
         ''' Écrit le pan d'une piste via <c>SetTrackUIPan</c> (UI-safe).
         ''' Déclenche l'enregistrement d'automation si la piste est en Touch/Write/Latch.
-        ''' Retourne True si Reaper a accepté la valeur.
+        ''' Retourne le pan réellement appliqué par Reaper.
         ''' </summary>
         ''' <param name="pan">Pan -1=Gauche  0=Centre  1=Droite.</param>
-        ''' <param name="isend">0=drag en cours  1=fin de drag/commit (défaut)  -1=écriture directe sans undo.</param>
+        ''' <param name="done">False=touch en cours  True=fin de touch/commit (défaut).</param>
+        ''' <param name="igngroupflags">&amp;1=ignore grouping  &amp;2=ignore ganging.</param>
         Public Function SetTrackUIPan(trackIndex As Integer,
                                       pan As Double,
-                                      Optional isend As Integer = 1) As Boolean
+                                      Optional done As Boolean = True,
+                                      Optional igngroupflags As Integer = 0) As Double
             Dim raw = CallReaperBridge(
-                $"SET_TRACK_UI_PAN|{trackIndex}|{pan.ToString("G", CultureInfo.InvariantCulture)}|{isend}")
-            Return raw = "OK"
+                $"SET_TRACK_UI_PAN|{trackIndex}|{pan.ToString("G", CultureInfo.InvariantCulture)}|{If(done, "1", "0")}|{igngroupflags}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return pan
+            End If
+            Dim result As Double = pan
+            Double.TryParse(raw, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, result)
+            Return result
         End Function
 
         ''' <summary>
@@ -1038,29 +1057,39 @@ Namespace Reaper
         ''' <summary>
         ''' Écrit l'état mute d'une piste via <c>SetTrackUIMute</c> (UI-safe).
         ''' Déclenche l'enregistrement d'automation si la piste est en Touch/Write/Latch.
-        ''' Retourne True si Reaper a accepté la valeur.
+        ''' Retourne le nouvel état mute (True=muet), ou False en cas d'erreur.
         ''' </summary>
-        ''' <param name="mute">True=muet  False=actif.</param>
-        ''' <param name="isend">0=drag en cours  1=fin de drag/commit (défaut)  -1=écriture directe sans undo.</param>
+        ''' <param name="mute">True=mute  False=unmute.</param>
+        ''' <param name="igngroupflags">&amp;1=ignore grouping  &amp;2=ignore ganging.</param>
         Public Function SetTrackUIMute(trackIndex As Integer,
                                        mute As Boolean,
-                                       Optional isend As Integer = 1) As Boolean
+                                       Optional igngroupflags As Integer = 0) As Boolean
+            Dim muteInt As Integer = If(mute, 1, 0)
             Dim raw = CallReaperBridge(
-                $"SET_TRACK_UI_MUTE|{trackIndex}|{If(mute, "1", "0")}|{isend}")
-            Return raw = "OK"
+                $"SET_TRACK_UI_MUTE|{trackIndex}|{muteInt}|{igngroupflags}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return mute
+            End If
+            Dim result As Integer = -1
+            Integer.TryParse(raw, result)
+            Return result > 0
         End Function
 
         ''' <summary>
         ''' Bascule l'état mute d'une piste (toggle UI-safe).
         ''' Retourne le nouvel état mute, ou False si le bridge est indisponible.
         ''' </summary>
-        ''' <param name="isend">0=drag en cours  1=fin de drag/commit (défaut)  -1=sans undo.</param>
+        ''' <param name="igngroupflags">&amp;1=ignore grouping  &amp;2=ignore ganging.</param>
         Public Function ToggleTrackUIMute(trackIndex As Integer,
-                                          Optional isend As Integer = 1) As Boolean
-            Dim current = GetTrackUIMute(trackIndex)
-            Dim newMute = Not current
-            SetTrackUIMute(trackIndex, newMute, isend)
-            Return newMute
+                                          Optional igngroupflags As Integer = 0) As Boolean
+            Dim raw = CallReaperBridge(
+                $"SET_TRACK_UI_MUTE|{trackIndex}|-1|{igngroupflags}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return False
+            End If
+            Dim result As Integer = -1
+            Integer.TryParse(raw, result)
+            Return result > 0
         End Function
 
         ''' <summary>
@@ -1172,9 +1201,8 @@ Namespace Reaper
         ' ── Propriétés numériques des enveloppes ──────────────────────────────
 
         ''' <summary>
-        ''' Lit une propriété numérique d'une enveloppe via <c>GetSetEnvelopeInfo_Value</c>.
-        ''' Paramètres : "ACTIVE" "VISIBLE" "ARMED" "IN_LANE" "LANEHEIGHT" "DEFSHAPE"
-        '''              "MINVALUE" "MAXVALUE" "CENTERVALUE" "FADERSCALING" "AUTO_ITEMS_OPTIONS".
+        ''' Lit une propriété numérique d'une enveloppe via <c>GetSetEnvelopeInfo_String</c>.
+        ''' Paramètres : "ACTIVE" "VISIBLE" "ARMED" "SHOWLANE
         ''' Retourne <see cref="Double.MinValue"/> si le bridge est indisponible.
         ''' </summary>
         Public Function GetEnvelopePropVal(trackIndex As Integer,
@@ -1213,7 +1241,7 @@ Namespace Reaper
                                             paramName As String,
                                             value As Double) As Boolean
             Dim raw = CallReaperBridge(
-                $"SET_ENVELOPE_PROP|{trackIndex}|{envIndex}|{paramName}|{value.ToString("G", CultureInfo.InvariantCulture)}")
+                $"SET_ENVELOPE_PROP_VAL|{trackIndex}|{envIndex}|{paramName}|{value.ToString("G", CultureInfo.InvariantCulture)}")
             Return raw = "OK"
         End Function
 
@@ -1462,7 +1490,7 @@ Namespace Reaper
         ''' <param name="trackIndex">Index 0-based de la piste.</param>
         Public Function GetTrackGUID(trackIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_TRACK_GUID|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return "err"
             Return raw
         End Function
 
@@ -1680,6 +1708,12 @@ Namespace Reaper
             Dim raw = CallReaperBridge($"GET_FX_OPEN|{trackIndex}|{fxIndex}")
             Return raw = "1"
         End Function
+        Public Function TrackFX_SetOpen(trackIndex As Integer,
+                                       fxIndex As Integer, Open As Boolean) As Boolean
+            Dim raw = CallReaperBridge($"SET_FX_OPEN|{trackIndex}|{fxIndex}|{If(Open, "1", "0")}")
+            Return If(raw = "OK", True, False)
+        End Function
+
         ''' <summary>
         ''' Ouvre ou ferme la fenêtre flottante d'un FX de piste.
         ''' Utilise <c>TrackFX_Show</c> (API stable) et non <c>TrackFX_SetOpen</c>
@@ -1691,14 +1725,736 @@ Namespace Reaper
         Public Sub TrackFX_Show(trackIndex As Integer,
                                 fxIndex As Integer,
                                 open As Boolean)
+            'showflag=0 for hidechain, =1 for show chain(index valid), =2 for hide floating window(index valid), =3 for show floating window (index valid)
             ' showFlag 3 = ouvrir flottant (déterministe, pas de toggle)
             ' showFlag 0 = cacher
             Dim showFlag = If(open, 3, 2)
             CallReaperBridge($"TRACKFX_SHOW|{trackIndex}|{fxIndex}|{showFlag}")
         End Sub
+
+        Public Structure FxParamValues
+            Public RawValue As Double
+            Public minValue As Double
+            Public maxValue As Double
+            Public midValue As Double
+        End Structure
+        ''' <summary>
+        ''' Lit la valeur brute (plage native du plugin) d'un paramètre FX.
+        ''' Contrairement à <see cref="GetFxParamNormalized"/>, la plage de retour
+        ''' dépend du plugin (ex. fréquence en Hz, gain en dB…).
+        ''' Retourne <see cref="Double.MinValue"/> si le bridge est indisponible.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+        ''' <param name="paramIndex">Index 0-based du paramètre sur le FX.</param>
+        Public Function GetFxParamEx(trackIndex As Integer,
+                                   fxIndex As Integer,
+                                   paramIndex As Integer) As FxParamValues
+            Dim _FxParamValues As New FxParamValues
+            Dim exRaw = utility.CallReaperBridge(
+               $"GET_FX_PARAM_EX|{trackIndex}|{fxIndex}|{paramIndex}")
+            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR") Then
+                Dim p = exRaw.Split("|"c)
+                If p.Length >= 4 Then
+
+                    Dim Ic = CultureInfo.CurrentCulture
+                    Dim new_raw As Double = 0
+                    Double.TryParse(p(0), NumberStyles.Any, Ic, new_raw)
+                    Dim dbl As Double = 0
+                    _FxParamValues.RawValue = If(Double.TryParse(p(0), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                    _FxParamValues.minValue = If(Double.TryParse(p(1), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                    _FxParamValues.maxValue = If(Double.TryParse(p(2), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                    _FxParamValues.midValue = If(Double.TryParse(p(3), NumberStyles.Any, Ic, dbl), dbl, Nothing)
+                End If
+            End If
+            Return _FxParamValues
+        End Function
+
+        ''' <summary>
+        ''' Écrit un paramètre de configuration nommé sur un FX de piste.
+        ''' <br/>
+        ''' Clés courantes :
+        ''' <list type="bullet">
+        ''' <item><c>"wet"</c> — niveau wet/dry [0..1]</item>
+        ''' <item><c>"bypass"</c> — bypass ("0" ou "1")</item>
+        ''' <item><c>"renamed_name"</c> — nom affiché dans la chaîne FX</item>
+        ''' <item><c>"floatpos"</c> — position fenêtre flottante "x y w h"</item>
+        ''' <item><c>"online"</c> — en ligne / hors ligne ("0" ou "1")</item>
+        ''' </list>
+        ''' Retourne True si Reaper a accepté la valeur.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+        ''' <param name="parmName">Nom du paramètre de configuration.</param>
+        ''' <param name="value">Valeur chaîne à appliquer.</param>
+        Public Function SetFxNamedConfigParm(trackIndex As Integer,
+                                             fxIndex As Integer,
+                                             parmName As String,
+                                             value As String) As Boolean
+            Dim raw = CallReaperBridge(
+                $"SET_FX_NAMED_CONFIG_PARM|{trackIndex}|{fxIndex}|{parmName}|{value}")
+            Return raw = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Lit un paramètre de configuration nommé d'un FX de piste.
+        ''' Retourne <see cref="String.Empty"/> si la clé n'existe pas ou si le bridge est indisponible.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+        ''' <param name="parmName">Nom du paramètre de configuration.</param>
+        Public Function GetFxNamedConfigParm(trackIndex As Integer,
+                                             fxIndex As Integer,
+                                             parmName As String) As String
+            Dim raw = CallReaperBridge(
+                $"GET_FX_NAMED_CONFIG_PARM|{trackIndex}|{fxIndex}|{parmName}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return String.Empty
+            End If
+            Return raw
+        End Function
+
+        ' ── State Chunk ───────────────────────────────────────────────────────
+
+        ''' <summary>
+        ''' Sérialise l'état complet d'une piste au format .rpp.
+        ''' <br/>
+        ''' Équivalent de <c>GetTrackStateChunk</c> dans l'API Reaper.
+        ''' Utile pour sauvegarder/restaurer l'état d'une piste (FX, routing,
+        ''' paramètres) ou pour comparer deux états.
+        ''' <br/>
+        ''' Retourne <see cref="String.Empty"/> si le bridge est indisponible.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        Public Function GetTrackStateChunk(trackIndex As Integer) As String
+            Dim raw = CallReaperBridge($"GET_TRACK_STATE_CHUNK|{trackIndex}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return String.Empty
+            End If
+            ' Décoder \n littéral → saut de ligne réel
+            Return raw.Replace("\n", vbLf)
+        End Function
+
+        ''' <summary>
+        ''' Restaure l'état d'une piste depuis un state chunk .rpp.
+        ''' <br/>
+        ''' Passer le chunk retourné par <see cref="GetTrackStateChunk"/> —
+        ''' les sauts de ligne sont encodés/décodés automatiquement.
+        ''' <br/>
+        ''' Retourne True si Reaper a accepté le chunk.
+        ''' </summary>
+        ''' <param name="trackIndex">Index 0-based de la piste.</param>
+        ''' <param name="chunk">State chunk .rpp (avec sauts de ligne réels).</param>
+        Public Function SetTrackStateChunk(trackIndex As Integer,
+                                           chunk As String) As Boolean
+
+            ' Encoder LF → \n littéral pour le transport pipe
+            Dim encoded = chunk.Replace(vbCrLf, "\n").Replace(vbLf, "\n").Replace(vbCr, "")
+            Dim raw = CallReaperBridge($"SET_TRACK_STATE_CHUNK|{trackIndex}|{encoded}")
+            Return raw = "OK"
+        End Function
+
+        ''' <summary>
+        ''' Retourne l'index 0-based de la piste se trouvant aux coordonnées écran données.
+        ''' <br/>
+        ''' Équivalent de <c>GetTrackFromPoint</c> dans l'API Reaper.
+        ''' Utile pour détecter quelle piste l'utilisateur survole avec la souris.
+        ''' <list type="table">
+        ''' <item><term>trackIndex = -1</term><description>Piste maître ou aucune piste à cette position.</description></item>
+        ''' <item><term>infoOut</term><description>Bits d'information sur la zone pointée
+        ''' (ex. : &amp;1 = bouton/contrôle TCP, &amp;2 = zone de volume…).</description></item>
+        ''' </list>
+        ''' Retourne (-1, 0) si le bridge est indisponible.
+        ''' </summary>
+        ''' <param name="screenX">Coordonnée X écran.</param>
+        ''' <param name="screenY">Coordonnée Y écran.</param>
+        Public Function GetTrackFromPoint(screenX As Integer,
+                                          screenY As Integer) As (trackIndex As Integer, infoOut As Integer)
+            Dim raw = CallReaperBridge($"GET_TRACK_FROM_POINT|{screenX}|{screenY}")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return (-1, 0)
+            End If
+            Dim p = raw.Split("|"c)
+            If p.Length < 2 Then
+                Return (-1, 0)
+            End If
+            Dim idx As Integer = -1
+            Dim info As Integer = 0
+            Integer.TryParse(p(0), idx)
+            Integer.TryParse(p(1), info)
+            Return (idx, info)
+        End Function
+
+        ''' <summary>
+        ''' Retourne le HWND de la fenêtre principale Reaper.
+        ''' <br/>
+        ''' Équivalent de <c>GetMainHwnd</c> dans l'API Reaper.
+        ''' Utile pour interagir avec la fenêtre Reaper (SendMessage, SetForeground…).
+        ''' Retourne <see cref="IntPtr.Zero"/> si le bridge est indisponible.
+        ''' </summary>
+        Public Function GetMainHwnd() As IntPtr
+            Dim raw = CallReaperBridge("GET_MAIN_HWND")
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return IntPtr.Zero
+            End If
+            Dim value As Long = 0
+            If Long.TryParse(raw, Globalization.NumberStyles.Integer,
+                             Globalization.CultureInfo.InvariantCulture, value) Then
+                Return New IntPtr(value)
+            End If
+            Return IntPtr.Zero
+        End Function
+
+
+
+        ' ── Win32 (Windows) ───────────────────────────────────────────────────
+        <Runtime.InteropServices.DllImport("user32.dll")>
+        Private Function GetCursorPos_Win32(ByRef lpPoint As MousePoint) As Boolean
+        End Function
+
+        ' ── CoreGraphics (macOS) ──────────────────────────────────────────────
+        <Runtime.InteropServices.DllImport(
+            "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+        Private Function CGEventCreate(source As IntPtr) As IntPtr
+        End Function
+
+        <Runtime.InteropServices.DllImport(
+            "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+        Private Function CGEventGetLocation(event_ As IntPtr) As MacPoint
+        End Function
+
+        <Runtime.InteropServices.DllImport(
+            "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+        Private Sub CFRelease(cf As IntPtr)
+        End Sub
+
+        <Runtime.InteropServices.StructLayout(
+            Runtime.InteropServices.LayoutKind.Sequential)>
+        Private Structure MousePoint
+            Public X As Integer
+            Public Y As Integer
+        End Structure
+
+        <Runtime.InteropServices.StructLayout(
+            Runtime.InteropServices.LayoutKind.Sequential)>
+        Private Structure MacPoint
+            Public X As Double
+            Public Y As Double
+        End Structure
+
+        ''' <summary>
+        ''' Retourne les coordonnées écran courantes du curseur souris.
+        ''' Compatible Windows et macOS — aucun round-trip bridge.
+        ''' Retourne (-1, -1) si la lecture échoue.
+        ''' </summary>
+        Public Function GetMousePosition() As (x As Integer, y As Integer)
+            If OperatingSystem.IsWindows() Then
+                Dim pt As MousePoint
+                If Not GetCursorPos_Win32(pt) Then
+                    Return (-1, -1)
+                End If
+                Return (pt.X, pt.Y)
+            ElseIf OperatingSystem.IsMacOS() Then
+                Dim ev = CGEventCreate(IntPtr.Zero)
+                If ev = IntPtr.Zero Then Return (-1, -1)
+                Try
+                    Dim pt = CGEventGetLocation(ev)
+                    Return (CInt(pt.X), CInt(pt.Y))
+                Finally
+                    CFRelease(ev)
+                End Try
+            End If
+            Return (-1, -1)
+        End Function
+
+
+
+
     End Module
 
+
+
+
     Namespace Monitors
+
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER MOUSE CLICK MONITOR — clic souris dans la fenêtre Reaper
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        Public Class ReaperMouseClickMonitor
+            Implements IDisposable
+
+            ' ── Win32 (Windows) ───────────────────────────────────────────────
+            <Runtime.InteropServices.DllImport("user32.dll")>
+            Private Shared Function GetAsyncKeyState(vKey As Integer) As Short
+            End Function
+
+            <Runtime.InteropServices.DllImport("user32.dll")>
+            Private Shared Function GetCursorPos(ByRef lpPoint As ClickPoint) As Boolean
+            End Function
+
+            <Runtime.InteropServices.DllImport("user32.dll")>
+            Private Shared Function WindowFromPoint(pt As ClickPoint) As IntPtr
+            End Function
+
+            <Runtime.InteropServices.DllImport("user32.dll")>
+            Private Shared Function GetAncestor(hwnd As IntPtr, gaFlags As UInteger) As IntPtr
+            End Function
+
+            ' ── CoreGraphics (macOS) ──────────────────────────────────────────
+            <Runtime.InteropServices.DllImport(
+                "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+            Private Shared Function CGEventSourceButtonState(
+                stateID As Integer, button As Integer) As Boolean
+            End Function
+
+            <Runtime.InteropServices.DllImport(
+                "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+            Private Shared Function CGEventCreate(source As IntPtr) As IntPtr
+            End Function
+
+            <Runtime.InteropServices.DllImport(
+                "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+            Private Shared Function CGEventGetLocation(event_ As IntPtr) As MacClickPoint
+            End Function
+
+            <Runtime.InteropServices.DllImport(
+                "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")>
+            Private Shared Sub CFRelease(cf As IntPtr)
+            End Sub
+
+            Private Const VK_LBUTTON As Integer = &H1
+            Private Const GA_ROOT As UInteger = 2UI
+            ' kCGEventSourceStateCombinedSessionState=0, kCGMouseButtonLeft=0
+            Private Const CG_COMBINED_SESSION As Integer = 0
+            Private Const CG_MOUSE_LEFT As Integer = 0
+
+            <Runtime.InteropServices.StructLayout(
+                Runtime.InteropServices.LayoutKind.Sequential)>
+            Private Structure ClickPoint
+                Public X As Integer
+                Public Y As Integer
+            End Structure
+
+            <Runtime.InteropServices.StructLayout(
+                Runtime.InteropServices.LayoutKind.Sequential)>
+            Private Structure MacClickPoint
+                Public X As Double
+                Public Y As Double
+            End Structure
+
+            Private _thread As Thread
+            Private _isRunning As Boolean = False
+            Private _disposed As Boolean = False
+            Private _interval As Integer = 16
+            Private _reaperHwnd As IntPtr = IntPtr.Zero
+            Private _wasDown As Boolean = False
+            Private _lastClickedTrackIndex As Integer = -1
+
+
+
+            ''' <summary>
+            ''' Déclenché sur le front montant du bouton gauche de la souris
+            ''' lorsque le curseur se trouve dans la fenêtre principale Reaper.
+            ''' Compatible Windows et macOS.
+            ''' </summary>
+            Public Event On_MouseClick(x As Integer, y As Integer)
+
+            ''' <summary>
+            ''' Intervalle de polling en millisecondes (défaut : 16 ms ≈ 60 Hz).
+            ''' </summary>
+            Public Property Interval As Integer
+                Get
+                    Return _interval
+                End Get
+                Set
+                    _interval = Value
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' True si le monitor de clic est actif.
+            ''' </summary>
+            Public ReadOnly Property IsRunning As Boolean
+                Get
+                    Return Threading.Volatile.Read(_isRunning)
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' Index 0-based de la piste sous le curseur lors du dernier clic détecté.
+            ''' -1 si aucun clic n'a encore été détecté ou si aucune piste n'était sous le curseur.
+            ''' </summary>
+            Public ReadOnly Property LastClickedTrackIndex As Integer
+                Get
+                    Return _lastClickedTrackIndex
+                End Get
+            End Property
+
+
+
+            ''' <summary>
+            ''' Démarre le monitor de clic souris.
+            ''' </summary>
+            Public Sub Start()
+                If IsRunning Then Return
+                If OperatingSystem.IsWindows() Then
+                    _reaperHwnd = utility.GetMainHwnd()
+                End If
+                _wasDown = False
+                _lastClickedTrackIndex = -1
+
+                Threading.Volatile.Write(_isRunning, True)
+                _thread = New Thread(AddressOf MonitorLoop) With {
+                    .Name = "ReaperMouseClickMonitor",
+                    .IsBackground = True,
+                    .Priority = ThreadPriority.Normal
+                }
+                _thread.Start()
+            End Sub
+
+            ''' <summary>
+            ''' Arrête le monitor de clic souris.
+            ''' </summary>
+            Public Sub [Stop]()
+                Threading.Volatile.Write(_isRunning, False)
+            End Sub
+
+            Private Sub MonitorLoop()
+                While Threading.Volatile.Read(_isRunning)
+                    PollClick()
+                    Thread.Sleep(_interval)
+                End While
+            End Sub
+
+            Private Sub PollClick()
+                Dim isDown As Boolean = False
+
+
+
+                If OperatingSystem.IsWindows() Then
+                    isDown = (GetAsyncKeyState(VK_LBUTTON) And &H8000S) <> 0
+                ElseIf OperatingSystem.IsMacOS() Then
+                    isDown = CGEventSourceButtonState(CG_COMBINED_SESSION, CG_MOUSE_LEFT)
+                End If
+
+                If isDown AndAlso Not _wasDown Then
+                    Dim x As Integer = -1
+                    Dim y As Integer = -1
+
+                    If OperatingSystem.IsWindows() Then
+                        Dim pt As ClickPoint
+                        If GetCursorPos(pt) AndAlso IsInsideReaperWindowWin(pt) Then
+                            x = pt.X
+                            y = pt.Y
+                        End If
+                    ElseIf OperatingSystem.IsMacOS() Then
+                        Dim ev = CGEventCreate(IntPtr.Zero)
+                        If ev <> IntPtr.Zero Then
+                            Try
+                                Dim pt = CGEventGetLocation(ev)
+                                x = CInt(pt.X)
+                                y = CInt(pt.Y)
+                            Finally
+                                CFRelease(ev)
+                            End Try
+                        End If
+                    End If
+
+                    If x >= 0 AndAlso y >= 0 Then
+                        ' ── Mémoriser la piste cliquée et le changement d'état projet ─
+                        Dim trkInfo = utility.GetTrackFromPoint(x, y)
+                        _lastClickedTrackIndex = trkInfo.trackIndex
+
+                        RaiseEvent On_MouseClick(x, y)
+                    End If
+                End If
+
+                _wasDown = isDown
+            End Sub
+
+            ''' <summary>Vérifie si le point est dans la fenêtre Reaper (Windows uniquement).</summary>
+            Private Function IsInsideReaperWindowWin(pt As ClickPoint) As Boolean
+                If _reaperHwnd = IntPtr.Zero Then
+                    _reaperHwnd = utility.GetMainHwnd()
+                End If
+                If _reaperHwnd = IntPtr.Zero Then Return False
+                Dim windowUnderCursor = WindowFromPoint(pt)
+                If windowUnderCursor = IntPtr.Zero Then Return False
+                Dim rootWindow = GetAncestor(windowUnderCursor, GA_ROOT)
+                Return rootWindow = _reaperHwnd
+            End Function
+
+            Protected Overridable Sub Dispose(disposing As Boolean)
+                If Not _disposed Then
+                    If disposing Then
+                        [Stop]()
+                    End If
+                    _disposed = True
+                End If
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dispose(disposing:=True)
+                GC.SuppressFinalize(Me)
+            End Sub
+
+        End Class
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER TRACK SENDS MONITOR — tous les sends d'une seule piste
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Surveille vol/pan/mute/sendMode de N envois d'une piste fixe.
+        ''' Symétrique de <see cref="ReaperSendMonitor"/> :
+        ''' ici la piste est fixe et les <c>sendIndex</c> varient.
+        ''' Une seule requête <c>GET_SEND_ALL_INFO</c> par envoi et par cycle.
+        ''' </summary>
+        Public Class ReaperTrackSendsMonitor
+            Implements IDisposable
+
+            Private ReadOnly _pipe As New ReaperPollPipe()
+            Private ReadOnly _trackIndex As Integer
+            Private ReadOnly _category As Integer
+            Private _stateChanged As Boolean = True
+            Private _thread As Thread
+            Private _isRunning As Boolean = False
+            Private _disposed As Boolean = False
+            Private _interval As Integer = 50
+            Private ReadOnly _lock As New Object()
+
+            ' ── Clé = sendIndex, Valeur = suspendu ────────────────────────────
+            Private ReadOnly _sends As New Dictionary(Of Integer, Boolean)
+
+            ' ── Caches par sendIndex ──────────────────────────────────────────
+            Private ReadOnly _volCache As New Dictionary(Of Integer, Double)
+            Private ReadOnly _panCache As New Dictionary(Of Integer, Double)
+            Private ReadOnly _muteCache As New Dictionary(Of Integer, Boolean)
+            Private ReadOnly _sendModeCache As New Dictionary(Of Integer, Integer)
+
+            ' ── Événements ────────────────────────────────────────────────────
+            Public Event On_Connected()
+            Public Event On_Disconnected()
+            Public Event On_VolChange(sendIndex As Integer, vol As Double)
+            Public Event On_PanChange(sendIndex As Integer, pan As Double)
+            Public Event On_MuteChange(sendIndex As Integer, mute As Boolean)
+            Public Event On_SendModeChange(sendIndex As Integer, sendMode As Integer)
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Initialise le moniteur pour une piste fixe.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste surveillée.</param>
+            ''' <param name="category"><see cref="SendCategory"/> (défaut : Sends).</param>
+            Public Sub New(trackIndex As Integer,
+                           Optional category As SendCategory = SendCategory.Sends)
+                _trackIndex = trackIndex
+                _category = CInt(category)
+            End Sub
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+
+            ''' <summary>Index 0-based de la piste surveillée.</summary>
+            Public ReadOnly Property TrackIndex As Integer
+                Get
+                    Return _trackIndex
+                End Get
+            End Property
+
+            ''' <summary>Catégorie des envois.</summary>
+            Public ReadOnly Property Category As SendCategory
+                Get
+                    Return CType(_category, SendCategory)
+                End Get
+            End Property
+
+            ''' <summary>Intervalle de polling en ms (défaut : 50).</summary>
+            Public Property Interval As Integer
+                Get
+                    Return _interval
+                End Get
+                Set
+                    _interval = Value
+                End Set
+            End Property
+
+            ''' <summary>True si le thread de monitoring tourne.</summary>
+            Public ReadOnly Property IsRunning As Boolean
+                Get
+                    Return Threading.Volatile.Read(_isRunning)
+                End Get
+            End Property
+
+            ' ── Gestion des envois surveillés ─────────────────────────────────
+
+            ''' <summary>Ajoute un envoi à surveiller.</summary>
+            Public Sub WatchSend(sendIndex As Integer)
+                SyncLock _lock
+                    If Not _sends.ContainsKey(sendIndex) Then
+                        _sends(sendIndex) = False
+                    End If
+                End SyncLock
+            End Sub
+
+            ''' <summary>Retire un envoi de la surveillance.</summary>
+            Public Sub UnwatchSend(sendIndex As Integer)
+                SyncLock _lock
+                    _sends.Remove(sendIndex)
+                    _volCache.Remove(sendIndex)
+                    _panCache.Remove(sendIndex)
+                    _muteCache.Remove(sendIndex)
+                    _sendModeCache.Remove(sendIndex)
+                End SyncLock
+            End Sub
+
+            ''' <summary>Vide tous les envois surveillés.</summary>
+            Public Sub ClearWatched()
+                SyncLock _lock
+                    _sends.Clear()
+                    _volCache.Clear()
+                    _panCache.Clear()
+                    _muteCache.Clear()
+                    _sendModeCache.Clear()
+                End SyncLock
+            End Sub
+
+            ''' <summary>Suspend le polling pour un envoi (anti-feedback écriture).</summary>
+            Public Sub SuspendSend(sendIndex As Integer)
+                SyncLock _lock
+                    If _sends.ContainsKey(sendIndex) Then
+                        _sends(sendIndex) = True
+                    End If
+                End SyncLock
+            End Sub
+
+            ''' <summary>Réactive le polling pour un envoi et invalide son cache.</summary>
+            Public Sub ResumeSend(sendIndex As Integer)
+                SyncLock _lock
+                    If _sends.ContainsKey(sendIndex) Then
+                        _sends(sendIndex) = False
+                        _volCache.Remove(sendIndex)
+                        _panCache.Remove(sendIndex)
+                        _muteCache.Remove(sendIndex)
+                        _sendModeCache.Remove(sendIndex)
+                    End If
+                End SyncLock
+            End Sub
+
+            ' ── Cycle de vie ──────────────────────────────────────────────────
+
+            ''' <summary>Démarre le thread de monitoring.</summary>
+            Public Sub Start()
+                If IsRunning Then Return
+                AddHandler ReaperPollHub.Instance.On_ProjectStateChange,
+                    AddressOf OnProjectStateChange
+                Threading.Volatile.Write(_isRunning, True)
+                _thread = New Thread(AddressOf MonitorLoop) With {
+                    .Name = $"TrackSendsMonitor_T{_trackIndex}_Cat{_category}",
+                    .IsBackground = True,
+                    .Priority = ThreadPriority.Normal
+                }
+                _thread.Start()
+            End Sub
+
+            ''' <summary>Arrête le thread de monitoring.</summary>
+            Public Sub [Stop]()
+                RemoveHandler ReaperPollHub.Instance.On_ProjectStateChange,
+                    AddressOf OnProjectStateChange
+                Threading.Volatile.Write(_isRunning, False)
+                _pipe.Disconnect()
+            End Sub
+
+            ' ── Boucle interne ────────────────────────────────────────────────
+
+            Private Sub MonitorLoop()
+                RaiseEvent On_Connected()
+                While Threading.Volatile.Read(_isRunning)
+                    If Threading.Volatile.Read(_stateChanged) Then
+                        Threading.Volatile.Write(_stateChanged, False)
+                        PollSends()
+                    End If
+                    Thread.Sleep(_interval)
+                End While
+                RaiseEvent On_Disconnected()
+            End Sub
+
+            Private Sub OnProjectStateChange(stateCount As Integer)
+                Threading.Volatile.Write(_stateChanged, True)
+            End Sub
+
+            Private Sub PollSends()
+                Dim snapshot As (sendIndex As Integer, isSuspended As Boolean)()
+                SyncLock _lock
+                    Dim tmp As New List(Of (Integer, Boolean))
+                    For Each kvp In _sends
+                        tmp.Add((kvp.Key, kvp.Value))
+                    Next
+                    snapshot = tmp.ToArray()
+                End SyncLock
+
+                Dim ic = CultureInfo.InvariantCulture
+
+                For Each entry In snapshot
+                    Dim sIdx = entry.sendIndex
+
+                    ' ── Vol + Pan + Mute + SendMode en 1 seule requête ────────
+                    ' GET_SEND_ALL_INFO → idx 0=vol  1=pan  3=mute  6=sendMode
+                    Dim raw = _pipe.Request(
+                        $"GET_SEND_ALL_INFO|{_trackIndex}|{_category}|{sIdx}")
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+
+                    Dim p = raw.Split("|"c)
+                    If p.Length < 7 Then Continue For
+
+                    Dim newVol As Double = 1
+                    Dim newPan As Double = 0
+                    Dim newMute As Boolean = False
+                    Dim newMode As Integer = 0
+                    Double.TryParse(p(0), NumberStyles.Any, ic, newVol)
+                    Double.TryParse(p(1), NumberStyles.Any, ic, newPan)
+                    newMute = p(3) = "1"
+                    Integer.TryParse(p(6), newMode)
+
+                    If entry.isSuspended Then Continue For
+
+                    Dim volChg As Boolean, panChg As Boolean
+                    Dim muteChg As Boolean, modeChg As Boolean
+                    SyncLock _lock
+                        Dim pv As Double = Double.MinValue
+                        volChg = Not _volCache.TryGetValue(sIdx, pv) OrElse pv <> newVol
+                        If volChg Then _volCache(sIdx) = newVol
+                        panChg = Not _panCache.TryGetValue(sIdx, pv) OrElse pv <> newPan
+                        If panChg Then _panCache(sIdx) = newPan
+                        Dim pm As Boolean = False
+                        muteChg = Not _muteCache.TryGetValue(sIdx, pm) OrElse pm <> newMute
+                        If muteChg Then _muteCache(sIdx) = newMute
+                        Dim pmode As Integer = -1
+                        modeChg = Not _sendModeCache.TryGetValue(sIdx, pmode) OrElse pmode <> newMode
+                        If modeChg Then _sendModeCache(sIdx) = newMode
+                    End SyncLock
+
+                    If volChg Then RaiseEvent On_VolChange(sIdx, newVol)
+                    If panChg Then RaiseEvent On_PanChange(sIdx, newPan)
+                    If muteChg Then RaiseEvent On_MuteChange(sIdx, newMute)
+                    If modeChg Then RaiseEvent On_SendModeChange(sIdx, newMode)
+                Next
+            End Sub
+
+            ' ── IDisposable ───────────────────────────────────────────────────
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If Not _disposed Then
+                    [Stop]()
+                    _pipe.Dispose()
+                    _disposed = True
+                End If
+            End Sub
+
+        End Class
+
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER SEND MONITOR — surveillance vol/pan/mute d'un envoi sur N pistes
         ' ══════════════════════════════════════════════════════════════════════════
@@ -1732,12 +2488,14 @@ Namespace Reaper
             Private ReadOnly _volCache As New Dictionary(Of Integer, Double)
             Private ReadOnly _panCache As New Dictionary(Of Integer, Double)
             Private ReadOnly _muteCache As New Dictionary(Of Integer, Boolean)
+            Private ReadOnly _sendModeCache As New Dictionary(Of Integer, Integer)
 
             Public Event On_Connected()
             Public Event On_Disconnected()
             Public Event On_VolChange(trackIndex As Integer, vol As Double)
             Public Event On_PanChange(trackIndex As Integer, pan As Double)
             Public Event On_MuteChange(trackIndex As Integer, mute As Boolean)
+            Public Event On_SendModeChange(trackIndex As Integer, sendMode As Integer)
             Public Event On_PlayStateChange(playState As Integer)
 
             Public Sub New(sendIndex As Integer,
@@ -1793,6 +2551,7 @@ Namespace Reaper
                     _volCache.Remove(trackIndex)
                     _panCache.Remove(trackIndex)
                     _muteCache.Remove(trackIndex)
+                    _sendModeCache.Remove(trackIndex)
                 End SyncLock
             End Sub
 
@@ -1802,6 +2561,7 @@ Namespace Reaper
                     _volCache.Clear()
                     _panCache.Clear()
                     _muteCache.Clear()
+                    _sendModeCache.Clear()
                 End SyncLock
             End Sub
 
@@ -1820,6 +2580,7 @@ Namespace Reaper
                         _volCache.Remove(trackIndex)
                         _panCache.Remove(trackIndex)
                         _muteCache.Remove(trackIndex)
+                        _sendModeCache.Remove(trackIndex)
                     End If
                 End SyncLock
             End Sub
@@ -1883,47 +2644,47 @@ Namespace Reaper
                 For Each entry In snapshot
                     Dim tIdx = entry.trackIndex
 
-                    ' ── Vol + Pan (1 requête via le pipe propre) ──────────────
-                    Dim rawVP = _pipe.Request($"GET_SEND_VOL_PAN|{tIdx}|{_category}|{_sendIndex}")
-                    If Not String.IsNullOrEmpty(rawVP) AndAlso Not rawVP.StartsWith("ERROR") Then
-                        Dim p = rawVP.Split("|"c)
-                        If p.Length >= 2 Then
-                            Dim newVol As Double = 1, newPan As Double = 0
-                            Double.TryParse(p(0), NumberStyles.Any, ic, newVol)
-                            Double.TryParse(p(1), NumberStyles.Any, ic, newPan)
+                    ' ── Vol + Pan + Mute + SendMode en 1 seule requête ────────
+                    ' GET_SEND_ALL_INFO → idx 0=vol  1=pan  3=mute  6=sendMode
+                    Dim raw = _pipe.Request($"GET_SEND_ALL_INFO|{tIdx}|{_category}|{_sendIndex}")
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
 
-                            If Not entry.isSuspended Then
-                                Dim volChg As Boolean, panChg As Boolean
-                                SyncLock _lock
-                                    Dim pv As Double = Double.MinValue
-                                    volChg = Not _volCache.TryGetValue(tIdx, pv) OrElse pv <> newVol
-                                    If volChg Then _volCache(tIdx) = newVol
-                                    panChg = Not _panCache.TryGetValue(tIdx, pv) OrElse pv <> newPan
-                                    If panChg Then _panCache(tIdx) = newPan
-                                End SyncLock
-                                If volChg Then RaiseEvent On_VolChange(tIdx, newVol)
-                                If panChg Then RaiseEvent On_PanChange(tIdx, newPan)
-                            End If
-                        End If
-                    End If
+                    Dim p = raw.Split("|"c)
+                    If p.Length < 7 Then Continue For
 
-                    ' ── Mute (1 requête via le pipe propre) ───────────────────
-                    Dim rawMute = _pipe.Request($"GET_SEND_MUTE|{tIdx}|{_category}|{_sendIndex}")
-                    If Not String.IsNullOrEmpty(rawMute) AndAlso Not rawMute.StartsWith("ERROR") Then
-                        Dim newMute = rawMute = "1"
-                        If Not entry.isSuspended Then
-                            Dim muteChg As Boolean
-                            SyncLock _lock
-                                Dim pm As Boolean = False
-                                muteChg = Not _muteCache.TryGetValue(tIdx, pm) OrElse pm <> newMute
-                                If muteChg Then _muteCache(tIdx) = newMute
-                            End SyncLock
-                            If muteChg Then RaiseEvent On_MuteChange(tIdx, newMute)
-                        End If
-                    End If
+                    Dim newVol As Double = 1
+                    Dim newPan As Double = 0
+                    Dim newMute As Boolean = False
+                    Dim newMode As Integer = 0
+                    Double.TryParse(p(0), NumberStyles.Any, ic, newVol)
+                    Double.TryParse(p(1), NumberStyles.Any, ic, newPan)
+                    newMute = p(3) = "1"
+                    Integer.TryParse(p(6), newMode)
+
+                    If entry.isSuspended Then Continue For
+
+                    Dim volChg As Boolean, panChg As Boolean
+                    Dim muteChg As Boolean, modeChg As Boolean
+                    SyncLock _lock
+                        Dim pv As Double = Double.MinValue
+                        volChg = Not _volCache.TryGetValue(tIdx, pv) OrElse pv <> newVol
+                        If volChg Then _volCache(tIdx) = newVol
+                        panChg = Not _panCache.TryGetValue(tIdx, pv) OrElse pv <> newPan
+                        If panChg Then _panCache(tIdx) = newPan
+                        Dim pm As Boolean = False
+                        muteChg = Not _muteCache.TryGetValue(tIdx, pm) OrElse pm <> newMute
+                        If muteChg Then _muteCache(tIdx) = newMute
+                        Dim pmode As Integer = -1
+                        modeChg = Not _sendModeCache.TryGetValue(tIdx, pmode) OrElse pmode <> newMode
+                        If modeChg Then _sendModeCache(tIdx) = newMode
+                    End SyncLock
+
+                    If volChg Then RaiseEvent On_VolChange(tIdx, newVol)
+                    If panChg Then RaiseEvent On_PanChange(tIdx, newPan)
+                    If muteChg Then RaiseEvent On_MuteChange(tIdx, newMute)
+                    If modeChg Then RaiseEvent On_SendModeChange(tIdx, newMode)
                 Next
             End Sub
-
             Public Sub Dispose() Implements IDisposable.Dispose
                 If Not _disposed Then
                     [Stop]()
@@ -1933,7 +2694,6 @@ Namespace Reaper
             End Sub
 
         End Class
-
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER PROJECT MONITOR — surveillance du nombre de pistes
         ' ══════════════════════════════════════════════════════════════════════════
@@ -2113,6 +2873,7 @@ Namespace Reaper
                 If IsRunning Then Return
 
                 ' ── Snapshot initial via le pipe propre ───────────────────────
+
                 _lastFilePath = _pipe.Request("GET_PROJECT_FILE_PATH")
                 If _lastFilePath.StartsWith("ERROR") Then _lastFilePath = String.Empty
 
@@ -2350,11 +3111,18 @@ Namespace Reaper
             Public Sub SuspendParam(paramIndex As Integer)
                 SyncLock _lock
                     If _params.ContainsKey(paramIndex) Then
-                        _params(paramIndex) = True
+                        _params(paramIndex) = False
                     End If
                 End SyncLock
             End Sub
+            Public Sub SuspendAllParams()
+                SyncLock _lock
+                    For Each index In _params.Keys
+                        _params(index) = False
+                    Next
 
+                End SyncLock
+            End Sub
             ''' <summary>
             ''' Réactive la détection de changement pour un paramètre suspendu.
             ''' Le prochain changement de valeur dans Reaper déclenchera à nouveau
@@ -2363,11 +3131,18 @@ Namespace Reaper
             Public Sub ResumeParam(paramIndex As Integer)
                 SyncLock _lock
                     If _params.ContainsKey(paramIndex) Then
-                        _params(paramIndex) = False
+                        _params(paramIndex) = True
                     End If
                 End SyncLock
             End Sub
+            Public Sub ResumeAllParams()
+                SyncLock _lock
+                    For Each index In _params.Keys
+                        _params(index) = True
+                    Next
 
+                End SyncLock
+            End Sub
             ''' <summary>
             ''' Retourne True si le paramètre est actuellement suspendu.
             ''' Retourne False si le paramètre n'est pas surveillé.
@@ -2455,28 +3230,43 @@ Namespace Reaper
                 For Each entry In snapshot
                     ' ── Utilise le pipe propre du monitor ─────────────────────
                     Dim raw = _pipe.Request(
-                        $"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+                    $"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                        Continue For
+                    End If
 
                     Dim newVal As Double = Double.MinValue
                     If Not Double.TryParse(raw, Globalization.NumberStyles.Any,
-                                           ic, newVal) Then Continue For
+                                       ic, newVal) Then
+                        Continue For
+                    End If
 
-                    Dim changed As Boolean
-                    Dim prevVal As Double = Double.MinValue
+                    Dim changed As Boolean = False
+                    Dim isSuspended As Boolean = False
+                    Dim stillWatched As Boolean = False
 
                     SyncLock _lock
-                        changed = Not _cache.TryGetValue(entry.paramIndex, prevVal) OrElse
+                        ' ── Fix Bug 1 + Bug 2 : vérifier que le param est toujours
+                        ' surveillé. ClearWatched() peut avoir vidé _params ET _cache
+                        ' entre la prise du snapshot et ici. On lit aussi isSuspended
+                        ' en direct (Fix Bug 3 mineur : valeur stale du snapshot).
+                        stillWatched = _params.TryGetValue(entry.paramIndex, isSuspended)
+                        If stillWatched Then
+                            Dim prevVal As Double = Double.MinValue
+                            changed = Not _cache.TryGetValue(entry.paramIndex, prevVal) OrElse
                                   prevVal <> newVal
-                        If changed Then _cache(entry.paramIndex) = newVal
+
+                            If changed Then
+                                _cache(entry.paramIndex) = newVal
+                            End If
+                        End If
                     End SyncLock
 
-                    If changed AndAlso Not entry.isSuspended Then
+                    If stillWatched AndAlso changed AndAlso Not isSuspended Then
                         RaiseEvent On_ParamChange(entry.paramIndex, newVal)
                     End If
                 Next
             End Sub
-
             ' ── IDisposable ───────────────────────────────────────────────────────
 
             ''' <summary>Arrête le monitoring et libère toutes les ressources.</summary>
@@ -2744,7 +3534,7 @@ Namespace Reaper
             Private _isRunning As Boolean = False
             Private _disposed As Boolean = False
             Private _interval As Integer = 50
-
+            Private _Suspend As Boolean = False
             Private ReadOnly _lock As New Object()
             Private ReadOnly _tracks As New Dictionary(Of Integer, (Track As ReaperTrack, IsSuspended As Boolean))
             Private ReadOnly _cleanup As New Dictionary(Of Integer, Action)
@@ -2790,6 +3580,14 @@ Namespace Reaper
                 Get
                     Return Threading.Volatile.Read(_isRunning)
                 End Get
+            End Property
+            Public Property Suspend As Boolean
+                Get
+                    Return _Suspend
+                End Get
+                Set
+                    _Suspend = Value
+                End Set
             End Property
 
             ' ── Gestion de la collection ──────────────────────────────────────
@@ -2963,9 +3761,11 @@ Namespace Reaper
             Private Sub MonitorLoop()
                 RaiseEvent On_Connected()
                 While Threading.Volatile.Read(_isRunning)
-                    If Threading.Volatile.Read(_stateChanged) Then
-                        Threading.Volatile.Write(_stateChanged, False)
-                        PollTracks()
+                    If Threading.Volatile.Read(_Suspend) = False Then
+                        If Threading.Volatile.Read(_stateChanged) Then
+                            Threading.Volatile.Write(_stateChanged, False)
+                            PollTracks()
+                        End If
                     End If
                     Thread.Sleep(_interval)
                 End While
@@ -3066,11 +3866,11 @@ Namespace Reaper
                 End SyncLock
             End Sub
 
-            Public Sub WatchTracks(firstIndex As Integer, count As Integer)
+            Public Sub WatchTracks(Tracks As List(Of ReaperTrack))
                 SyncLock _lock
-                    For i = firstIndex To firstIndex + count - 1
-                        If Not _tracks.ContainsKey(i) Then
-                            _tracks(i) = False
+                    For Each trk In Tracks
+                        If Not _tracks.ContainsKey(trk.TrackIndex) Then
+                            _tracks(trk.TrackIndex) = False
                         End If
                     Next
                 End SyncLock
@@ -4134,17 +4934,18 @@ Namespace Reaper
             Private _Tracks As New List(Of ReaperTrack)
             Private ReadOnly _project As ReaperProject
             Private _TrackMonitor As Monitors.ReaperTrackMonitor
+
             Private _EnvMonitor As Monitors.ReaperTrackEnvelopeMonitor
             Private _FxManager As ReaperTrackFxManager         ' ← AJOUT
             Private ReadOnly _maxTracksNbPerPage As Integer
             Private ReadOnly _all_Tracks As New List(Of List(Of ReaperTrack))
-            Private ReadOnly _all_VolEnvelopes As New List(Of List(Of ReaperTrackVolEnvelope))
-            Private ReadOnly _all_PanEnvelopes As New List(Of List(Of ReaperTrackPanEnvelope))
-            Private ReadOnly _all_MuteEnvelopes As New List(Of List(Of ReaperTrackMuteEnvelope))
+            Private ReadOnly _all_VolEnvelopes As New Dictionary(Of Integer, Dictionary(Of Integer, ReaperTrackVolEnvelope))
+            Private ReadOnly _all_PanEnvelopes As New Dictionary(Of Integer, Dictionary(Of Integer, ReaperTrackPanEnvelope))
+            Private ReadOnly _all_MuteEnvelopes As New Dictionary(Of Integer, Dictionary(Of Integer, ReaperTrackMuteEnvelope))
 
-            Private _VolEnvelopes As List(Of ReaperTrackVolEnvelope)
-            Private _PanEnvelopes As List(Of ReaperTrackPanEnvelope)
-            Private _MuteEnvelopes As List(Of ReaperTrackMuteEnvelope)
+            Private _VolEnvelopes As New Dictionary(Of Integer, ReaperTrackVolEnvelope)
+            Private _PanEnvelopes As New Dictionary(Of Integer, ReaperTrackPanEnvelope)
+            Private _MuteEnvelopes As New Dictionary(Of Integer, ReaperTrackMuteEnvelope)
             Private _Actual_PageNb As Integer = 0
             Private ReadOnly _trackPageMap As New Dictionary(Of Integer, Integer)
             Private disposedValue As Boolean
@@ -4167,19 +4968,19 @@ Namespace Reaper
                 End Get
             End Property
 
-            Public ReadOnly Property VolEnvelopes As List(Of ReaperTrackVolEnvelope)
+            Public ReadOnly Property VolEnvelopes As Dictionary(Of Integer, ReaperTrackVolEnvelope)
                 Get
                     Return _VolEnvelopes
                 End Get
             End Property
 
-            Public ReadOnly Property PanEnvelopes As List(Of ReaperTrackPanEnvelope)
+            Public ReadOnly Property PanEnvelopes As Dictionary(Of Integer, ReaperTrackPanEnvelope)
                 Get
                     Return _PanEnvelopes
                 End Get
             End Property
 
-            Public ReadOnly Property MuteEnvelopes As List(Of ReaperTrackMuteEnvelope)
+            Public ReadOnly Property MuteEnvelopes As Dictionary(Of Integer, ReaperTrackMuteEnvelope)
                 Get
                     Return _MuteEnvelopes
                 End Get
@@ -4273,6 +5074,9 @@ Namespace Reaper
             Public Sub New(proj As ReaperProject,
                            Optional maxTracksNb As Integer = 24,
                            Optional sessionConfig As ReaperSessionConfig = Nothing)
+
+
+
                 _project = proj
                 _maxTracksNbPerPage = maxTracksNb
                 _sessionConfig = sessionConfig
@@ -4314,11 +5118,11 @@ Namespace Reaper
                 Next
                 If trk_list.Count > 0 Then _all_Tracks.Add(trk_list)
 
-                For i = 0 To _all_Tracks.Count - 1
-                    _all_VolEnvelopes.Add(Nothing)
-                    _all_PanEnvelopes.Add(Nothing)
-                    _all_MuteEnvelopes.Add(Nothing)
-                Next
+                'For i = 0 To _all_Tracks.Count - 1
+                '    _all_VolEnvelopes.Add(Nothing)
+                '    _all_PanEnvelopes.Add(Nothing)
+                '    _all_MuteEnvelopes.Add(Nothing)
+                'Next
             End Sub
 
             ' ── Lecture d'état ────────────────────────────────────────────────
@@ -4492,14 +5296,26 @@ Namespace Reaper
                         _trackPageMap(_Tracks(i).TrackIndex) = i
                     Next
 
-                    If _all_VolEnvelopes(pageNb) Is Nothing Then
-                        Dim volPage As New List(Of ReaperTrackVolEnvelope)
-                        Dim panPage As New List(Of ReaperTrackPanEnvelope)
-                        Dim mutePage As New List(Of ReaperTrackMuteEnvelope)
+
+
+                    If _all_VolEnvelopes.ContainsKey(pageNb) = False Then
+                        Dim volPage As New Dictionary(Of Integer, ReaperTrackVolEnvelope)
+                        Dim panPage As New Dictionary(Of Integer, ReaperTrackPanEnvelope)
+                        Dim mutePage As New Dictionary(Of Integer, ReaperTrackMuteEnvelope)
                         For Each trk In _Tracks
-                            volPage.Add(New ReaperTrackVolEnvelope(trk.TrackIndex))
-                            panPage.Add(New ReaperTrackPanEnvelope(trk.TrackIndex))
-                            mutePage.Add(New ReaperTrackMuteEnvelope(trk.TrackIndex))
+                            For Each env In trk.Envelopes.Envelopes
+                                Select Case env.Name
+                                    Case "Volume"
+                                        volPage.Add(trk.TrackIndex, env)
+                                    Case "Pan"
+                                        panPage.Add(trk.TrackIndex, env)
+                                    Case "Mute"
+                                        mutePage.Add(trk.TrackIndex, env)
+                                End Select
+                            Next
+
+
+
                         Next
                         _all_VolEnvelopes(pageNb) = volPage
                         _all_PanEnvelopes(pageNb) = panPage
@@ -4511,15 +5327,13 @@ Namespace Reaper
                     _MuteEnvelopes = _all_MuteEnvelopes(pageNb)
 
                     _TrackMonitor.WatchTracks(_Tracks)
+                    _EnvMonitor.WatchTracks(_Tracks)
 
 
 
-                    For Each trk In _Tracks
-                        _EnvMonitor.WatchTrack(trk.TrackIndex)
-                    Next
 
                     _TrackMonitor.Start()
-                                                               _EnvMonitor.Start()
+                    _EnvMonitor.Start()
 
                 Finally
                     _pageLock.ExitWriteLock()
@@ -4529,22 +5343,56 @@ Namespace Reaper
             ' ── Handlers EnvMonitor ───────────────────────────────────────────
 
             Private Sub On_EnvVolChange(trackIndex As Integer, vol As Double)
-                Dim pageIdx As Integer = -1
-                If Not _trackPageMap.TryGetValue(trackIndex, pageIdx) Then Return
-                _VolEnvelopes(pageIdx).SetValueFromMonitor(vol)
+
+                If _VolEnvelopes.ContainsKey(trackIndex) Then
+                    _VolEnvelopes(trackIndex).SetValueFromMonitor(vol)
+                End If
+
             End Sub
 
             Private Sub On_EnvPanChange(trackIndex As Integer, pan As Double)
-                Dim pageIdx As Integer = -1
-                If Not _trackPageMap.TryGetValue(trackIndex, pageIdx) Then Return
-                _PanEnvelopes(pageIdx).SetValueFromMonitor(pan)
+
+                If _PanEnvelopes.ContainsKey(trackIndex) Then
+                    _PanEnvelopes(trackIndex).SetValueFromMonitor(pan)
+                End If
+
             End Sub
 
             Private Sub On_EnvMuteChange(trackIndex As Integer, mute As Boolean)
-                Dim pageIdx As Integer = -1
-                If Not _trackPageMap.TryGetValue(trackIndex, pageIdx) Then Return
-                _MuteEnvelopes(pageIdx).SetValueFromMonitor(If(mute, 1.0, 0.0))
+
+                If _MuteEnvelopes.ContainsKey(trackIndex) Then
+                    _MuteEnvelopes(trackIndex).SetValueFromMonitor(If(mute, 1.0, 0.0))
+                End If
+
             End Sub
+
+
+            Public Function GetVolEnvelope(TrackIndex As Integer) As ReaperTrackVolEnvelope
+                For Each pageVolenvs In _all_VolEnvelopes.Values
+                    If pageVolenvs.ContainsKey(TrackIndex) Then
+                        Return pageVolenvs(TrackIndex)
+                    End If
+                Next
+                Return Nothing
+            End Function
+
+            Public Function GetPanEnvelope(TrackIndex As Integer) As ReaperTrackPanEnvelope
+                For Each pagePanenvs In _all_PanEnvelopes.Values
+                    If pagePanenvs.ContainsKey(TrackIndex) Then
+                        Return pagePanenvs(TrackIndex)
+                    End If
+                Next
+                Return Nothing
+            End Function
+
+            Public Function GetMuteEnvelope(TrackIndex As Integer) As ReaperTrackMuteEnvelope
+                For Each pageMuteenvs In _all_MuteEnvelopes.Values
+                    If pageMuteenvs.ContainsKey(TrackIndex) Then
+                        Return pageMuteenvs(TrackIndex)
+                    End If
+                Next
+                Return Nothing
+            End Function
 
             ' ── Utilitaires ───────────────────────────────────────────────────
 
@@ -4571,6 +5419,7 @@ Namespace Reaper
                         RemoveHandler _project.On_TrackGuidsChanged,
                                       AddressOf OnTrackGuidsChanged
                         _TrackMonitor?.Dispose()
+
                         _EnvMonitor?.Dispose()
                         _FxManager?.Dispose()                          ' ← AJOUT
                         _pageLock.Dispose()
@@ -4584,56 +5433,41 @@ Namespace Reaper
                 GC.SuppressFinalize(Me)
             End Sub
 
+            Protected Overrides Sub Finalize()
+                MyBase.Finalize()
+            End Sub
         End Class
 
         ' ══════════════════════════════════════════════════════════════════════════
-        '  REAPER TRACK SEND MANAGER — envoi N paginé sur une liste de pistes
+        '  REAPER TRACK SEND MANAGER — envoi N sur une liste fixe de pistes
         ' ══════════════════════════════════════════════════════════════════════════
 
         ''' <summary>
-        ''' Gère de manière paginée l'envoi <see cref="SendIndex"/> pour une liste
-        ''' fixe de <see cref="ReaperTrack"/>.
+        ''' Surveille l'envoi <see cref="SendIndex"/> pour une liste fixe de
+        ''' <see cref="ReaperTrack"/> fournie à la construction (page unique).
         ''' <br/>
-        ''' Pour chaque page, un <see cref="Monitors.ReaperSendMonitor"/> surveille
-        ''' vol/pan/mute et propage les changements vers les <see cref="ReaperSend"/>
-        ''' via <c>SetXxxFromMonitor</c>, déclenchant leurs propres événements.
-        ''' <br/>
-        ''' La liste de pistes source est fixe à la construction — utiliser
-        ''' <see cref="ReaperTracksManager"/> si elle doit réagir aux changements
-        ''' structurels du projet.
+        ''' Un <see cref="Monitors.ReaperSendMonitor"/> surveille vol/pan/mute et
+        ''' propage les changements vers les <see cref="ReaperSend"/> via
+        ''' <c>SetXxxFromMonitor</c>, déclenchant leurs propres événements.
         ''' </summary>
-        Public Class ReaperTrackSendManager
+        Public Class ReaperTracksSendManager
             Implements IDisposable
 
             ' ── Identité de l'envoi (fixe) ────────────────────────────────────
             Private ReadOnly _sendIndex As Integer
             Private ReadOnly _category As Integer
-            Private ReadOnly _maxTracksNbPerPage As Integer
-
-            ' ── Liste source de pistes (fixe à la construction) ───────────────
-            Private ReadOnly _sourceTracks As IReadOnlyList(Of ReaperTrack)
 
             ' ── Moniteur ──────────────────────────────────────────────────────
-            Private _SendMonitor As Monitors.ReaperSendMonitor
+            Public _SendMonitor As Monitors.ReaperSendMonitor
 
-            ' ── Pages ─────────────────────────────────────────────────────────
-            ' Chaque page = liste de ReaperSend (un par piste, tous au même sendIndex)
-            Private ReadOnly _all_Sends As New List(Of List(Of ReaperSend))
-            Private _Sends As List(Of ReaperSend)
-            Private _Actual_PageNb As Integer = 0
-            Private ReadOnly _trackPageMap As New Dictionary(Of Integer, Integer)
+            ' ── Envois (un par piste fournie) ─────────────────────────────────
+            Private ReadOnly _Sends As New List(Of ReaperSend)
+            Private ReadOnly _trackIndexMap As New Dictionary(Of Integer, Integer)
 
             ' ── Verrou ────────────────────────────────────────────────────────
-            Private ReadOnly _pageLock As New ReaderWriterLockSlim()
+            Private ReadOnly _lock As New ReaderWriterLockSlim()
+            Private _Tracks As List(Of ReaperTrack)
             Private disposedValue As Boolean
-
-            ' ── Événements ────────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Déclenché après chaque changement de page.
-            ''' Abonnez-vous pour recâbler la surface (ré-affecter les vpots…).
-            ''' </summary>
-            Public Event On_SendsRebuilt()
 
             ' ── Propriétés ────────────────────────────────────────────────────
 
@@ -4651,130 +5485,62 @@ Namespace Reaper
                 End Get
             End Property
 
-            ''' <summary>Envois de la page courante (un par piste visible).</summary>
+            ''' <summary>Liste des envois (un par piste fournie à la construction).</summary>
             Public ReadOnly Property Sends As List(Of ReaperSend)
                 Get
                     Return _Sends
                 End Get
             End Property
-
-            ''' <summary>Index 0-based de la page courante.</summary>
-            Public ReadOnly Property CurrentPage As Integer
+            Public ReadOnly Property Tracks As List(Of ReaperTrack)
                 Get
-                    Return _Actual_PageNb
-                End Get
-            End Property
-
-            ''' <summary>Nombre total de pages.</summary>
-            Public ReadOnly Property PageCount As Integer
-                Get
-                    Return _all_Sends.Count
+                    Return _Tracks
                 End Get
             End Property
 
             ' ── Constructeur ──────────────────────────────────────────────────
 
             ''' <summary>
-            ''' Initialise le manager, construit les pages et démarre la surveillance.
+            ''' Initialise le manager et démarre la surveillance pour les pistes données.
             ''' </summary>
-            ''' <param name="tracks">Liste fixe de pistes à paginer.</param>
+            ''' <param name="tracks">Liste fixe de pistes à surveiller.</param>
             ''' <param name="sendIndex">Index 0-based de l'envoi à surveiller.</param>
             ''' <param name="category"><see cref="SendCategory"/> (défaut : Sends).</param>
-            ''' <param name="maxTracksNbPerPage">Pistes max par page (défaut : 24).</param>
             Public Sub New(tracks As IReadOnlyList(Of ReaperTrack),
                            sendIndex As Integer,
-                           Optional category As SendCategory = SendCategory.Sends,
-                           Optional maxTracksNbPerPage As Integer = 24)
-                _sourceTracks = tracks
+                           Optional category As SendCategory = SendCategory.Sends)
                 _sendIndex = sendIndex
                 _category = CInt(category)
-                _maxTracksNbPerPage = maxTracksNbPerPage
+                _Tracks = tracks
 
-                ' ── Construire toutes les pages dès le départ ─────────────────
-                ' Pas de lazy-creation ici : les ReaperSend sont légers (pas de pipe).
-                RebuildAllPages()
-                If _all_Sends.Count > 0 Then Set_Sends(0)
-            End Sub
-
-            ' ── Construction des pages ────────────────────────────────────────
-
-            ''' <summary>
-            ''' Découpe la liste source en pages de <c>maxTracksNbPerPage</c> pistes
-            ''' et crée un <see cref="ReaperSend"/> par piste.
-            ''' Appeler uniquement depuis le constructeur (liste source fixe).
-            ''' </summary>
-            Private Sub RebuildAllPages()
-                _all_Sends.Clear()
-                Dim page As New List(Of ReaperSend)
-                For Each trk In _sourceTracks
-                    If page.Count = _maxTracksNbPerPage Then
-                        _all_Sends.Add(page)
-                        page = New List(Of ReaperSend)
-                    End If
-                    page.Add(New ReaperSend(trk.TrackIndex, _category, _sendIndex))
+                For Each trk In tracks
+                    Dim send = New ReaperSend(trk.TrackIndex, _category, _sendIndex)
+                    _trackIndexMap(trk.TrackIndex) = _Sends.Count
+                    _Sends.Add(send)
                 Next
-                If page.Count > 0 Then _all_Sends.Add(page)
-            End Sub
 
-            ' ── Changement de page ────────────────────────────────────────────
+                _SendMonitor = New Monitors.ReaperSendMonitor(
+                                   _sendIndex, CType(_category, SendCategory))
+                AddHandler _SendMonitor.On_VolChange, AddressOf On_MonitorVolChange
+                AddHandler _SendMonitor.On_PanChange, AddressOf On_MonitorPanChange
+                AddHandler _SendMonitor.On_MuteChange, AddressOf On_MonitorMuteChange
 
-            ''' <summary>
-            ''' Dispose et recrée le moniteur pour la page donnée,
-            ''' câble les handlers et démarre la surveillance.
-            ''' Protégé par <see cref="_pageLock"/> (WriteLock).
-            ''' </summary>
-            Private Sub Set_Sends(pageNb As Integer)
-                _pageLock.EnterWriteLock()
-                Try
-                    ' ── Recréer le moniteur ───────────────────────────────────
-                    _SendMonitor?.Dispose()
-                    _SendMonitor = New Monitors.ReaperSendMonitor(
-                                       _sendIndex, CType(_category, SendCategory))
-                    AddHandler _SendMonitor.On_VolChange, AddressOf On_MonitorVolChange
-                    AddHandler _SendMonitor.On_PanChange, AddressOf On_MonitorPanChange
-                    AddHandler _SendMonitor.On_MuteChange, AddressOf On_MonitorMuteChange
+                For Each send In _Sends
+                    _SendMonitor.WatchTrack(send.TrackIndex)
+                Next
 
-                    ' ── Pointer sur la page ───────────────────────────────────
-                    _Sends = _all_Sends(pageNb)
-                    _trackPageMap.Clear()
-                    For i = 0 To _Sends.Count - 1
-                        _trackPageMap(_Sends(i).TrackIndex) = i
-                        _SendMonitor.WatchTrack(_Sends(i).TrackIndex)
-                    Next
-
-                    _SendMonitor.Start()
-
-                Finally
-                    _pageLock.ExitWriteLock()
-                End Try
-            End Sub
-
-            ' ── Navigation ────────────────────────────────────────────────────
-
-            ''' <summary>Passe à la page suivante si possible.</summary>
-            Public Sub Set_Next_Page()
-                _Actual_PageNb = Math.Min(_all_Sends.Count - 1, _Actual_PageNb + 1)
-                Set_Sends(_Actual_PageNb)
-                RaiseEvent On_SendsRebuilt()
-            End Sub
-
-            ''' <summary>Revient à la page précédente si possible.</summary>
-            Public Sub Set_Prev_Page()
-                _Actual_PageNb = Math.Max(0, _Actual_PageNb - 1)
-                Set_Sends(_Actual_PageNb)
-                RaiseEvent On_SendsRebuilt()
+                _SendMonitor.Start()
             End Sub
 
             ' ── Suspension par piste ──────────────────────────────────────────
 
-            ''' <summary>Suspend le moniteur pour la piste de la page donnée.</summary>
+            ''' <summary>Suspend le moniteur pour la piste à l'index donné.</summary>
             Public Sub SuspendTrack(pageTrackIndex As Integer)
                 Dim tIdx = GetAbsoluteTrackIndex(pageTrackIndex)
                 If tIdx < 0 Then Return
                 _SendMonitor?.SuspendTrack(tIdx)
             End Sub
 
-            ''' <summary>Réactive le moniteur pour la piste de la page donnée.</summary>
+            ''' <summary>Réactive le moniteur pour la piste à l'index donné.</summary>
             Public Sub ResumeTrack(pageTrackIndex As Integer)
                 Dim tIdx = GetAbsoluteTrackIndex(pageTrackIndex)
                 If tIdx < 0 Then Return
@@ -4784,75 +5550,73 @@ Namespace Reaper
             ' ── Écriture depuis la surface ────────────────────────────────────
 
             ''' <summary>
-            ''' Écrit le volume de l'envoi pour la piste de la page donnée.
+            ''' Écrit le volume de l'envoi pour la piste à l'index donné.
             ''' Suspend le moniteur pendant l'écriture (anti-feedback).
             ''' </summary>
             ''' <param name="vol">Volume 0..4  (1.0 = 0 dB).</param>
             Public Sub Set_Vol(pageTrackIndex As Integer, vol As Double)
-                _pageLock.EnterReadLock()
+                _lock.EnterReadLock()
                 Try
-                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends?.Count Then Return
+                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends.Count Then Return
                     SuspendTrack(pageTrackIndex)
                     utility.SetTrackSendUIVol(_Sends(pageTrackIndex).TrackIndex, _sendIndex, vol)
                     ResumeTrack(pageTrackIndex)
                 Finally
-                    _pageLock.ExitReadLock()
+                    _lock.ExitReadLock()
                 End Try
             End Sub
 
             ''' <summary>
-            ''' Écrit le pan de l'envoi pour la piste de la page donnée.
+            ''' Écrit le pan de l'envoi pour la piste à l'index donné.
             ''' Suspend le moniteur pendant l'écriture (anti-feedback).
             ''' </summary>
             ''' <param name="pan">Pan -1=Gauche  0=Centre  1=Droite.</param>
             Public Sub Set_Pan(pageTrackIndex As Integer, pan As Double)
-                _pageLock.EnterReadLock()
+                _lock.EnterReadLock()
                 Try
-                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends?.Count Then Return
+                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends.Count Then Return
                     SuspendTrack(pageTrackIndex)
                     utility.SetTrackSendUIPan(_Sends(pageTrackIndex).TrackIndex,
                                               _sendIndex, pan,
                                               CType(_category, SendCategory))
                     ResumeTrack(pageTrackIndex)
                 Finally
-                    _pageLock.ExitReadLock()
+                    _lock.ExitReadLock()
                 End Try
             End Sub
 
             ''' <summary>
-            ''' Impose l'état mute de l'envoi pour la piste de la page donnée.
+            ''' Impose l'état mute de l'envoi pour la piste à l'index donné.
             ''' Suspend le moniteur pendant l'écriture (anti-feedback).
             ''' </summary>
             Public Sub Set_Mute(pageTrackIndex As Integer, mute As Boolean)
-                _pageLock.EnterReadLock()
+                _lock.EnterReadLock()
                 Try
-                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends?.Count Then Return
+                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends.Count Then Return
                     SuspendTrack(pageTrackIndex)
                     utility.SetTrackSendUIMute(_Sends(pageTrackIndex).TrackIndex,
                                                _sendIndex, mute)
                     ResumeTrack(pageTrackIndex)
                 Finally
-                    _pageLock.ExitReadLock()
+                    _lock.ExitReadLock()
                 End Try
             End Sub
 
-            ''' <summary>
-            ''' Bascule le mute de l'envoi pour la piste de la page donnée.
-            ''' </summary>
+            ''' <summary>Bascule le mute de l'envoi pour la piste à l'index donné.</summary>
             Public Sub ToggleMute(pageTrackIndex As Integer)
-                _pageLock.EnterReadLock()
+                _lock.EnterReadLock()
                 Try
-                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends?.Count Then Return
+                    If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends.Count Then Return
                     Dim current = _Sends(pageTrackIndex).Mute
                     Set_Mute(pageTrackIndex, Not current)
                 Finally
-                    _pageLock.ExitReadLock()
+                    _lock.ExitReadLock()
                 End Try
             End Sub
 
             ' ── Lecture d'état ────────────────────────────────────────────────
 
-            ''' <summary>Retourne la liste des volumes de la page courante.</summary>
+            ''' <summary>Retourne la liste des volumes courants.</summary>
             Public Function Get_VolStatus() As List(Of Double)
                 Dim result As New List(Of Double)
                 For Each s In _Sends
@@ -4861,7 +5625,7 @@ Namespace Reaper
                 Return result
             End Function
 
-            ''' <summary>Retourne la liste des pans de la page courante.</summary>
+            ''' <summary>Retourne la liste des pans courants.</summary>
             Public Function Get_PanStatus() As List(Of Double)
                 Dim result As New List(Of Double)
                 For Each s In _Sends
@@ -4870,7 +5634,7 @@ Namespace Reaper
                 Return result
             End Function
 
-            ''' <summary>Retourne la liste des états mute de la page courante.</summary>
+            ''' <summary>Retourne la liste des états mute courants.</summary>
             Public Function Get_MuteStatus() As List(Of Boolean)
                 Dim result As New List(Of Boolean)
                 For Each s In _Sends
@@ -4881,36 +5645,28 @@ Namespace Reaper
 
             ' ── Handlers internes ─────────────────────────────────────────────
 
-            ''' <summary>
-            ''' Reçoit les changements de vol depuis <see cref="Monitors.ReaperSendMonitor"/>
-            ''' et les route vers le <see cref="ReaperSend"/> correspondant via
-            ''' <c>SetVolFromMonitor</c>, qui déclenchera son propre événement
-            ''' <c>On_VolChange</c> si la valeur diffère.
-            ''' </summary>
             Private Sub On_MonitorVolChange(trackIndex As Integer, vol As Double)
                 Dim pageIdx As Integer = -1
-                If Not _trackPageMap.TryGetValue(trackIndex, pageIdx) Then Return
+                If Not _trackIndexMap.TryGetValue(trackIndex, pageIdx) Then Return
                 _Sends(pageIdx).SetVolFromMonitor(vol)
             End Sub
 
             Private Sub On_MonitorPanChange(trackIndex As Integer, pan As Double)
                 Dim pageIdx As Integer = -1
-                If Not _trackPageMap.TryGetValue(trackIndex, pageIdx) Then Return
+                If Not _trackIndexMap.TryGetValue(trackIndex, pageIdx) Then Return
                 _Sends(pageIdx).SetPanFromMonitor(pan)
             End Sub
 
             Private Sub On_MonitorMuteChange(trackIndex As Integer, mute As Boolean)
                 Dim pageIdx As Integer = -1
-                If Not _trackPageMap.TryGetValue(trackIndex, pageIdx) Then Return
+                If Not _trackIndexMap.TryGetValue(trackIndex, pageIdx) Then Return
                 _Sends(pageIdx).SetMuteFromMonitor(mute)
             End Sub
 
             ' ── Utilitaires ───────────────────────────────────────────────────
 
             Private Function GetAbsoluteTrackIndex(pageTrackIndex As Integer) As Integer
-                If _Sends Is Nothing OrElse
-                   pageTrackIndex < 0 OrElse
-                   pageTrackIndex >= _Sends.Count Then Return -1
+                If pageTrackIndex < 0 OrElse pageTrackIndex >= _Sends.Count Then Return -1
                 Return _Sends(pageTrackIndex).TrackIndex
             End Function
 
@@ -4920,7 +5676,274 @@ Namespace Reaper
                 If Not disposedValue Then
                     If disposing Then
                         _SendMonitor?.Dispose()
-                        _pageLock.Dispose()
+                        _lock.Dispose()
+                    End If
+                    disposedValue = True
+                End If
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dispose(disposing:=True)
+                GC.SuppressFinalize(Me)
+            End Sub
+
+        End Class
+
+
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER TRACK SENDS MANAGER — tous les sends d'une seule piste
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Surveille tous les envois d'une piste fixe fournis à la construction.
+        ''' Symétrique de <see cref="ReaperTrackSendManager"/> :
+        ''' ici la piste est fixe et les <c>sendIndex</c> varient.
+        ''' <br/>
+        ''' Un <see cref="ReaperTrackSendsMonitor"/> surveille vol/pan/mute/sendMode
+        ''' et propage les changements vers les <see cref="ReaperSend"/> correspondants.
+        ''' </summary>
+        Public Class ReaperTrackSendsManager
+            Implements IDisposable
+
+            Private ReadOnly _trackIndex As Integer
+            Private ReadOnly _category As Integer
+            Private _Monitor As ReaperTrackSendsMonitor
+
+            ' ── Envois (un par sendIndex fourni) ──────────────────────────────
+            Private ReadOnly _Sends As New List(Of ReaperSend)
+            Private ReadOnly _sendIndexMap As New Dictionary(Of Integer, Integer)
+
+            Private ReadOnly _lock As New ReaderWriterLockSlim()
+            Private disposedValue As Boolean
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+
+            ''' <summary>Index 0-based de la piste surveillée.</summary>
+            Public ReadOnly Property TrackIndex As Integer
+                Get
+                    Return _trackIndex
+                End Get
+            End Property
+
+            ''' <summary>Catégorie des envois.</summary>
+            Public ReadOnly Property Category As SendCategory
+                Get
+                    Return CType(_category, SendCategory)
+                End Get
+            End Property
+
+            ''' <summary>Liste des envois surveillés.</summary>
+            Public ReadOnly Property Sends As List(Of ReaperSend)
+                Get
+                    Return _Sends
+                End Get
+            End Property
+
+            ''' <summary>Moniteur interne (accès direct pour abonnements externes).</summary>
+            Public ReadOnly Property Monitor As ReaperTrackSendsMonitor
+                Get
+                    Return _Monitor
+                End Get
+            End Property
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Initialise le manager pour la piste donnée et les sendIndexes fournis.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="sendIndexes">Liste des sendIndex à surveiller.</param>
+            ''' <param name="category"><see cref="SendCategory"/> (défaut : Sends).</param>
+            Public Sub New(trackIndex As Integer,
+                           sendIndexes As IReadOnlyList(Of Integer),
+                           Optional category As SendCategory = SendCategory.Sends)
+                _trackIndex = trackIndex
+                _category = CInt(category)
+
+                For Each sIdx In sendIndexes
+                    Dim send = New ReaperSend(trackIndex, _category, sIdx)
+                    _sendIndexMap(sIdx) = _Sends.Count
+                    _Sends.Add(send)
+                Next
+
+                _Monitor = New ReaperTrackSendsMonitor(trackIndex, category)
+                AddHandler _Monitor.On_VolChange, AddressOf On_MonitorVolChange
+                AddHandler _Monitor.On_PanChange, AddressOf On_MonitorPanChange
+                AddHandler _Monitor.On_MuteChange, AddressOf On_MonitorMuteChange
+                AddHandler _Monitor.On_SendModeChange, AddressOf On_MonitorSendModeChange
+
+                For Each send In _Sends
+                    _Monitor.WatchSend(send.SendIndex)
+                Next
+
+                _Monitor.Start()
+            End Sub
+
+            ' ── Suspension par envoi ──────────────────────────────────────────
+
+            ''' <summary>Suspend le monitoring pour l'envoi à l'index de page donné.</summary>
+            Public Sub SuspendSend(pageSendIndex As Integer)
+                Dim sIdx = GetAbsoluteSendIndex(pageSendIndex)
+                If sIdx < 0 Then Return
+                _Monitor?.SuspendSend(sIdx)
+            End Sub
+
+            ''' <summary>Réactive le monitoring pour l'envoi à l'index de page donné.</summary>
+            Public Sub ResumeSend(pageSendIndex As Integer)
+                Dim sIdx = GetAbsoluteSendIndex(pageSendIndex)
+                If sIdx < 0 Then Return
+                _Monitor?.ResumeSend(sIdx)
+            End Sub
+
+            ' ── Écriture depuis la surface ────────────────────────────────────
+
+            ''' <summary>
+            ''' Écrit le volume de l'envoi à l'index donné.
+            ''' Suspend le moniteur pendant l'écriture (anti-feedback).
+            ''' </summary>
+            ''' <param name="vol">Volume 0..4  (1.0 = 0 dB).</param>
+            Public Sub Set_Vol(pageSendIndex As Integer, vol As Double)
+                _lock.EnterReadLock()
+                Try
+                    If pageSendIndex < 0 OrElse pageSendIndex >= _Sends.Count Then Return
+                    SuspendSend(pageSendIndex)
+                    utility.SetTrackSendUIVol(_trackIndex, _Sends(pageSendIndex).SendIndex, vol)
+                    ResumeSend(pageSendIndex)
+                Finally
+                    _lock.ExitReadLock()
+                End Try
+            End Sub
+
+            ''' <summary>
+            ''' Écrit le pan de l'envoi à l'index donné.
+            ''' Suspend le moniteur pendant l'écriture (anti-feedback).
+            ''' </summary>
+            ''' <param name="pan">Pan -1=Gauche  0=Centre  1=Droite.</param>
+            Public Sub Set_Pan(pageSendIndex As Integer, pan As Double)
+                _lock.EnterReadLock()
+                Try
+                    If pageSendIndex < 0 OrElse pageSendIndex >= _Sends.Count Then Return
+                    SuspendSend(pageSendIndex)
+                    utility.SetTrackSendUIPan(_trackIndex,
+                                              _Sends(pageSendIndex).SendIndex, pan,
+                                              CType(_category, SendCategory))
+                    ResumeSend(pageSendIndex)
+                Finally
+                    _lock.ExitReadLock()
+                End Try
+            End Sub
+
+            ''' <summary>
+            ''' Impose l'état mute de l'envoi à l'index donné.
+            ''' Suspend le moniteur pendant l'écriture (anti-feedback).
+            ''' </summary>
+            Public Sub Set_Mute(pageSendIndex As Integer, mute As Boolean)
+                _lock.EnterReadLock()
+                Try
+                    If pageSendIndex < 0 OrElse pageSendIndex >= _Sends.Count Then Return
+                    SuspendSend(pageSendIndex)
+                    utility.SetTrackSendUIMute(_trackIndex,
+                                               _Sends(pageSendIndex).SendIndex, mute)
+                    ResumeSend(pageSendIndex)
+                Finally
+                    _lock.ExitReadLock()
+                End Try
+            End Sub
+
+            ''' <summary>Bascule le mute de l'envoi à l'index donné.</summary>
+            Public Sub ToggleMute(pageSendIndex As Integer)
+                _lock.EnterReadLock()
+                Try
+                    If pageSendIndex < 0 OrElse pageSendIndex >= _Sends.Count Then Return
+                    Dim current = _Sends(pageSendIndex).Mute
+                    Set_Mute(pageSendIndex, Not current)
+                Finally
+                    _lock.ExitReadLock()
+                End Try
+            End Sub
+
+            ' ── Lecture d'état ────────────────────────────────────────────────
+
+            ''' <summary>Retourne la liste des volumes courants.</summary>
+            Public Function Get_VolStatus() As List(Of Double)
+                Dim result As New List(Of Double)
+                For Each s In _Sends
+                    result.Add(s.Vol)
+                Next
+                Return result
+            End Function
+
+            ''' <summary>Retourne la liste des pans courants.</summary>
+            Public Function Get_PanStatus() As List(Of Double)
+                Dim result As New List(Of Double)
+                For Each s In _Sends
+                    result.Add(s.Pan)
+                Next
+                Return result
+            End Function
+
+            ''' <summary>Retourne la liste des états mute courants.</summary>
+            Public Function Get_MuteStatus() As List(Of Boolean)
+                Dim result As New List(Of Boolean)
+                For Each s In _Sends
+                    result.Add(s.Mute)
+                Next
+                Return result
+            End Function
+
+            ' ── Handlers internes ─────────────────────────────────────────────
+
+            Private Sub On_MonitorVolChange(sendIndex As Integer, vol As Double)
+                Dim pageIdx As Integer = -1
+                If Not _sendIndexMap.TryGetValue(sendIndex, pageIdx) Then Return
+                _Sends(pageIdx).SetVolFromMonitor(vol)
+            End Sub
+
+            Private Sub On_MonitorPanChange(sendIndex As Integer, pan As Double)
+                Dim pageIdx As Integer = -1
+                If Not _sendIndexMap.TryGetValue(sendIndex, pageIdx) Then Return
+                _Sends(pageIdx).SetPanFromMonitor(pan)
+            End Sub
+
+            Private Sub On_MonitorMuteChange(sendIndex As Integer, mute As Boolean)
+                Dim pageIdx As Integer = -1
+                If Not _sendIndexMap.TryGetValue(sendIndex, pageIdx) Then Return
+                _Sends(pageIdx).SetMuteFromMonitor(mute)
+            End Sub
+
+            Private Sub On_MonitorSendModeChange(sendIndex As Integer, sendMode As Integer)
+                Dim pageIdx As Integer = -1
+                If Not _sendIndexMap.TryGetValue(sendIndex, pageIdx) Then Return
+                ' SendMode est lecture seule dans ReaperSend — pas de SetSendModeFromMonitor
+                ' L'abonné externe peut s'abonner à _Monitor.On_SendModeChange directement.
+            End Sub
+
+            ' ── Utilitaires ───────────────────────────────────────────────────
+
+            Public Function GetAbsoluteSendIndex(pageSendIndex As Integer) As Integer
+                If pageSendIndex < 0 OrElse pageSendIndex >= _Sends.Count Then Return -1
+                Return _Sends(pageSendIndex).SendIndex
+            End Function
+
+            ''' <summary>
+            ''' Retourne l'index de position (0-based) dans la liste <see cref="Sends"/>
+            ''' correspondant au <paramref name="absoluteSendIndex"/> Reaper.
+            ''' Retourne -1 si l'envoi n'est pas géré par ce manager.
+            ''' </summary>
+            ''' <param name="absoluteSendIndex">Index 0-based de l'envoi dans Reaper.</param>
+            Public Function GetRelativeSendIndex(absoluteSendIndex As Integer) As Integer
+                Dim pageIdx As Integer = -1
+                _sendIndexMap.TryGetValue(absoluteSendIndex, pageIdx)
+                Return pageIdx
+            End Function
+            ' ── IDisposable ───────────────────────────────────────────────────
+
+            Protected Overridable Sub Dispose(disposing As Boolean)
+                If Not disposedValue Then
+                    If disposing Then
+                        _Monitor?.Dispose()
+                        _lock.Dispose()
                     End If
                     disposedValue = True
                 End If
@@ -6649,614 +7672,614 @@ Namespace Reaper
         ''' </summary>
         Public Class ReaperAutomationManager
 
-                ' ── Liste source de pistes (fixe) ────────────────────────────────────
-                Private ReadOnly _tracks As IReadOnlyList(Of ReaperTrack)
+            ' ── Liste source de pistes (fixe) ────────────────────────────────────
+            Private ReadOnly _tracks As IReadOnlyList(Of ReaperTrack)
 
-                ' ── Cache des enveloppes armées ───────────────────────────────────────
-                ' Chaque entrée = (trackIndex, envIndex) d'une enveloppe armée par ce manager.
-                ' Utilisé par SuspendAll / ResumeAll / DisarmAll.
-                Private ReadOnly _armed As New List(Of (TrackIndex As Integer, EnvIndex As Integer))
-                Private ReadOnly _lock As New Object()
-                ' ── Cache état armé par type ──────────────────────────────────────────
-                ' Mémorise la dernière valeur publiée pour éviter les doublons d'événements.
-                Private _cachedHasArmedVol As Boolean = False
-                Private _cachedHasArmedPan As Boolean = False
-                Private _cachedHasArmedMute As Boolean = False
-                Private _cachedHasArmedSendVol As Boolean = False
-                Private _cachedHasArmedSendPan As Boolean = False
-                Private _cachedHasArmedSendMute As Boolean = False
-                Private _cachedHasArmedFxParam As Boolean = False
+            ' ── Cache des enveloppes armées ───────────────────────────────────────
+            ' Chaque entrée = (trackIndex, envIndex) d'une enveloppe armée par ce manager.
+            ' Utilisé par SuspendAll / ResumeAll / DisarmAll.
+            Private ReadOnly _armed As New List(Of (TrackIndex As Integer, EnvIndex As Integer))
+            Private ReadOnly _lock As New Object()
+            ' ── Cache état armé par type ──────────────────────────────────────────
+            ' Mémorise la dernière valeur publiée pour éviter les doublons d'événements.
+            Private _cachedHasArmedVol As Boolean = False
+            Private _cachedHasArmedPan As Boolean = False
+            Private _cachedHasArmedMute As Boolean = False
+            Private _cachedHasArmedSendVol As Boolean = False
+            Private _cachedHasArmedSendPan As Boolean = False
+            Private _cachedHasArmedSendMute As Boolean = False
+            Private _cachedHasArmedFxParam As Boolean = False
 
-                Private _ReaperTrackMonitor As ReaperTrackMonitor
+            Private _ReaperTrackMonitor As ReaperTrackMonitor
 
-                ' ── Événements par type d'enveloppe ──────────────────────────────────
+            ' ── Événements par type d'enveloppe ──────────────────────────────────
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de volume armée" change.
-                ''' </summary>
-                Public Event On_VolEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de volume armée" change.
+            ''' </summary>
+            Public Event On_VolEnvelopeArmedChange(armed As Boolean)
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de pan armée" change.
-                ''' </summary>
-                Public Event On_PanEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de pan armée" change.
+            ''' </summary>
+            Public Event On_PanEnvelopeArmedChange(armed As Boolean)
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de mute armée" change.
-                ''' </summary>
-                Public Event On_MuteEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de mute armée" change.
+            ''' </summary>
+            Public Event On_MuteEnvelopeArmedChange(armed As Boolean)
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de volume d'envoi armée" change.
-                ''' </summary>
-                Public Event On_SendVolEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de volume d'envoi armée" change.
+            ''' </summary>
+            Public Event On_SendVolEnvelopeArmedChange(armed As Boolean)
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de pan d'envoi armée" change.
-                ''' </summary>
-                Public Event On_SendPanEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de pan d'envoi armée" change.
+            ''' </summary>
+            Public Event On_SendPanEnvelopeArmedChange(armed As Boolean)
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de mute d'envoi armée" change.
-                ''' </summary>
-                Public Event On_SendMuteEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de mute d'envoi armée" change.
+            ''' </summary>
+            Public Event On_SendMuteEnvelopeArmedChange(armed As Boolean)
 
-                ''' <summary>
-                ''' Déclenché quand l'état "au moins une enveloppe de paramètre FX armée" change.
-                ''' </summary>
-                Public Event On_FxParamEnvelopeArmedChange(armed As Boolean)
+            ''' <summary>
+            ''' Déclenché quand l'état "au moins une enveloppe de paramètre FX armée" change.
+            ''' </summary>
+            Public Event On_FxParamEnvelopeArmedChange(armed As Boolean)
 
-                ' ── Événements ────────────────────────────────────────────────────────
+            ' ── Événements ────────────────────────────────────────────────────────
 
-                ''' <summary>Déclenché quand une enveloppe est armée par ce manager.</summary>
-                Public Event On_EnvelopeArmed(trackIndex As Integer,
+            ''' <summary>Déclenché quand une enveloppe est armée par ce manager.</summary>
+            Public Event On_EnvelopeArmed(trackIndex As Integer,
                                                envIndex As Integer,
                                                name As String)
 
-                ''' <summary>Déclenché quand une enveloppe est désarmée définitivement.</summary>
-                Public Event On_EnvelopeDisarmed(trackIndex As Integer, envIndex As Integer)
+            ''' <summary>Déclenché quand une enveloppe est désarmée définitivement.</summary>
+            Public Event On_EnvelopeDisarmed(trackIndex As Integer, envIndex As Integer)
 
-                ''' <summary>Déclenché quand toutes les enveloppes sont suspendues.</summary>
-                Public Event On_AllSuspended()
+            ''' <summary>Déclenché quand toutes les enveloppes sont suspendues.</summary>
+            Public Event On_AllSuspended()
 
-                ''' <summary>Déclenché quand toutes les enveloppes sont réactivées.</summary>
-                Public Event On_AllResumed()
+            ''' <summary>Déclenché quand toutes les enveloppes sont réactivées.</summary>
+            Public Event On_AllResumed()
 
-                ' ── Constructeur ──────────────────────────────────────────────────────
+            ' ── Constructeur ──────────────────────────────────────────────────────
 
-                ''' <summary>
-                ''' Initialise le manager pour une liste fixe de pistes.
-                ''' </summary>
-                ''' <param name="tracks">Liste fixe de pistes à gérer.</param>
-                Public Sub New(tracks As IReadOnlyList(Of ReaperTrack), ReaperTrackMonitor As ReaperTrackMonitor)
-                    _tracks = tracks
-                    _ReaperTrackMonitor = ReaperTrackMonitor
-                End Sub
+            ''' <summary>
+            ''' Initialise le manager pour une liste fixe de pistes.
+            ''' </summary>
+            ''' <param name="tracks">Liste fixe de pistes à gérer.</param>
+            Public Sub New(tracks As IReadOnlyList(Of ReaperTrack), ReaperTrackMonitor As ReaperTrackMonitor)
+                _tracks = tracks
+                _ReaperTrackMonitor = ReaperTrackMonitor
+            End Sub
 
-                ' ── Propriétés ────────────────────────────────────────────────────────
+            ' ── Propriétés ────────────────────────────────────────────────────────
 
-                ''' <summary>Nombre d'enveloppes actuellement trackées (armées).</summary>
-                Public ReadOnly Property ArmedCount As Integer
-                    Get
-                        SyncLock _lock
-                            Return _armed.Count
-                        End SyncLock
-                    End Get
-                End Property
-
-                ' ── Propriétés d'état par type d'enveloppe ────────────────────────────
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de volume est armée dans la liste des pistes.
-                ''' </summary>
-                Public ReadOnly Property HasArmedVolEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperTrackVolEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de pan est armée dans la liste des pistes.
-                ''' </summary>
-                Public ReadOnly Property HasArmedPanEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperTrackPanEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de mute est armée dans la liste des pistes.
-                ''' </summary>
-                Public ReadOnly Property HasArmedMuteEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperTrackMuteEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de volume d'envoi est armée.
-                ''' </summary>
-                Public ReadOnly Property HasArmedSendVolEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperSendVolEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de pan d'envoi est armée.
-                ''' </summary>
-                Public ReadOnly Property HasArmedSendPanEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperSendPanEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de mute d'envoi est armée.
-                ''' </summary>
-                Public ReadOnly Property HasArmedSendMuteEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperSendMuteEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe de paramètre FX est armée.
-                ''' </summary>
-                Public ReadOnly Property HasArmedFxParamEnvelope As Boolean
-                    Get
-                        Return HasArmedEnvelopeOfType(Of ReaperFxParamEnvelope)()
-                    End Get
-                End Property
-
-                ''' <summary>
-                ''' True si au moins une enveloppe d'un type quelconque est armée.
-                ''' Équivalent de <see cref="ArmedCount"/> &gt; 0.
-                ''' </summary>
-                Public ReadOnly Property HasArmedAnyEnvelope As Boolean
-                    Get
-                        SyncLock _lock
-                            Return _armed.Count > 0
-                        End SyncLock
-                    End Get
-                End Property
-
-                ' ── Helper interne ────────────────────────────────────────────────────
-
-                ''' <summary>
-                ''' Vérifie si au moins une entrée de <see cref="_armed"/> correspond à
-                ''' une enveloppe du type <typeparamref name="T"/> en croisant la liste
-                ''' armée avec <see cref="ReaperTrackEnvelopes.AllOfType"/> de chaque piste.
-                ''' Résolution par (TrackIndex + EnvIndex) — aucun appel pipe.
-                ''' </summary>
-                Private Function HasArmedEnvelopeOfType(Of T As ReaperTrackEnvelope)() As Boolean
+            ''' <summary>Nombre d'enveloppes actuellement trackées (armées).</summary>
+            Public ReadOnly Property ArmedCount As Integer
+                Get
                     SyncLock _lock
-                        For Each entry In _armed
-                            For Each trk In _tracks
-                                If trk.TrackIndex <> entry.TrackIndex Then Continue For
-                                For Each env In trk.Envelopes.AllOfType(Of T)()
-                                    If env.EnvIndex = entry.EnvIndex Then Return True
-                                Next
-                                Exit For
-                            Next
-                        Next
+                        Return _armed.Count
                     End SyncLock
-                    Return False
-                End Function
+                End Get
+            End Property
 
-                ' ── Armement Vol / Pan / Mute ─────────────────────────────────────────
+            ' ── Propriétés d'état par type d'enveloppe ────────────────────────────
 
-                ''' <summary>
-                ''' Arme l'enveloppe de volume d'une piste.
-                ''' Si elle n'existe pas et que <paramref name="create"/> est True,
-                ''' la crée avant de l'armer.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
-                Public Function ArmVolEnvelope(trackIndex As Integer,
+            ''' <summary>
+            ''' True si au moins une enveloppe de volume est armée dans la liste des pistes.
+            ''' </summary>
+            Public ReadOnly Property HasArmedVolEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperTrackVolEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe de pan est armée dans la liste des pistes.
+            ''' </summary>
+            Public ReadOnly Property HasArmedPanEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperTrackPanEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe de mute est armée dans la liste des pistes.
+            ''' </summary>
+            Public ReadOnly Property HasArmedMuteEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperTrackMuteEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe de volume d'envoi est armée.
+            ''' </summary>
+            Public ReadOnly Property HasArmedSendVolEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperSendVolEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe de pan d'envoi est armée.
+            ''' </summary>
+            Public ReadOnly Property HasArmedSendPanEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperSendPanEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe de mute d'envoi est armée.
+            ''' </summary>
+            Public ReadOnly Property HasArmedSendMuteEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperSendMuteEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe de paramètre FX est armée.
+            ''' </summary>
+            Public ReadOnly Property HasArmedFxParamEnvelope As Boolean
+                Get
+                    Return HasArmedEnvelopeOfType(Of ReaperFxParamEnvelope)()
+                End Get
+            End Property
+
+            ''' <summary>
+            ''' True si au moins une enveloppe d'un type quelconque est armée.
+            ''' Équivalent de <see cref="ArmedCount"/> &gt; 0.
+            ''' </summary>
+            Public ReadOnly Property HasArmedAnyEnvelope As Boolean
+                Get
+                    SyncLock _lock
+                        Return _armed.Count > 0
+                    End SyncLock
+                End Get
+            End Property
+
+            ' ── Helper interne ────────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Vérifie si au moins une entrée de <see cref="_armed"/> correspond à
+            ''' une enveloppe du type <typeparamref name="T"/> en croisant la liste
+            ''' armée avec <see cref="ReaperTrackEnvelopes.AllOfType"/> de chaque piste.
+            ''' Résolution par (TrackIndex + EnvIndex) — aucun appel pipe.
+            ''' </summary>
+            Private Function HasArmedEnvelopeOfType(Of T As ReaperTrackEnvelope)() As Boolean
+                SyncLock _lock
+                    For Each entry In _armed
+                        For Each trk In _tracks
+                            If trk.TrackIndex <> entry.TrackIndex Then Continue For
+                            For Each env In trk.Envelopes.AllOfType(Of T)()
+                                If env.EnvIndex = entry.EnvIndex Then Return True
+                            Next
+                            Exit For
+                        Next
+                    Next
+                End SyncLock
+                Return False
+            End Function
+
+            ' ── Armement Vol / Pan / Mute ─────────────────────────────────────────
+
+            ''' <summary>
+            ''' Arme l'enveloppe de volume d'une piste.
+            ''' Si elle n'existe pas et que <paramref name="create"/> est True,
+            ''' la crée avant de l'armer.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
+            Public Function ArmVolEnvelope(trackIndex As Integer,
                                                 Optional create As Boolean = True) As Boolean
-                    Return ArmTrackEnvelopeByName(trackIndex, "Volume", create)
-                End Function
+                Return ArmTrackEnvelopeByName(trackIndex, "Volume", create)
+            End Function
 
-                ''' <summary>
-                ''' Arme l'enveloppe de pan d'une piste.
-                ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
-                Public Function ArmPanEnvelope(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme l'enveloppe de pan d'une piste.
+            ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
+            Public Function ArmPanEnvelope(trackIndex As Integer,
                                                 Optional create As Boolean = True) As Boolean
-                    Return ArmTrackEnvelopeByName(trackIndex, "Pan", create)
-                End Function
+                Return ArmTrackEnvelopeByName(trackIndex, "Pan", create)
+            End Function
 
-                ''' <summary>
-                ''' Arme l'enveloppe de mute d'une piste.
-                ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
-                Public Function ArmMuteEnvelope(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme l'enveloppe de mute d'une piste.
+            ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
+            Public Function ArmMuteEnvelope(trackIndex As Integer,
                                                  Optional create As Boolean = True) As Boolean
-                    Return ArmTrackEnvelopeByName(trackIndex, "Mute", create)
-                End Function
+                Return ArmTrackEnvelopeByName(trackIndex, "Mute", create)
+            End Function
 
-                ' ── Armement Send Vol / Send Mute ─────────────────────────────────────
+            ' ── Armement Send Vol / Send Mute ─────────────────────────────────────
 
-                ''' <summary>
-                ''' Arme l'enveloppe de volume de l'envoi <paramref name="sendIndex"/> sur
-                ''' la piste <paramref name="trackIndex"/>.
-                ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="sendIndex">Index 0-based de l'envoi.</param>
-                ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
-                Public Function ArmSendVolEnvelope(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme l'enveloppe de volume de l'envoi <paramref name="sendIndex"/> sur
+            ''' la piste <paramref name="trackIndex"/>.
+            ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="sendIndex">Index 0-based de l'envoi.</param>
+            ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
+            Public Function ArmSendVolEnvelope(trackIndex As Integer,
                                                     sendIndex As Integer,
                                                     Optional create As Boolean = True) As Boolean
-                    Return ArmSendEnvelopeByName(trackIndex, sendIndex, "Volume", create)
-                End Function
+                Return ArmSendEnvelopeByName(trackIndex, sendIndex, "Volume", create)
+            End Function
 
-                ''' <summary>
-                ''' Arme l'enveloppe de mute de l'envoi <paramref name="sendIndex"/> sur
-                ''' la piste <paramref name="trackIndex"/>.
-                ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="sendIndex">Index 0-based de l'envoi.</param>
-                ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
-                Public Function ArmSendMuteEnvelope(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme l'enveloppe de mute de l'envoi <paramref name="sendIndex"/> sur
+            ''' la piste <paramref name="trackIndex"/>.
+            ''' Crée l'enveloppe si absente et <paramref name="create"/> est True.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="sendIndex">Index 0-based de l'envoi.</param>
+            ''' <param name="create">True = créer l'enveloppe si absente (défaut : True).</param>
+            Public Function ArmSendMuteEnvelope(trackIndex As Integer,
                                                      sendIndex As Integer,
                                                      Optional create As Boolean = True) As Boolean
-                    Return ArmSendEnvelopeByName(trackIndex, sendIndex, "Mute", create)
-                End Function
+                Return ArmSendEnvelopeByName(trackIndex, sendIndex, "Mute", create)
+            End Function
 
-                ' ── Armement FX (pas de création) ─────────────────────────────────────
+            ' ── Armement FX (pas de création) ─────────────────────────────────────
 
-                ''' <summary>
-                ''' Arme toutes les enveloppes existantes du FX
-                ''' <paramref name="fxIndex"/> sur la piste <paramref name="trackIndex"/>.
-                ''' <br/>
-                ''' Aucune enveloppe n'est créée — seules celles déjà présentes
-                ''' dans Reaper sont armées.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
-                ''' <returns>Nombre d'enveloppes effectivement armées.</returns>
-                Public Function ArmFxEnvelopes(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme toutes les enveloppes existantes du FX
+            ''' <paramref name="fxIndex"/> sur la piste <paramref name="trackIndex"/>.
+            ''' <br/>
+            ''' Aucune enveloppe n'est créée — seules celles déjà présentes
+            ''' dans Reaper sont armées.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="fxIndex">Index 0-based du FX sur la piste.</param>
+            ''' <returns>Nombre d'enveloppes effectivement armées.</returns>
+            Public Function ArmFxEnvelopes(trackIndex As Integer,
                                                 fxIndex As Integer) As Integer
-                    Dim count = 0
-                    Dim nParams = GetFxParamCount(trackIndex, fxIndex)
-                    For paramIndex = 0 To nParams - 1
-                        Dim envIdx = utility.GetFXEnvelopeIndex(trackIndex, fxIndex,
+                Dim count = 0
+                Dim nParams = GetFxParamCount(trackIndex, fxIndex)
+                For paramIndex = 0 To nParams - 1
+                    Dim envIdx = utility.GetFXEnvelopeIndex(trackIndex, fxIndex,
                                                                  paramIndex, create:=False)
-                        If envIdx >= 0 Then
-                            If ArmEnvelope(trackIndex, envIdx) Then
-                                count += 1
-                            End If
+                    If envIdx >= 0 Then
+                        If ArmEnvelope(trackIndex, envIdx) Then
+                            count += 1
                         End If
-                    Next
-                    Return count
-                End Function
+                    End If
+                Next
+                Return count
+            End Function
 
-                ''' <summary>
-                ''' Arme l'enveloppe d'un paramètre FX précis si elle existe déjà.
-                ''' Retourne False si l'enveloppe n'existe pas (aucune création).
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="fxIndex">Index 0-based du FX.</param>
-                ''' <param name="paramIndex">Index 0-based du paramètre.</param>
-                Public Function ArmFxParamEnvelope(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme l'enveloppe d'un paramètre FX précis si elle existe déjà.
+            ''' Retourne False si l'enveloppe n'existe pas (aucune création).
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="fxIndex">Index 0-based du FX.</param>
+            ''' <param name="paramIndex">Index 0-based du paramètre.</param>
+            Public Function ArmFxParamEnvelope(trackIndex As Integer,
                                                     fxIndex As Integer,
                                                     paramIndex As Integer) As Boolean
-                    Dim envIdx = utility.GetFXEnvelopeIndex(trackIndex, fxIndex,
+                Dim envIdx = utility.GetFXEnvelopeIndex(trackIndex, fxIndex,
                                                               paramIndex, create:=False)
-                    If envIdx < 0 Then Return False
-                    Return ArmEnvelope(trackIndex, envIdx)
-                End Function
+                If envIdx < 0 Then Return False
+                Return ArmEnvelope(trackIndex, envIdx)
+            End Function
 
-                ' ── Armement groupé par piste ─────────────────────────────────────────
+            ' ── Armement groupé par piste ─────────────────────────────────────────
 
-                ''' <summary>
-                ''' Arme les enveloppes Vol / Pan / Mute d'une piste.
-                ''' </summary>
-                ''' <param name="trackIndex">Index 0-based de la piste.</param>
-                ''' <param name="armVol">Armer l'enveloppe de volume (défaut : True).</param>
-                ''' <param name="armPan">Armer l'enveloppe de pan (défaut : True).</param>
-                ''' <param name="armMute">Armer l'enveloppe de mute (défaut : True).</param>
-                ''' <param name="create">Créer les enveloppes absentes (défaut : True).</param>
-                Public Sub ArmTrackEnvelopes(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme les enveloppes Vol / Pan / Mute d'une piste.
+            ''' </summary>
+            ''' <param name="trackIndex">Index 0-based de la piste.</param>
+            ''' <param name="armVol">Armer l'enveloppe de volume (défaut : True).</param>
+            ''' <param name="armPan">Armer l'enveloppe de pan (défaut : True).</param>
+            ''' <param name="armMute">Armer l'enveloppe de mute (défaut : True).</param>
+            ''' <param name="create">Créer les enveloppes absentes (défaut : True).</param>
+            Public Sub ArmTrackEnvelopes(trackIndex As Integer,
                                               Optional armVol As Boolean = True,
                                               Optional armPan As Boolean = True,
                                               Optional armMute As Boolean = True,
                                               Optional create As Boolean = True)
-                    If armVol Then ArmVolEnvelope(trackIndex, create)
-                    If armPan Then ArmPanEnvelope(trackIndex, create)
-                    If armMute Then ArmMuteEnvelope(trackIndex, create)
-                End Sub
+                If armVol Then ArmVolEnvelope(trackIndex, create)
+                If armPan Then ArmPanEnvelope(trackIndex, create)
+                If armMute Then ArmMuteEnvelope(trackIndex, create)
+            End Sub
 
-                ''' <summary>
-                ''' Arme les enveloppes Vol / Pan / Mute de toutes les pistes de la liste source.
-                ''' </summary>
-                ''' <param name="armVol">Armer les enveloppes de volume (défaut : True).</param>
-                ''' <param name="armPan">Armer les enveloppes de pan (défaut : True).</param>
-                ''' <param name="armMute">Armer les enveloppes de mute (défaut : True).</param>
-                ''' <param name="create">Créer les enveloppes absentes (défaut : True).</param>
-                Public Sub ArmAllTracks(Optional armVol As Boolean = True,
+            ''' <summary>
+            ''' Arme les enveloppes Vol / Pan / Mute de toutes les pistes de la liste source.
+            ''' </summary>
+            ''' <param name="armVol">Armer les enveloppes de volume (défaut : True).</param>
+            ''' <param name="armPan">Armer les enveloppes de pan (défaut : True).</param>
+            ''' <param name="armMute">Armer les enveloppes de mute (défaut : True).</param>
+            ''' <param name="create">Créer les enveloppes absentes (défaut : True).</param>
+            Public Sub ArmAllTracks(Optional armVol As Boolean = True,
                                          Optional armPan As Boolean = True,
                                          Optional armMute As Boolean = True,
                                          Optional create As Boolean = True)
-                    For Each trk In _tracks
-                        ArmTrackEnvelopes(trk.TrackIndex, armVol, armPan, armMute, create)
+                For Each trk In _tracks
+                    ArmTrackEnvelopes(trk.TrackIndex, armVol, armPan, armMute, create)
+                Next
+            End Sub
+
+            ''' <summary>
+            ''' Arme les enveloppes de tous les FX existants de toutes les pistes
+            ''' de la liste source (aucune création).
+            ''' </summary>
+            Public Sub ArmAllFxEnvelopes()
+                For Each trk In _tracks
+                    Dim fxCount = GetFxCount(trk.TrackIndex)
+                    For fxIndex = 0 To fxCount - 1
+                        ArmFxEnvelopes(trk.TrackIndex, fxIndex)
                     Next
-                End Sub
+                Next
+            End Sub
 
-                ''' <summary>
-                ''' Arme les enveloppes de tous les FX existants de toutes les pistes
-                ''' de la liste source (aucune création).
-                ''' </summary>
-                Public Sub ArmAllFxEnvelopes()
-                    For Each trk In _tracks
-                        Dim fxCount = GetFxCount(trk.TrackIndex)
-                        For fxIndex = 0 To fxCount - 1
-                            ArmFxEnvelopes(trk.TrackIndex, fxIndex)
-                        Next
-                    Next
-                End Sub
+            ' ── Suspension / Reprise ──────────────────────────────────────────────
 
-                ' ── Suspension / Reprise ──────────────────────────────────────────────
-
-                ''' <summary>
-                ''' Désarme temporairement toutes les enveloppes trackées par ce manager
-                ''' sans les retirer de la liste — le contrôle manuel reprend la main.
-                ''' <br/>
-                ''' Appeler <see cref="ResumeAll"/> pour les réarmer.
-                ''' </summary>
-                Public Sub SuspendAll()
-                    SyncLock _lock
-                        For Each entry In _armed
-                            _ReaperTrackMonitor.SuspendTrack(entry.TrackIndex)
-                            utility.SetEnvelopePropVal(entry.TrackIndex, entry.EnvIndex,
+            ''' <summary>
+            ''' Désarme temporairement toutes les enveloppes trackées par ce manager
+            ''' sans les retirer de la liste — le contrôle manuel reprend la main.
+            ''' <br/>
+            ''' Appeler <see cref="ResumeAll"/> pour les réarmer.
+            ''' </summary>
+            Public Sub SuspendAll()
+                SyncLock _lock
+                    For Each entry In _armed
+                        _ReaperTrackMonitor.SuspendTrack(entry.TrackIndex)
+                        utility.SetEnvelopePropVal(entry.TrackIndex, entry.EnvIndex,
                                                         "ARMED", 0.0)
-                            _ReaperTrackMonitor.ResumeTrack(entry.TrackIndex)
-                        Next
-                    End SyncLock
-                    RaiseEvent On_AllSuspended()
-                End Sub
+                        _ReaperTrackMonitor.ResumeTrack(entry.TrackIndex)
+                    Next
+                End SyncLock
+                RaiseEvent On_AllSuspended()
+            End Sub
 
-                ''' <summary>
-                ''' Réarme toutes les enveloppes précédemment suspendues via
-                ''' <see cref="SuspendAll"/>.
-                ''' </summary>
-                Public Sub ResumeAll()
-                    SyncLock _lock
-                        For Each entry In _armed
-                            _ReaperTrackMonitor.SuspendTrack(entry.TrackIndex)
-                            utility.SetEnvelopePropVal(entry.TrackIndex, entry.EnvIndex,
+            ''' <summary>
+            ''' Réarme toutes les enveloppes précédemment suspendues via
+            ''' <see cref="SuspendAll"/>.
+            ''' </summary>
+            Public Sub ResumeAll()
+                SyncLock _lock
+                    For Each entry In _armed
+                        _ReaperTrackMonitor.SuspendTrack(entry.TrackIndex)
+                        utility.SetEnvelopePropVal(entry.TrackIndex, entry.EnvIndex,
                                                         "ARMED", 1.0)
-                            _ReaperTrackMonitor.ResumeTrack(entry.TrackIndex)
-                        Next
-                    End SyncLock
-                    RaiseEvent On_AllResumed()
-                End Sub
+                        _ReaperTrackMonitor.ResumeTrack(entry.TrackIndex)
+                    Next
+                End SyncLock
+                RaiseEvent On_AllResumed()
+            End Sub
 
 
 
-                ' ── Helpers internes ──────────────────────────────────────────────────
+            ' ── Helpers internes ──────────────────────────────────────────────────
 
-                ''' <summary>
-                ''' Arme une enveloppe par son index et l'enregistre dans la liste trackée.
-                ''' Sans effet si l'enveloppe est déjà dans la liste.
-                ''' Déclenche <see cref="On_EnvelopeArmed"/> et les événements par type si l'état change.
-                ''' </summary>
-                Private Function ArmEnvelope(trackIndex As Integer, envIndex As Integer) As Boolean
-                    _ReaperTrackMonitor.SuspendTrack(trackIndex)
-                    Dim ok = utility.SetEnvelopePropVal(trackIndex, envIndex, "ARMED", 1.0)
-                    If Not ok Then Return False
+            ''' <summary>
+            ''' Arme une enveloppe par son index et l'enregistre dans la liste trackée.
+            ''' Sans effet si l'enveloppe est déjà dans la liste.
+            ''' Déclenche <see cref="On_EnvelopeArmed"/> et les événements par type si l'état change.
+            ''' </summary>
+            Private Function ArmEnvelope(trackIndex As Integer, envIndex As Integer) As Boolean
+                _ReaperTrackMonitor.SuspendTrack(trackIndex)
+                Dim ok = utility.SetEnvelopePropVal(trackIndex, envIndex, "ARMED", 1.0)
+                If Not ok Then Return False
 
-                    Dim alreadyTracked As Boolean
-                    SyncLock _lock
-                        alreadyTracked = False
-                        For Each e In _armed
-                            If e.TrackIndex = trackIndex AndAlso e.EnvIndex = envIndex Then
-                                alreadyTracked = True
-                                Exit For
-                            End If
-                        Next
-                        If Not alreadyTracked Then
-                            _armed.Add((trackIndex, envIndex))
-                        End If
-                    End SyncLock
-
-                    If Not alreadyTracked Then
-                        Dim name = utility.GetEnvelopeName(trackIndex, envIndex)
-                        RaiseEvent On_EnvelopeArmed(trackIndex, envIndex, name)
-                        ' ── Notifier les changements d'état par type ──────────
-                        RaiseEnvelopeTypeChanges()
-                    End If
-                    _ReaperTrackMonitor.ResumeTrack(trackIndex)
-                    Return True
-                End Function
-
-                ''' <summary>
-                ''' Désarme définitivement toutes les enveloppes trackées et vide la liste.
-                ''' Contrairement à <see cref="SuspendAll"/>, un appel à <see cref="ResumeAll"/>
-                ''' ne les réarmera pas.
-                ''' </summary>
-                Public Sub DisarmAll()
-
-                    SyncLock _lock
-                        For Each entry In _armed
-                            _ReaperTrackMonitor.SuspendTrack(entry.TrackIndex)
-                            utility.SetEnvelopePropVal(entry.TrackIndex, entry.EnvIndex,
-                                                        "ARMED", 0.0)
-                            _ReaperTrackMonitor.ResumeTrack(entry.TrackIndex)
-                            RaiseEvent On_EnvelopeDisarmed(entry.TrackIndex, entry.EnvIndex)
-                        Next
-                        _armed.Clear()
-                    End SyncLock
-                    ' ── Notifier les changements d'état par type ──────────────
-                    RaiseEnvelopeTypeChanges()
-                End Sub
-                ''' <summary>
-                ''' Compare l'état armé actuel de chaque type d'enveloppe avec le cache et
-                ''' déclenche l'événement correspondant uniquement en cas de changement.
-                ''' Appelé après <see cref="ArmEnvelope"/> et <see cref="DisarmAll"/>.
-                ''' </summary>
-                Private Sub RaiseEnvelopeTypeChanges()
-                    Dim vol = HasArmedEnvelopeOfType(Of ReaperTrackVolEnvelope)()
-                    If _cachedHasArmedVol <> vol Then
-                        _cachedHasArmedVol = vol
-                        RaiseEvent On_VolEnvelopeArmedChange(vol)
-                    End If
-
-                    Dim pan = HasArmedEnvelopeOfType(Of ReaperTrackPanEnvelope)()
-                    If _cachedHasArmedPan <> pan Then
-                        _cachedHasArmedPan = pan
-                        RaiseEvent On_PanEnvelopeArmedChange(pan)
-                    End If
-
-                    Dim mute = HasArmedEnvelopeOfType(Of ReaperTrackMuteEnvelope)()
-                    If _cachedHasArmedMute <> mute Then
-                        _cachedHasArmedMute = mute
-                        RaiseEvent On_MuteEnvelopeArmedChange(mute)
-                    End If
-
-                    Dim sendVol = HasArmedEnvelopeOfType(Of ReaperSendVolEnvelope)()
-                    If _cachedHasArmedSendVol <> sendVol Then
-                        _cachedHasArmedSendVol = sendVol
-                        RaiseEvent On_SendVolEnvelopeArmedChange(sendVol)
-                    End If
-
-                    Dim sendPan = HasArmedEnvelopeOfType(Of ReaperSendPanEnvelope)()
-                    If _cachedHasArmedSendPan <> sendPan Then
-                        _cachedHasArmedSendPan = sendPan
-                        RaiseEvent On_SendPanEnvelopeArmedChange(sendPan)
-                    End If
-
-                    Dim sendMute = HasArmedEnvelopeOfType(Of ReaperSendMuteEnvelope)()
-                    If _cachedHasArmedSendMute <> sendMute Then
-                        _cachedHasArmedSendMute = sendMute
-                        RaiseEvent On_SendMuteEnvelopeArmedChange(sendMute)
-                    End If
-
-                    Dim fxParam = HasArmedEnvelopeOfType(Of ReaperFxParamEnvelope)()
-                    If _cachedHasArmedFxParam <> fxParam Then
-                        _cachedHasArmedFxParam = fxParam
-                        RaiseEvent On_FxParamEnvelopeArmedChange(fxParam)
-                    End If
-                End Sub
-                ''' <summary>
-                ''' Cherche une enveloppe de piste par nom (Volume / Pan / Mute).
-                ''' Retourne l'envIndex 0-based, ou -1 si introuvable.
-                ''' </summary>
-                Private Function FindEnvelopeByName(trackIndex As Integer,
-                                                      name As String) As Integer
-                    Dim count = utility.CountTrackEnvelopes(trackIndex)
-                    If count <= 0 Then Return -1
-                    For i = 0 To count - 1
-                        Dim envName = utility.GetEnvelopeName(trackIndex, i)
-                        If envName.Equals(name, StringComparison.OrdinalIgnoreCase) Then
-                            Return i
+                Dim alreadyTracked As Boolean
+                SyncLock _lock
+                    alreadyTracked = False
+                    For Each e In _armed
+                        If e.TrackIndex = trackIndex AndAlso e.EnvIndex = envIndex Then
+                            alreadyTracked = True
+                            Exit For
                         End If
                     Next
-                    Return -1
-                End Function
+                    If Not alreadyTracked Then
+                        _armed.Add((trackIndex, envIndex))
+                    End If
+                End SyncLock
 
-                ''' <summary>
-                ''' Cherche une enveloppe d'envoi par nom ET par index d'envoi
-                ''' (<c>I_SEND_IDX</c>).
-                ''' Retourne l'envIndex 0-based, ou -1 si introuvable.
-                ''' </summary>
-                Private Function FindSendEnvelope(trackIndex As Integer,
+                If Not alreadyTracked Then
+                    Dim name = utility.GetEnvelopeName(trackIndex, envIndex)
+                    RaiseEvent On_EnvelopeArmed(trackIndex, envIndex, name)
+                    ' ── Notifier les changements d'état par type ──────────
+                    RaiseEnvelopeTypeChanges()
+                End If
+                _ReaperTrackMonitor.ResumeTrack(trackIndex)
+                Return True
+            End Function
+
+            ''' <summary>
+            ''' Désarme définitivement toutes les enveloppes trackées et vide la liste.
+            ''' Contrairement à <see cref="SuspendAll"/>, un appel à <see cref="ResumeAll"/>
+            ''' ne les réarmera pas.
+            ''' </summary>
+            Public Sub DisarmAll()
+
+                SyncLock _lock
+                    For Each entry In _armed
+                        _ReaperTrackMonitor.SuspendTrack(entry.TrackIndex)
+                        utility.SetEnvelopePropVal(entry.TrackIndex, entry.EnvIndex,
+                                                        "ARMED", 0.0)
+                        _ReaperTrackMonitor.ResumeTrack(entry.TrackIndex)
+                        RaiseEvent On_EnvelopeDisarmed(entry.TrackIndex, entry.EnvIndex)
+                    Next
+                    _armed.Clear()
+                End SyncLock
+                ' ── Notifier les changements d'état par type ──────────────
+                RaiseEnvelopeTypeChanges()
+            End Sub
+            ''' <summary>
+            ''' Compare l'état armé actuel de chaque type d'enveloppe avec le cache et
+            ''' déclenche l'événement correspondant uniquement en cas de changement.
+            ''' Appelé après <see cref="ArmEnvelope"/> et <see cref="DisarmAll"/>.
+            ''' </summary>
+            Private Sub RaiseEnvelopeTypeChanges()
+                Dim vol = HasArmedEnvelopeOfType(Of ReaperTrackVolEnvelope)()
+                If _cachedHasArmedVol <> vol Then
+                    _cachedHasArmedVol = vol
+                    RaiseEvent On_VolEnvelopeArmedChange(vol)
+                End If
+
+                Dim pan = HasArmedEnvelopeOfType(Of ReaperTrackPanEnvelope)()
+                If _cachedHasArmedPan <> pan Then
+                    _cachedHasArmedPan = pan
+                    RaiseEvent On_PanEnvelopeArmedChange(pan)
+                End If
+
+                Dim mute = HasArmedEnvelopeOfType(Of ReaperTrackMuteEnvelope)()
+                If _cachedHasArmedMute <> mute Then
+                    _cachedHasArmedMute = mute
+                    RaiseEvent On_MuteEnvelopeArmedChange(mute)
+                End If
+
+                Dim sendVol = HasArmedEnvelopeOfType(Of ReaperSendVolEnvelope)()
+                If _cachedHasArmedSendVol <> sendVol Then
+                    _cachedHasArmedSendVol = sendVol
+                    RaiseEvent On_SendVolEnvelopeArmedChange(sendVol)
+                End If
+
+                Dim sendPan = HasArmedEnvelopeOfType(Of ReaperSendPanEnvelope)()
+                If _cachedHasArmedSendPan <> sendPan Then
+                    _cachedHasArmedSendPan = sendPan
+                    RaiseEvent On_SendPanEnvelopeArmedChange(sendPan)
+                End If
+
+                Dim sendMute = HasArmedEnvelopeOfType(Of ReaperSendMuteEnvelope)()
+                If _cachedHasArmedSendMute <> sendMute Then
+                    _cachedHasArmedSendMute = sendMute
+                    RaiseEvent On_SendMuteEnvelopeArmedChange(sendMute)
+                End If
+
+                Dim fxParam = HasArmedEnvelopeOfType(Of ReaperFxParamEnvelope)()
+                If _cachedHasArmedFxParam <> fxParam Then
+                    _cachedHasArmedFxParam = fxParam
+                    RaiseEvent On_FxParamEnvelopeArmedChange(fxParam)
+                End If
+            End Sub
+            ''' <summary>
+            ''' Cherche une enveloppe de piste par nom (Volume / Pan / Mute).
+            ''' Retourne l'envIndex 0-based, ou -1 si introuvable.
+            ''' </summary>
+            Private Function FindEnvelopeByName(trackIndex As Integer,
+                                                      name As String) As Integer
+                Dim count = utility.CountTrackEnvelopes(trackIndex)
+                If count <= 0 Then Return -1
+                For i = 0 To count - 1
+                    Dim envName = utility.GetEnvelopeName(trackIndex, i)
+                    If envName.Equals(name, StringComparison.OrdinalIgnoreCase) Then
+                        Return i
+                    End If
+                Next
+                Return -1
+            End Function
+
+            ''' <summary>
+            ''' Cherche une enveloppe d'envoi par nom ET par index d'envoi
+            ''' (<c>I_SEND_IDX</c>).
+            ''' Retourne l'envIndex 0-based, ou -1 si introuvable.
+            ''' </summary>
+            Private Function FindSendEnvelope(trackIndex As Integer,
                                                    sendIndex As Integer,
                                                    name As String) As Integer
-                    Dim count = utility.CountTrackEnvelopes(trackIndex)
-                    If count <= 0 Then Return -1
-                    For i = 0 To count - 1
-                        Dim envName = utility.GetEnvelopeName(trackIndex, i)
-                        If Not envName.Equals(name, StringComparison.OrdinalIgnoreCase) Then
-                            Continue For
-                        End If
-                        Dim rawSendId = utility.GetEnvelopePropVal2(trackIndex, i, "I_SEND_IDX")
-                        If rawSendId = Double.MinValue Then Continue For
-                        If CInt(rawSendId) = sendIndex Then Return i
-                    Next
-                    Return -1
-                End Function
+                Dim count = utility.CountTrackEnvelopes(trackIndex)
+                If count <= 0 Then Return -1
+                For i = 0 To count - 1
+                    Dim envName = utility.GetEnvelopeName(trackIndex, i)
+                    If Not envName.Equals(name, StringComparison.OrdinalIgnoreCase) Then
+                        Continue For
+                    End If
+                    Dim rawSendId = utility.GetEnvelopePropVal2(trackIndex, i, "I_SEND_IDX")
+                    If rawSendId = Double.MinValue Then Continue For
+                    If CInt(rawSendId) = sendIndex Then Return i
+                Next
+                Return -1
+            End Function
 
-                ''' <summary>
-                ''' Arme une enveloppe de piste standard (Volume/Pan/Mute) en la cherchant
-                ''' par nom. Si absente et <paramref name="create"/> est True,
-                ''' demande sa création au bridge via <c>CREATE_TRACK_ENVELOPE</c>.
-                ''' </summary>
-                Private Function ArmTrackEnvelopeByName(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme une enveloppe de piste standard (Volume/Pan/Mute) en la cherchant
+            ''' par nom. Si absente et <paramref name="create"/> est True,
+            ''' demande sa création au bridge via <c>CREATE_TRACK_ENVELOPE</c>.
+            ''' </summary>
+            Private Function ArmTrackEnvelopeByName(trackIndex As Integer,
                                                           name As String,
                                                           create As Boolean) As Boolean
-                    _ReaperTrackMonitor.SuspendTrack(trackIndex)
-                    Dim envIdx = FindEnvelopeByName(trackIndex, name)
-                    If envIdx < 0 Then
-                        If Not create Then Return False
-                        Dim raw = utility.CallReaperBridge(
+                _ReaperTrackMonitor.SuspendTrack(trackIndex)
+                Dim envIdx = FindEnvelopeByName(trackIndex, name)
+                If envIdx < 0 Then
+                    If Not create Then Return False
+                    Dim raw = utility.CallReaperBridge(
                             $"CREATE_TRACK_ENVELOPE|{trackIndex}|{name}")
-                        If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
-                        Integer.TryParse(raw, envIdx)
-                        If envIdx < 0 Then Return False
-                    End If
-                    _ReaperTrackMonitor.ResumeTrack(trackIndex)
-                    Return ArmEnvelope(trackIndex, envIdx)
-                End Function
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
+                    Integer.TryParse(raw, envIdx)
+                    If envIdx < 0 Then Return False
+                End If
+                _ReaperTrackMonitor.ResumeTrack(trackIndex)
+                Return ArmEnvelope(trackIndex, envIdx)
+            End Function
 
-                ''' <summary>
-                ''' Arme une enveloppe d'envoi (Send Volume / Send Mute) en la cherchant
-                ''' par nom + sendIndex. Si absente et <paramref name="create"/> est True,
-                ''' demande sa création au bridge via <c>CREATE_SEND_ENVELOPE</c>.
-                ''' </summary>
-                Private Function ArmSendEnvelopeByName(trackIndex As Integer,
+            ''' <summary>
+            ''' Arme une enveloppe d'envoi (Send Volume / Send Mute) en la cherchant
+            ''' par nom + sendIndex. Si absente et <paramref name="create"/> est True,
+            ''' demande sa création au bridge via <c>CREATE_SEND_ENVELOPE</c>.
+            ''' </summary>
+            Private Function ArmSendEnvelopeByName(trackIndex As Integer,
                                                          sendIndex As Integer,
                                                          name As String,
                                                          create As Boolean) As Boolean
 
-                    _ReaperTrackMonitor.SuspendTrack(trackIndex)
-                    Dim envIdx = FindSendEnvelope(trackIndex, sendIndex, name)
-                    If envIdx < 0 Then
-                        If Not create Then Return False
-                        Dim raw = utility.CallReaperBridge(
+                _ReaperTrackMonitor.SuspendTrack(trackIndex)
+                Dim envIdx = FindSendEnvelope(trackIndex, sendIndex, name)
+                If envIdx < 0 Then
+                    If Not create Then Return False
+                    Dim raw = utility.CallReaperBridge(
                             $"CREATE_SEND_ENVELOPE|{trackIndex}|{sendIndex}|{name}")
-                        If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
-                        Integer.TryParse(raw, envIdx)
-                        If envIdx < 0 Then Return False
-                    End If
-                    _ReaperTrackMonitor.ResumeTrack(trackIndex)
-                    Return ArmEnvelope(trackIndex, envIdx)
-                End Function
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
+                    Integer.TryParse(raw, envIdx)
+                    If envIdx < 0 Then Return False
+                End If
+                _ReaperTrackMonitor.ResumeTrack(trackIndex)
+                Return ArmEnvelope(trackIndex, envIdx)
+            End Function
 
-                ''' <summary>
-                ''' Retourne le nombre de paramètres d'un FX via <c>GET_FX_ALL_INFO</c>.
-                ''' Retourne 0 si le bridge est indisponible.
-                ''' </summary>
-                Private Function GetFxParamCount(trackIndex As Integer, fxIndex As Integer) As Integer
-                    Dim raw = utility.CallReaperBridge($"GET_FX_ALL_INFO|{trackIndex}|{fxIndex}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
-                    Dim p = raw.Split("|"c)
-                    If p.Length < 3 Then Return 0
-                    Dim count As Integer = 0
-                    Integer.TryParse(p(2), count)
-                    Return count
-                End Function
+            ''' <summary>
+            ''' Retourne le nombre de paramètres d'un FX via <c>GET_FX_ALL_INFO</c>.
+            ''' Retourne 0 si le bridge est indisponible.
+            ''' </summary>
+            Private Function GetFxParamCount(trackIndex As Integer, fxIndex As Integer) As Integer
+                Dim raw = utility.CallReaperBridge($"GET_FX_ALL_INFO|{trackIndex}|{fxIndex}")
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
+                Dim p = raw.Split("|"c)
+                If p.Length < 3 Then Return 0
+                Dim count As Integer = 0
+                Integer.TryParse(p(2), count)
+                Return count
+            End Function
 
-                ''' <summary>
-                ''' Retourne le nombre de FX d'une piste.
-                ''' Retourne 0 si le bridge est indisponible.
-                ''' </summary>
-                Private Function GetFxCount(trackIndex As Integer) As Integer
-                    Dim raw = utility.CallReaperBridge($"GET_FX_COUNT|{trackIndex}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
-                    Dim count As Integer = 0
-                    Integer.TryParse(raw, count)
-                    Return count
-                End Function
+            ''' <summary>
+            ''' Retourne le nombre de FX d'une piste.
+            ''' Retourne 0 si le bridge est indisponible.
+            ''' </summary>
+            Private Function GetFxCount(trackIndex As Integer) As Integer
+                Dim raw = utility.CallReaperBridge($"GET_FX_COUNT|{trackIndex}")
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
+                Dim count As Integer = 0
+                Integer.TryParse(raw, count)
+                Return count
+            End Function
 
-            End Class
+        End Class
 
         ' ══════════════════════════════════════════════════════════════════════════
         '  REAPER TRACK SENDS EDITOR — liste, ajout, suppression de sends sur une piste
@@ -7872,767 +8895,767 @@ Namespace Reaper
         ''' Appeler <see cref="Start"/> pour démarrer la surveillance.
         ''' </summary>
         Public Class ReaperTransportManager
-                Implements IDisposable
+            Implements IDisposable
 
-                Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
+            Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
 
-                ' ── Moniteur interne ──────────────────────────────────────────────
-                Private ReadOnly _monitor As New Monitors.ReaperTransportMonitor()
-                Private _disposed As Boolean = False
+            ' ── Moniteur interne ──────────────────────────────────────────────
+            Private ReadOnly _monitor As New Monitors.ReaperTransportMonitor()
+            Private _disposed As Boolean = False
 
-                ' ── Cache état transport ──────────────────────────────────────────
-                Private _playState As Integer = 0
-                Private _playPos As Double = 0
-                Private _isLooping As Boolean = False
-                Private _loopIn As Double = 0
-                Private _loopOut As Double = 0
-                Private _isQuickPunch As Boolean = False
-                Private _timeSelIn As Double = 0
-                Private _timeSelOut As Double = 0
+            ' ── Cache état transport ──────────────────────────────────────────
+            Private _playState As Integer = 0
+            Private _playPos As Double = 0
+            Private _isLooping As Boolean = False
+            Private _loopIn As Double = 0
+            Private _loopOut As Double = 0
+            Private _isQuickPunch As Boolean = False
+            Private _timeSelIn As Double = 0
+            Private _timeSelOut As Double = 0
 
-                ' ── Événements ────────────────────────────────────────────────────
+            ' ── Événements ────────────────────────────────────────────────────
 
-                ''' <summary>
-                ''' Déclenché quand l'état de transport change.
-                ''' 0=stop  1=play  2=pause  4=rec  5=rec+play
-                ''' </summary>
-                Public Event On_PlayStateChange(playState As Integer)
+            ''' <summary>
+            ''' Déclenché quand l'état de transport change.
+            ''' 0=stop  1=play  2=pause  4=rec  5=rec+play
+            ''' </summary>
+            Public Event On_PlayStateChange(playState As Integer)
 
-                ''' <summary>Déclenché quand la position de lecture change (secondes).</summary>
-                Public Event On_PositionChange(pos As Double)
+            ''' <summary>Déclenché quand la position de lecture change (secondes).</summary>
+            Public Event On_PositionChange(pos As Double)
 
-                ''' <summary>
-                ''' Déclenché quand l'état ou les points de boucle changent.
-                ''' <paramref name="isLooping"/> indique si la boucle est active.
-                ''' </summary>
-                Public Event On_LoopChange(isLooping As Boolean,
+            ''' <summary>
+            ''' Déclenché quand l'état ou les points de boucle changent.
+            ''' <paramref name="isLooping"/> indique si la boucle est active.
+            ''' </summary>
+            Public Event On_LoopChange(isLooping As Boolean,
                                             loopIn As Double,
                                             loopOut As Double)
 
-                ''' <summary>Déclenché quand l'état Quick Punch change.</summary>
-                Public Event On_QuickPunchChange(isQuickPunch As Boolean)
+            ''' <summary>Déclenché quand l'état Quick Punch change.</summary>
+            Public Event On_QuickPunchChange(isQuickPunch As Boolean)
 
-                ''' <summary>Déclenché quand la sélection temporelle (In/Out) change.</summary>
-                Public Event On_TimeSelectionChange(selIn As Double, selOut As Double)
+            ''' <summary>Déclenché quand la sélection temporelle (In/Out) change.</summary>
+            Public Event On_TimeSelectionChange(selIn As Double, selOut As Double)
 
-                ' ── Constructeur ──────────────────────────────────────────────────
-
-                ''' <summary>
-                ''' Initialise le manager et câble le moniteur interne.
-                ''' Appeler <see cref="Start"/> pour démarrer la surveillance.
-                ''' </summary>
-                Public Sub New()
-                    AddHandler _monitor.On_PlayStateChange, AddressOf OnPlayStateChange
-                    AddHandler _monitor.On_PlayPositionChange, AddressOf OnPlayPositionChange
-                    AddHandler _monitor.On_LoopChange, AddressOf OnLoopChange
-                    AddHandler _monitor.On_QuickPunchChange, AddressOf OnQuickPunchChange
-                    AddHandler _monitor.On_TimeSelectionChange, AddressOf OnTimeSelectionChange
-                End Sub
-
-                ' ── Propriétés d'état ─────────────────────────────────────────────
-
-                ''' <summary>
-                ''' État de transport brut Reaper.
-                ''' 0=stop  1=play  2=pause  4=rec  5=rec+play
-                ''' </summary>
-                Public ReadOnly Property PlayState As Integer
-                    Get
-                        Return _playState
-                    End Get
-                End Property
-
-                ''' <summary>Position de lecture courante en secondes.</summary>
-                Public ReadOnly Property PlayPosition As Double
-                    Get
-                        Return _playPos
-                    End Get
-                End Property
-
-                ''' <summary>True si Reaper est en lecture (bit 0 de <see cref="PlayState"/>).</summary>
-                Public ReadOnly Property IsPlaying As Boolean
-                    Get
-                        Return (_playState And 1) <> 0
-                    End Get
-                End Property
-
-                ''' <summary>True si Reaper est en pause (bit 1 de <see cref="PlayState"/>).</summary>
-                Public ReadOnly Property IsPaused As Boolean
-                    Get
-                        Return (_playState And 2) <> 0
-                    End Get
-                End Property
-
-                ''' <summary>True si Reaper est en enregistrement (bit 2 de <see cref="PlayState"/>).</summary>
-                Public ReadOnly Property IsRecording As Boolean
-                    Get
-                        Return (_playState And 4) <> 0
-                    End Get
-                End Property
-
-                ''' <summary>True si la boucle est active.</summary>
-                Public ReadOnly Property IsLooping As Boolean
-                    Get
-                        Return _isLooping
-                    End Get
-                End Property
-
-                ''' <summary>True si Quick Punch est activé.</summary>
-                Public ReadOnly Property IsQuickPunch As Boolean
-                    Get
-                        Return _isQuickPunch
-                    End Get
-                End Property
-
-                ''' <summary>Point de début de boucle en secondes.</summary>
-                Public ReadOnly Property LoopIn As Double
-                    Get
-                        Return _loopIn
-                    End Get
-                End Property
-
-                ''' <summary>Point de fin de boucle en secondes.</summary>
-                Public ReadOnly Property LoopOut As Double
-                    Get
-                        Return _loopOut
-                    End Get
-                End Property
-
-                ''' <summary>Point de début de sélection temporelle en secondes.</summary>
-                Public ReadOnly Property TimeSelIn As Double
-                    Get
-                        Return _timeSelIn
-                    End Get
-                End Property
-
-                ''' <summary>Point de fin de sélection temporelle en secondes.</summary>
-                Public ReadOnly Property TimeSelOut As Double
-                    Get
-                        Return _timeSelOut
-                    End Get
-                End Property
-
-                ''' <summary>Intervalle de polling du moniteur en ms (défaut : 50 ms).</summary>
-                Public Property Interval As Integer
-                    Get
-                        Return _monitor.Interval
-                    End Get
-                    Set
-                        _monitor.Interval = Value
-                    End Set
-                End Property
-
-                ' ── Cycle de vie du moniteur ──────────────────────────────────────
-
-                ''' <summary>Démarre la surveillance du transport. Sans effet si déjà démarré.</summary>
-                Public Sub Start()
-                    _monitor.Start()
-                End Sub
-
-                ''' <summary>Arrête la surveillance du transport.</summary>
-                Public Sub [Stop]()
-                    _monitor.[Stop]()
-                End Sub
-
-                ' ── Suspension du moniteur ────────────────────────────────────────
-
-                ''' <summary>
-                ''' Suspend les événements du moniteur de transport.
-                ''' Appeler avant d'envoyer une commande pour éviter le feedback.
-                ''' </summary>
-                Public Sub SuspendMonitor()
-                    _monitor.SuspendMonitor()
-                End Sub
-
-                ''' <summary>
-                ''' Réactive les événements du moniteur et force un re-poll immédiat
-                ''' pour capturer l'état résultant de la commande.
-                ''' </summary>
-                Public Sub ResumeMonitor()
-                    _monitor.ResumeMonitor()
-                End Sub
-
-                ' ── Commandes de transport ────────────────────────────────────────
-
-                ''' <summary>Lance la lecture.</summary>
-                Public Sub Play()
-                    SuspendMonitor()
-                    utility.CallReaperBridge("TRANSPORT_PLAY")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Arrête la lecture.</summary>
-                Public Sub StopPlayback()
-                    SuspendMonitor()
-                    utility.CallReaperBridge("TRANSPORT_STOP")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Bascule la pause.</summary>
-                Public Sub Pause()
-                    SuspendMonitor()
-                    utility.CallReaperBridge("TRANSPORT_PAUSE")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Lance l'enregistrement.</summary>
-                Public Sub Record()
-                    SuspendMonitor()
-                    utility.CallReaperBridge("TRANSPORT_REC")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Bascule l'état de boucle (Loop On/Off).</summary>
-                Public Sub ToggleLoop()
-                    SuspendMonitor()
-                    utility.CallReaperBridge("TRANSPORT_TOGGLE_LOOP")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Bascule le mode Quick Punch.</summary>
-                Public Sub ToggleQuickPunch()
-                    SuspendMonitor()
-                    utility.CallReaperBridge("TRANSPORT_TOGGLE_QUICK_PUNCH")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Déplace le curseur au début du projet.</summary>
-                Public Sub GoToStart()
-                    SuspendMonitor()
-                    utility.SetCursorPosition(0.0, moveView:=True, seekPlay:=IsPlaying)
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Déplace le curseur à la fin du projet.</summary>
-                Public Sub GoToEnd()
-                    Dim length = utility.GetProjectLength()
-                    If length < 0 Then Return
-                    SuspendMonitor()
-                    utility.SetCursorPosition(length, moveView:=True, seekPlay:=IsPlaying)
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Recule le curseur de <paramref name="stepSeconds"/> secondes.</summary>
-                Public Sub Rewind(Optional stepSeconds As Double = 5.0)
-                    Dim newPos = Math.Max(0.0, _playPos - stepSeconds)
-                    SuspendMonitor()
-                    utility.SetCursorPosition(newPos, moveView:=True, seekPlay:=True)
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Avance le curseur de <paramref name="stepSeconds"/> secondes.</summary>
-                Public Sub FastForward(Optional stepSeconds As Double = 5.0)
-                    Dim newPos = _playPos + stepSeconds
-                    SuspendMonitor()
-                    utility.SetCursorPosition(newPos, moveView:=True, seekPlay:=True)
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Déplace le point de début de boucle.</summary>
-                Public Sub SetLoopIn(time As Double)
-                    SuspendMonitor()
-                    utility.CallReaperBridge(
-                        $"TRANSPORT_SET_LOOP_IN|{time.ToString("G", Ic)}")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Déplace le point de fin de boucle.</summary>
-                Public Sub SetLoopOut(time As Double)
-                    SuspendMonitor()
-                    utility.CallReaperBridge(
-                        $"TRANSPORT_SET_LOOP_OUT|{time.ToString("G", Ic)}")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Définit les deux points de boucle en un seul appel.</summary>
-                Public Sub SetLoopPoints(inTime As Double, outTime As Double)
-                    SuspendMonitor()
-                    utility.CallReaperBridge(
-                        $"TRANSPORT_SET_LOOP_POINTS|{inTime.ToString("G", Ic)}|{outTime.ToString("G", Ic)}")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Déplace le point de début de la sélection temporelle.</summary>
-                Public Sub SetTimeSelIn(time As Double)
-                    SuspendMonitor()
-                    utility.CallReaperBridge(
-                        $"TRANSPORT_SET_TIME_SEL_IN|{time.ToString("G", Ic)}")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Déplace le point de fin de la sélection temporelle.</summary>
-                Public Sub SetTimeSelOut(time As Double)
-                    SuspendMonitor()
-                    utility.CallReaperBridge(
-                        $"TRANSPORT_SET_TIME_SEL_OUT|{time.ToString("G", Ic)}")
-                    ResumeMonitor()
-                End Sub
-
-                ''' <summary>Définit les deux points de sélection temporelle en un seul appel.</summary>
-                Public Sub SetTimeSelection(inTime As Double, outTime As Double)
-                    SuspendMonitor()
-                    utility.CallReaperBridge(
-                        $"TRANSPORT_SET_TIME_SEL|{inTime.ToString("G", Ic)}|{outTime.ToString("G", Ic)}")
-                    ResumeMonitor()
-                End Sub
-
-                ' ── Handlers internes ─────────────────────────────────────────────
-
-                Private Sub OnPlayStateChange(playState As Integer)
-                    _playState = playState
-                    RaiseEvent On_PlayStateChange(_playState)
-                End Sub
-
-                Private Sub OnPlayPositionChange(playPos As Double)
-                    _playPos = playPos
-                    RaiseEvent On_PositionChange(_playPos)
-                End Sub
-
-                Private Sub OnLoopChange(isLooping As Boolean,
-                                          loopIn As Double,
-                                          loopOut As Double)
-                    _isLooping = isLooping
-                    _loopIn = loopIn
-                    _loopOut = loopOut
-                    RaiseEvent On_LoopChange(isLooping, loopIn, loopOut)
-                End Sub
-
-                Private Sub OnQuickPunchChange(isQuickPunch As Boolean)
-                    _isQuickPunch = isQuickPunch
-                    RaiseEvent On_QuickPunchChange(isQuickPunch)
-                End Sub
-
-                Private Sub OnTimeSelectionChange(selIn As Double, selOut As Double)
-                    _timeSelIn = selIn
-                    _timeSelOut = selOut
-                    RaiseEvent On_TimeSelectionChange(selIn, selOut)
-                End Sub
-
-                ' ── IDisposable ───────────────────────────────────────────────────
-
-                Protected Overridable Sub Dispose(disposing As Boolean)
-                    If Not _disposed Then
-                        If disposing Then
-                            _monitor.Dispose()
-                        End If
-                        _disposed = True
-                    End If
-                End Sub
-
-                ''' <summary>Arrête le monitoring et libère toutes les ressources.</summary>
-                Public Sub Dispose() Implements IDisposable.Dispose
-                    Dispose(disposing:=True)
-                    GC.SuppressFinalize(Me)
-                End Sub
-
-            End Class
-
-            ' ══════════════════════════════════════════════════════════════════════════
-            '  JOG WHEEL MODE — modes de la jogwheel
-            ' ══════════════════════════════════════════════════════════════════════════
-
-            ''' <summary>Modes de fonctionnement de la jogwheel de la surface de contrôle.</summary>
-            Public Enum JogWheelMode
-                ''' <summary>Déplace le curseur d'édition avant/arrière sur la timeline.</summary>
-                Cursor = 0
-                ''' <summary>Déplace le point In de la sélection temporelle.</summary>
-                SelectionIn = 1
-                ''' <summary>Déplace le point Out de la sélection temporelle.</summary>
-                SelectionOut = 2
-                ''' <summary>Zoom horizontal de la timeline (in/out).</summary>
-                ZoomHorizontal = 3
-                ''' <summary>Zoom vertical de la piste sélectionnée (in/out).</summary>
-                ZoomVertical = 4
-            End Enum
-
-
-
-            ' ══════════════════════════════════════════════════════════════════════════
-            '  REAPER JOG WHEEL MANAGER — interface jogwheel multi-modes
-            ' ══════════════════════════════════════════════════════════════════════════
+            ' ── Constructeur ──────────────────────────────────────────────────
 
             ''' <summary>
-            ''' Interface entre la jogwheel d'une surface de contrôle et Reaper.
-            ''' Gère plusieurs modes :
-            ''' <list type="table">
-            ''' <item><term><see cref="JogWheelMode.Cursor"/></term>
-            '''       <description>Déplace le curseur d'édition avant/arrière.</description></item>
-            ''' <item><term><see cref="JogWheelMode.SelectionIn"/></term>
-            '''       <description>Déplace le point In de la sélection temporelle.</description></item>
-            ''' <item><term><see cref="JogWheelMode.SelectionOut"/></term>
-            '''       <description>Déplace le point Out de la sélection temporelle.</description></item>
-            ''' <item><term><see cref="JogWheelMode.ZoomHorizontal"/></term>
-            '''       <description>Zoom horizontal de la timeline (vue arrangement).</description></item>
-            ''' <item><term><see cref="JogWheelMode.ZoomVertical"/></term>
-            '''       <description>Zoom vertical de la piste sélectionnée.</description></item>
-            ''' </list>
-            ''' Appeler <see cref="Jog"/> à chaque tick détecté de la jogwheel.
-            ''' Un tick positif correspond à une rotation dans le sens horaire
-            ''' (forward / zoom in / point +) ; un tick négatif à une rotation
-            ''' anti-horaire (backward / zoom out / point -).
-            ''' <br/>
-            ''' Fournir un <see cref="ReaperTransportManager"/> via le constructeur ou
-            ''' <see cref="TransportManager"/> pour lire <c>IsPlaying</c> et la sélection
-            ''' temporelle depuis le cache (évite une requête pipe).
+            ''' Initialise le manager et câble le moniteur interne.
+            ''' Appeler <see cref="Start"/> pour démarrer la surveillance.
             ''' </summary>
-            Public Class ReaperJogWheelManager
+            Public Sub New()
+                AddHandler _monitor.On_PlayStateChange, AddressOf OnPlayStateChange
+                AddHandler _monitor.On_PlayPositionChange, AddressOf OnPlayPositionChange
+                AddHandler _monitor.On_LoopChange, AddressOf OnLoopChange
+                AddHandler _monitor.On_QuickPunchChange, AddressOf OnQuickPunchChange
+                AddHandler _monitor.On_TimeSelectionChange, AddressOf OnTimeSelectionChange
+            End Sub
 
-                    Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
+            ' ── Propriétés d'état ─────────────────────────────────────────────
 
-                    ' ── Mode courant ──────────────────────────────────────────────────
-                    Private _mode As JogWheelMode = JogWheelMode.Cursor
+            ''' <summary>
+            ''' État de transport brut Reaper.
+            ''' 0=stop  1=play  2=pause  4=rec  5=rec+play
+            ''' </summary>
+            Public ReadOnly Property PlayState As Integer
+                Get
+                    Return _playState
+                End Get
+            End Property
 
-                    ' ── Référence optionnelle au transport manager ────────────────────
-                    Private _transportManager As ReaperTransportManager
+            ''' <summary>Position de lecture courante en secondes.</summary>
+            Public ReadOnly Property PlayPosition As Double
+                Get
+                    Return _playPos
+                End Get
+            End Property
 
-                    ' ── Pas de déplacement par tick ───────────────────────────────────
-                    Private _cursorStepSeconds As Double = 0.1
-                    Private _selectionStepSeconds As Double = 0.1
+            ''' <summary>True si Reaper est en lecture (bit 0 de <see cref="PlayState"/>).</summary>
+            Public ReadOnly Property IsPlaying As Boolean
+                Get
+                    Return (_playState And 1) <> 0
+                End Get
+            End Property
 
-                    ' ── Mode fin (Ctrl/Shift sur la surface) ──────────────────────────
-                    Private _fineMode As Boolean = False
-                    Private _fineDivider As Double = 10.0
+            ''' <summary>True si Reaper est en pause (bit 1 de <see cref="PlayState"/>).</summary>
+            Public ReadOnly Property IsPaused As Boolean
+                Get
+                    Return (_playState And 2) <> 0
+                End Get
+            End Property
 
-                    ' ── Événements ────────────────────────────────────────────────────
+            ''' <summary>True si Reaper est en enregistrement (bit 2 de <see cref="PlayState"/>).</summary>
+            Public ReadOnly Property IsRecording As Boolean
+                Get
+                    Return (_playState And 4) <> 0
+                End Get
+            End Property
 
-                    ''' <summary>Déclenché quand le mode change.</summary>
-                    Public Event On_ModeChanged(mode As JogWheelMode)
+            ''' <summary>True si la boucle est active.</summary>
+            Public ReadOnly Property IsLooping As Boolean
+                Get
+                    Return _isLooping
+                End Get
+            End Property
 
-                    ''' <summary>
-                    ''' Déclenché après chaque déplacement du curseur d'édition.
-                    ''' <paramref name="newPosition"/> = nouvelle position en secondes.
-                    ''' </summary>
-                    Public Event On_CursorMoved(newPosition As Double)
+            ''' <summary>True si Quick Punch est activé.</summary>
+            Public ReadOnly Property IsQuickPunch As Boolean
+                Get
+                    Return _isQuickPunch
+                End Get
+            End Property
 
-                    ''' <summary>
-                    ''' Déclenché après chaque modification de la sélection temporelle.
-                    ''' </summary>
-                    Public Event On_SelectionChanged(selIn As Double, selOut As Double)
+            ''' <summary>Point de début de boucle en secondes.</summary>
+            Public ReadOnly Property LoopIn As Double
+                Get
+                    Return _loopIn
+                End Get
+            End Property
 
-                    ''' <summary>
-                    ''' Déclenché après chaque action de zoom.
-                    ''' <paramref name="direction"/> : +1 = zoom in   -1 = zoom out.
-                    ''' </summary>
-                    Public Event On_Zoomed(mode As JogWheelMode, direction As Integer)
+            ''' <summary>Point de fin de boucle en secondes.</summary>
+            Public ReadOnly Property LoopOut As Double
+                Get
+                    Return _loopOut
+                End Get
+            End Property
 
-                    ' ── Constructeur ──────────────────────────────────────────────────
+            ''' <summary>Point de début de sélection temporelle en secondes.</summary>
+            Public ReadOnly Property TimeSelIn As Double
+                Get
+                    Return _timeSelIn
+                End Get
+            End Property
 
-                    ''' <summary>
-                    ''' Initialise le manager.
-                    ''' </summary>
-                    ''' <param name="transportManager">
-                    ''' Optionnel — permet de lire <c>IsPlaying</c>, <c>TimeSelIn</c> et
-                    ''' <c>TimeSelOut</c> depuis le cache. Peut être défini plus tard via
-                    ''' <see cref="TransportManager"/>.
-                    ''' </param>
-                    Public Sub New(Optional transportManager As ReaperTransportManager = Nothing)
-                        _transportManager = transportManager
-                    End Sub
+            ''' <summary>Point de fin de sélection temporelle en secondes.</summary>
+            Public ReadOnly Property TimeSelOut As Double
+                Get
+                    Return _timeSelOut
+                End Get
+            End Property
 
-                    ' ── Propriétés ────────────────────────────────────────────────────
+            ''' <summary>Intervalle de polling du moniteur en ms (défaut : 50 ms).</summary>
+            Public Property Interval As Integer
+                Get
+                    Return _monitor.Interval
+                End Get
+                Set
+                    _monitor.Interval = Value
+                End Set
+            End Property
 
-                    ''' <summary>Mode de fonctionnement courant.</summary>
-                    Public Property Mode As JogWheelMode
-                        Get
-                            Return _mode
-                        End Get
-                        Set
-                            If _mode = Value Then Return
-                            _mode = Value
-                            RaiseEvent On_ModeChanged(_mode)
-                        End Set
-                    End Property
+            ' ── Cycle de vie du moniteur ──────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Référence au <see cref="ReaperTransportManager"/>.
-                    ''' Peut être définie après construction.
-                    ''' </summary>
-                    Public Property TransportManager As ReaperTransportManager
-                        Get
-                            Return _transportManager
-                        End Get
-                        Set
-                            _transportManager = Value
-                        End Set
-                    End Property
+            ''' <summary>Démarre la surveillance du transport. Sans effet si déjà démarré.</summary>
+            Public Sub Start()
+                _monitor.Start()
+            End Sub
 
-                    ''' <summary>
-                    ''' Pas de déplacement du curseur par tick en mode
-                    ''' <see cref="JogWheelMode.Cursor"/> (secondes, défaut : 0.1 s).
-                    ''' </summary>
-                    Public Property CursorStepSeconds As Double
-                        Get
-                            Return _cursorStepSeconds
-                        End Get
-                        Set
-                            _cursorStepSeconds = Math.Max(0.001, Value)
-                        End Set
-                    End Property
+            ''' <summary>Arrête la surveillance du transport.</summary>
+            Public Sub [Stop]()
+                _monitor.[Stop]()
+            End Sub
 
-                    ''' <summary>
-                    ''' Pas de déplacement des points de sélection par tick en modes
-                    ''' <see cref="JogWheelMode.SelectionIn"/> et
-                    ''' <see cref="JogWheelMode.SelectionOut"/> (secondes, défaut : 0.1 s).
-                    ''' </summary>
-                    Public Property SelectionStepSeconds As Double
-                        Get
-                            Return _selectionStepSeconds
-                        End Get
-                        Set
-                            _selectionStepSeconds = Math.Max(0.001, Value)
-                        End Set
-                    End Property
+            ' ── Suspension du moniteur ────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Quand True, le pas effectif est divisé par <see cref="FineDivider"/>.
-                    ''' Activer via un modificateur (Ctrl/Shift) sur la surface.
-                    ''' </summary>
-                    Public Property FineMode As Boolean
-                        Get
-                            Return _fineMode
-                        End Get
-                        Set
-                            _fineMode = Value
-                        End Set
-                    End Property
+            ''' <summary>
+            ''' Suspend les événements du moniteur de transport.
+            ''' Appeler avant d'envoyer une commande pour éviter le feedback.
+            ''' </summary>
+            Public Sub SuspendMonitor()
+                _monitor.SuspendMonitor()
+            End Sub
 
-                    ''' <summary>
-                    ''' Facteur de division du pas en mode fin (défaut : 10 → pas ÷ 10).
-                    ''' Minimum : 2.
-                    ''' </summary>
-                    Public Property FineDivider As Double
-                        Get
-                            Return _fineDivider
-                        End Get
-                        Set
-                            _fineDivider = Math.Max(2.0, Value)
-                        End Set
-                    End Property
+            ''' <summary>
+            ''' Réactive les événements du moniteur et force un re-poll immédiat
+            ''' pour capturer l'état résultant de la commande.
+            ''' </summary>
+            Public Sub ResumeMonitor()
+                _monitor.ResumeMonitor()
+            End Sub
 
-                    ' ── Point d'entrée principal ──────────────────────────────────────
+            ' ── Commandes de transport ────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' À appeler à chaque tick détecté de la jogwheel.
-                    ''' <list type="table">
-                    ''' <item><term><paramref name="ticks"/> &gt; 0</term>
-                    '''       <description>Sens horaire : forward / zoom in / point +</description></item>
-                    ''' <item><term><paramref name="ticks"/> &lt; 0</term>
-                    '''       <description>Sens anti-horaire : backward / zoom out / point -</description></item>
-                    ''' </list>
-                    ''' </summary>
-                    ''' <param name="ticks">
-                    ''' Nombre de crans (positif = horaire).
-                    ''' Une valeur de ±1 correspond à un cran standard de la roue.
-                    ''' </param>
-                    Public Sub Jog(ticks As Integer)
-                        If ticks = 0 Then Return
-                        Select Case _mode
-                            Case JogWheelMode.Cursor
-                                JogCursor(ticks)
-                            Case JogWheelMode.SelectionIn
-                                JogSelectionIn(ticks)
-                            Case JogWheelMode.SelectionOut
-                                JogSelectionOut(ticks)
-                            Case JogWheelMode.ZoomHorizontal
-                                JogZoomHorizontal(ticks)
-                            Case JogWheelMode.ZoomVertical
-                                JogZoomVertical(ticks)
-                        End Select
-                    End Sub
+            ''' <summary>Lance la lecture.</summary>
+            Public Sub Play()
+                SuspendMonitor()
+                utility.CallReaperBridge("TRANSPORT_PLAY")
+                ResumeMonitor()
+            End Sub
 
-                    ' ── Raccourcis de mode ────────────────────────────────────────────
+            ''' <summary>Arrête la lecture.</summary>
+            Public Sub StopPlayback()
+                SuspendMonitor()
+                utility.CallReaperBridge("TRANSPORT_STOP")
+                ResumeMonitor()
+            End Sub
 
-                    ''' <summary>Passe en mode <see cref="JogWheelMode.Cursor"/>.</summary>
-                    Public Sub SetCursorMode()
-                        Mode = JogWheelMode.Cursor
-                    End Sub
+            ''' <summary>Bascule la pause.</summary>
+            Public Sub Pause()
+                SuspendMonitor()
+                utility.CallReaperBridge("TRANSPORT_PAUSE")
+                ResumeMonitor()
+            End Sub
 
-                    ''' <summary>Passe en mode <see cref="JogWheelMode.SelectionIn"/>.</summary>
-                    Public Sub SetSelectionInMode()
+            ''' <summary>Lance l'enregistrement.</summary>
+            Public Sub Record()
+                SuspendMonitor()
+                utility.CallReaperBridge("TRANSPORT_REC")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Bascule l'état de boucle (Loop On/Off).</summary>
+            Public Sub ToggleLoop()
+                SuspendMonitor()
+                utility.CallReaperBridge("TRANSPORT_TOGGLE_LOOP")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Bascule le mode Quick Punch.</summary>
+            Public Sub ToggleQuickPunch()
+                SuspendMonitor()
+                utility.CallReaperBridge("TRANSPORT_TOGGLE_QUICK_PUNCH")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Déplace le curseur au début du projet.</summary>
+            Public Sub GoToStart()
+                SuspendMonitor()
+                utility.SetCursorPosition(0.0, moveView:=True, seekPlay:=IsPlaying)
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Déplace le curseur à la fin du projet.</summary>
+            Public Sub GoToEnd()
+                Dim length = utility.GetProjectLength()
+                If length < 0 Then Return
+                SuspendMonitor()
+                utility.SetCursorPosition(length, moveView:=True, seekPlay:=IsPlaying)
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Recule le curseur de <paramref name="stepSeconds"/> secondes.</summary>
+            Public Sub Rewind(Optional stepSeconds As Double = 5.0)
+                Dim newPos = Math.Max(0.0, _playPos - stepSeconds)
+                SuspendMonitor()
+                utility.SetCursorPosition(newPos, moveView:=True, seekPlay:=True)
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Avance le curseur de <paramref name="stepSeconds"/> secondes.</summary>
+            Public Sub FastForward(Optional stepSeconds As Double = 5.0)
+                Dim newPos = _playPos + stepSeconds
+                SuspendMonitor()
+                utility.SetCursorPosition(newPos, moveView:=True, seekPlay:=True)
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Déplace le point de début de boucle.</summary>
+            Public Sub SetLoopIn(time As Double)
+                SuspendMonitor()
+                utility.CallReaperBridge(
+                        $"TRANSPORT_SET_LOOP_IN|{time.ToString("G", Ic)}")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Déplace le point de fin de boucle.</summary>
+            Public Sub SetLoopOut(time As Double)
+                SuspendMonitor()
+                utility.CallReaperBridge(
+                        $"TRANSPORT_SET_LOOP_OUT|{time.ToString("G", Ic)}")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Définit les deux points de boucle en un seul appel.</summary>
+            Public Sub SetLoopPoints(inTime As Double, outTime As Double)
+                SuspendMonitor()
+                utility.CallReaperBridge(
+                        $"TRANSPORT_SET_LOOP_POINTS|{inTime.ToString("G", Ic)}|{outTime.ToString("G", Ic)}")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Déplace le point de début de la sélection temporelle.</summary>
+            Public Sub SetTimeSelIn(time As Double)
+                SuspendMonitor()
+                utility.CallReaperBridge(
+                        $"TRANSPORT_SET_TIME_SEL_IN|{time.ToString("G", Ic)}")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Déplace le point de fin de la sélection temporelle.</summary>
+            Public Sub SetTimeSelOut(time As Double)
+                SuspendMonitor()
+                utility.CallReaperBridge(
+                        $"TRANSPORT_SET_TIME_SEL_OUT|{time.ToString("G", Ic)}")
+                ResumeMonitor()
+            End Sub
+
+            ''' <summary>Définit les deux points de sélection temporelle en un seul appel.</summary>
+            Public Sub SetTimeSelection(inTime As Double, outTime As Double)
+                SuspendMonitor()
+                utility.CallReaperBridge(
+                        $"TRANSPORT_SET_TIME_SEL|{inTime.ToString("G", Ic)}|{outTime.ToString("G", Ic)}")
+                ResumeMonitor()
+            End Sub
+
+            ' ── Handlers internes ─────────────────────────────────────────────
+
+            Private Sub OnPlayStateChange(playState As Integer)
+                _playState = playState
+                RaiseEvent On_PlayStateChange(_playState)
+            End Sub
+
+            Private Sub OnPlayPositionChange(playPos As Double)
+                _playPos = playPos
+                RaiseEvent On_PositionChange(_playPos)
+            End Sub
+
+            Private Sub OnLoopChange(isLooping As Boolean,
+                                          loopIn As Double,
+                                          loopOut As Double)
+                _isLooping = isLooping
+                _loopIn = loopIn
+                _loopOut = loopOut
+                RaiseEvent On_LoopChange(isLooping, loopIn, loopOut)
+            End Sub
+
+            Private Sub OnQuickPunchChange(isQuickPunch As Boolean)
+                _isQuickPunch = isQuickPunch
+                RaiseEvent On_QuickPunchChange(isQuickPunch)
+            End Sub
+
+            Private Sub OnTimeSelectionChange(selIn As Double, selOut As Double)
+                _timeSelIn = selIn
+                _timeSelOut = selOut
+                RaiseEvent On_TimeSelectionChange(selIn, selOut)
+            End Sub
+
+            ' ── IDisposable ───────────────────────────────────────────────────
+
+            Protected Overridable Sub Dispose(disposing As Boolean)
+                If Not _disposed Then
+                    If disposing Then
+                        _monitor.Dispose()
+                    End If
+                    _disposed = True
+                End If
+            End Sub
+
+            ''' <summary>Arrête le monitoring et libère toutes les ressources.</summary>
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dispose(disposing:=True)
+                GC.SuppressFinalize(Me)
+            End Sub
+
+        End Class
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  JOG WHEEL MODE — modes de la jogwheel
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>Modes de fonctionnement de la jogwheel de la surface de contrôle.</summary>
+        Public Enum JogWheelMode
+            ''' <summary>Déplace le curseur d'édition avant/arrière sur la timeline.</summary>
+            Cursor = 0
+            ''' <summary>Déplace le point In de la sélection temporelle.</summary>
+            SelectionIn = 1
+            ''' <summary>Déplace le point Out de la sélection temporelle.</summary>
+            SelectionOut = 2
+            ''' <summary>Zoom horizontal de la timeline (in/out).</summary>
+            ZoomHorizontal = 3
+            ''' <summary>Zoom vertical de la piste sélectionnée (in/out).</summary>
+            ZoomVertical = 4
+        End Enum
+
+
+
+        ' ══════════════════════════════════════════════════════════════════════════
+        '  REAPER JOG WHEEL MANAGER — interface jogwheel multi-modes
+        ' ══════════════════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' Interface entre la jogwheel d'une surface de contrôle et Reaper.
+        ''' Gère plusieurs modes :
+        ''' <list type="table">
+        ''' <item><term><see cref="JogWheelMode.Cursor"/></term>
+        '''       <description>Déplace le curseur d'édition avant/arrière.</description></item>
+        ''' <item><term><see cref="JogWheelMode.SelectionIn"/></term>
+        '''       <description>Déplace le point In de la sélection temporelle.</description></item>
+        ''' <item><term><see cref="JogWheelMode.SelectionOut"/></term>
+        '''       <description>Déplace le point Out de la sélection temporelle.</description></item>
+        ''' <item><term><see cref="JogWheelMode.ZoomHorizontal"/></term>
+        '''       <description>Zoom horizontal de la timeline (vue arrangement).</description></item>
+        ''' <item><term><see cref="JogWheelMode.ZoomVertical"/></term>
+        '''       <description>Zoom vertical de la piste sélectionnée.</description></item>
+        ''' </list>
+        ''' Appeler <see cref="Jog"/> à chaque tick détecté de la jogwheel.
+        ''' Un tick positif correspond à une rotation dans le sens horaire
+        ''' (forward / zoom in / point +) ; un tick négatif à une rotation
+        ''' anti-horaire (backward / zoom out / point -).
+        ''' <br/>
+        ''' Fournir un <see cref="ReaperTransportManager"/> via le constructeur ou
+        ''' <see cref="TransportManager"/> pour lire <c>IsPlaying</c> et la sélection
+        ''' temporelle depuis le cache (évite une requête pipe).
+        ''' </summary>
+        Public Class ReaperJogWheelManager
+
+            Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
+
+            ' ── Mode courant ──────────────────────────────────────────────────
+            Private _mode As JogWheelMode = JogWheelMode.Cursor
+
+            ' ── Référence optionnelle au transport manager ────────────────────
+            Private _transportManager As ReaperTransportManager
+
+            ' ── Pas de déplacement par tick ───────────────────────────────────
+            Private _cursorStepSeconds As Double = 0.1
+            Private _selectionStepSeconds As Double = 0.1
+
+            ' ── Mode fin (Ctrl/Shift sur la surface) ──────────────────────────
+            Private _fineMode As Boolean = False
+            Private _fineDivider As Double = 10.0
+
+            ' ── Événements ────────────────────────────────────────────────────
+
+            ''' <summary>Déclenché quand le mode change.</summary>
+            Public Event On_ModeChanged(mode As JogWheelMode)
+
+            ''' <summary>
+            ''' Déclenché après chaque déplacement du curseur d'édition.
+            ''' <paramref name="newPosition"/> = nouvelle position en secondes.
+            ''' </summary>
+            Public Event On_CursorMoved(newPosition As Double)
+
+            ''' <summary>
+            ''' Déclenché après chaque modification de la sélection temporelle.
+            ''' </summary>
+            Public Event On_SelectionChanged(selIn As Double, selOut As Double)
+
+            ''' <summary>
+            ''' Déclenché après chaque action de zoom.
+            ''' <paramref name="direction"/> : +1 = zoom in   -1 = zoom out.
+            ''' </summary>
+            Public Event On_Zoomed(mode As JogWheelMode, direction As Integer)
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+
+            ''' <summary>
+            ''' Initialise le manager.
+            ''' </summary>
+            ''' <param name="transportManager">
+            ''' Optionnel — permet de lire <c>IsPlaying</c>, <c>TimeSelIn</c> et
+            ''' <c>TimeSelOut</c> depuis le cache. Peut être défini plus tard via
+            ''' <see cref="TransportManager"/>.
+            ''' </param>
+            Public Sub New(Optional transportManager As ReaperTransportManager = Nothing)
+                _transportManager = transportManager
+            End Sub
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+
+            ''' <summary>Mode de fonctionnement courant.</summary>
+            Public Property Mode As JogWheelMode
+                Get
+                    Return _mode
+                End Get
+                Set
+                    If _mode = Value Then Return
+                    _mode = Value
+                    RaiseEvent On_ModeChanged(_mode)
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Référence au <see cref="ReaperTransportManager"/>.
+            ''' Peut être définie après construction.
+            ''' </summary>
+            Public Property TransportManager As ReaperTransportManager
+                Get
+                    Return _transportManager
+                End Get
+                Set
+                    _transportManager = Value
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Pas de déplacement du curseur par tick en mode
+            ''' <see cref="JogWheelMode.Cursor"/> (secondes, défaut : 0.1 s).
+            ''' </summary>
+            Public Property CursorStepSeconds As Double
+                Get
+                    Return _cursorStepSeconds
+                End Get
+                Set
+                    _cursorStepSeconds = Math.Max(0.001, Value)
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Pas de déplacement des points de sélection par tick en modes
+            ''' <see cref="JogWheelMode.SelectionIn"/> et
+            ''' <see cref="JogWheelMode.SelectionOut"/> (secondes, défaut : 0.1 s).
+            ''' </summary>
+            Public Property SelectionStepSeconds As Double
+                Get
+                    Return _selectionStepSeconds
+                End Get
+                Set
+                    _selectionStepSeconds = Math.Max(0.001, Value)
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Quand True, le pas effectif est divisé par <see cref="FineDivider"/>.
+            ''' Activer via un modificateur (Ctrl/Shift) sur la surface.
+            ''' </summary>
+            Public Property FineMode As Boolean
+                Get
+                    Return _fineMode
+                End Get
+                Set
+                    _fineMode = Value
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Facteur de division du pas en mode fin (défaut : 10 → pas ÷ 10).
+            ''' Minimum : 2.
+            ''' </summary>
+            Public Property FineDivider As Double
+                Get
+                    Return _fineDivider
+                End Get
+                Set
+                    _fineDivider = Math.Max(2.0, Value)
+                End Set
+            End Property
+
+            ' ── Point d'entrée principal ──────────────────────────────────────
+
+            ''' <summary>
+            ''' À appeler à chaque tick détecté de la jogwheel.
+            ''' <list type="table">
+            ''' <item><term><paramref name="ticks"/> &gt; 0</term>
+            '''       <description>Sens horaire : forward / zoom in / point +</description></item>
+            ''' <item><term><paramref name="ticks"/> &lt; 0</term>
+            '''       <description>Sens anti-horaire : backward / zoom out / point -</description></item>
+            ''' </list>
+            ''' </summary>
+            ''' <param name="ticks">
+            ''' Nombre de crans (positif = horaire).
+            ''' Une valeur de ±1 correspond à un cran standard de la roue.
+            ''' </param>
+            Public Sub Jog(ticks As Integer)
+                If ticks = 0 Then Return
+                Select Case _mode
+                    Case JogWheelMode.Cursor
+                        JogCursor(ticks)
+                    Case JogWheelMode.SelectionIn
+                        JogSelectionIn(ticks)
+                    Case JogWheelMode.SelectionOut
+                        JogSelectionOut(ticks)
+                    Case JogWheelMode.ZoomHorizontal
+                        JogZoomHorizontal(ticks)
+                    Case JogWheelMode.ZoomVertical
+                        JogZoomVertical(ticks)
+                End Select
+            End Sub
+
+            ' ── Raccourcis de mode ────────────────────────────────────────────
+
+            ''' <summary>Passe en mode <see cref="JogWheelMode.Cursor"/>.</summary>
+            Public Sub SetCursorMode()
+                Mode = JogWheelMode.Cursor
+            End Sub
+
+            ''' <summary>Passe en mode <see cref="JogWheelMode.SelectionIn"/>.</summary>
+            Public Sub SetSelectionInMode()
+                Mode = JogWheelMode.SelectionIn
+            End Sub
+
+            ''' <summary>Passe en mode <see cref="JogWheelMode.SelectionOut"/>.</summary>
+            Public Sub SetSelectionOutMode()
+                Mode = JogWheelMode.SelectionOut
+            End Sub
+
+            ''' <summary>Passe en mode <see cref="JogWheelMode.ZoomHorizontal"/>.</summary>
+            Public Sub SetZoomHorizontalMode()
+                Mode = JogWheelMode.ZoomHorizontal
+            End Sub
+
+            ''' <summary>Passe en mode <see cref="JogWheelMode.ZoomVertical"/>.</summary>
+            Public Sub SetZoomVerticalMode()
+                Mode = JogWheelMode.ZoomVertical
+            End Sub
+
+            ''' <summary>
+            ''' Cycle vers le mode suivant dans l'ordre :
+            ''' Cursor → SelectionIn → SelectionOut → ZoomHorizontal → ZoomVertical → Cursor…
+            ''' Utile pour un bouton "Mode" dédié sur la surface.
+            ''' </summary>
+            Public Sub CycleMode()
+                Select Case _mode
+                    Case JogWheelMode.Cursor
                         Mode = JogWheelMode.SelectionIn
-                    End Sub
-
-                    ''' <summary>Passe en mode <see cref="JogWheelMode.SelectionOut"/>.</summary>
-                    Public Sub SetSelectionOutMode()
+                    Case JogWheelMode.SelectionIn
                         Mode = JogWheelMode.SelectionOut
-                    End Sub
-
-                    ''' <summary>Passe en mode <see cref="JogWheelMode.ZoomHorizontal"/>.</summary>
-                    Public Sub SetZoomHorizontalMode()
+                    Case JogWheelMode.SelectionOut
                         Mode = JogWheelMode.ZoomHorizontal
-                    End Sub
-
-                    ''' <summary>Passe en mode <see cref="JogWheelMode.ZoomVertical"/>.</summary>
-                    Public Sub SetZoomVerticalMode()
+                    Case JogWheelMode.ZoomHorizontal
                         Mode = JogWheelMode.ZoomVertical
-                    End Sub
+                    Case Else
+                        Mode = JogWheelMode.Cursor
+                End Select
+            End Sub
 
-                    ''' <summary>
-                    ''' Cycle vers le mode suivant dans l'ordre :
-                    ''' Cursor → SelectionIn → SelectionOut → ZoomHorizontal → ZoomVertical → Cursor…
-                    ''' Utile pour un bouton "Mode" dédié sur la surface.
-                    ''' </summary>
-                    Public Sub CycleMode()
-                        Select Case _mode
-                            Case JogWheelMode.Cursor
-                                Mode = JogWheelMode.SelectionIn
-                            Case JogWheelMode.SelectionIn
-                                Mode = JogWheelMode.SelectionOut
-                            Case JogWheelMode.SelectionOut
-                                Mode = JogWheelMode.ZoomHorizontal
-                            Case JogWheelMode.ZoomHorizontal
-                                Mode = JogWheelMode.ZoomVertical
-                            Case Else
-                                Mode = JogWheelMode.Cursor
-                        End Select
-                    End Sub
+            ' ── Mode Cursor ───────────────────────────────────────────────────
 
-                    ' ── Mode Cursor ───────────────────────────────────────────────────
+            ''' <summary>
+            ''' Déplace le curseur d'édition de <c>ticks × <see cref="CursorStepSeconds"/></c>.
+            ''' Si Reaper est en lecture (<see cref="ReadIsPlaying"/>), cherche la
+            ''' nouvelle position sans s'arrêter (seek).
+            ''' </summary>
+            Private Sub JogCursor(ticks As Integer)
+                Dim currentPos = utility.GetCursorPosition()
+                If currentPos < 0 Then currentPos = 0
 
-                    ''' <summary>
-                    ''' Déplace le curseur d'édition de <c>ticks × <see cref="CursorStepSeconds"/></c>.
-                    ''' Si Reaper est en lecture (<see cref="ReadIsPlaying"/>), cherche la
-                    ''' nouvelle position sans s'arrêter (seek).
-                    ''' </summary>
-                    Private Sub JogCursor(ticks As Integer)
-                        Dim currentPos = utility.GetCursorPosition()
-                        If currentPos < 0 Then currentPos = 0
+                Dim _step = EffectiveStep(_cursorStepSeconds)
+                Dim newPos = Math.Max(0.0, currentPos + ticks * _step)
 
-                        Dim _step = EffectiveStep(_cursorStepSeconds)
-                        Dim newPos = Math.Max(0.0, currentPos + ticks * _step)
-
-                        utility.SetCursorPosition(newPos,
+                utility.SetCursorPosition(newPos,
                                                   moveView:=True,
                                                   seekPlay:=ReadIsPlaying())
-                        RaiseEvent On_CursorMoved(newPos)
-                    End Sub
+                RaiseEvent On_CursorMoved(newPos)
+            End Sub
 
-                    ' ── Mode SelectionIn ──────────────────────────────────────────────
+            ' ── Mode SelectionIn ──────────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Déplace le point In de la sélection temporelle.
-                    ''' Clampé à [0, selOut].
-                    ''' </summary>
-                    Private Sub JogSelectionIn(ticks As Integer)
-                        Dim sel = ReadSelectionState()
+            ''' <summary>
+            ''' Déplace le point In de la sélection temporelle.
+            ''' Clampé à [0, selOut].
+            ''' </summary>
+            Private Sub JogSelectionIn(ticks As Integer)
+                Dim sel = ReadSelectionState()
 
-                        Dim _step = EffectiveStep(_selectionStepSeconds)
-                        Dim newIn = Math.Max(0.0, sel.selIn + ticks * _step)
-                        If newIn > sel.selOut Then newIn = sel.selOut
+                Dim _step = EffectiveStep(_selectionStepSeconds)
+                Dim newIn = Math.Max(0.0, sel.selIn + ticks * _step)
+                If newIn > sel.selOut Then newIn = sel.selOut
 
-                        utility.CallReaperBridge(
+                utility.CallReaperBridge(
                             $"TRANSPORT_SET_TIME_SEL_IN|{newIn.ToString("G", Ic)}")
-                        RaiseEvent On_SelectionChanged(newIn, sel.selOut)
-                    End Sub
+                RaiseEvent On_SelectionChanged(newIn, sel.selOut)
+            End Sub
 
-                    ' ── Mode SelectionOut ─────────────────────────────────────────────
+            ' ── Mode SelectionOut ─────────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Déplace le point Out de la sélection temporelle.
-                    ''' Clampé à [selIn, +∞[.
-                    ''' </summary>
-                    Private Sub JogSelectionOut(ticks As Integer)
-                        Dim sel = ReadSelectionState()
+            ''' <summary>
+            ''' Déplace le point Out de la sélection temporelle.
+            ''' Clampé à [selIn, +∞[.
+            ''' </summary>
+            Private Sub JogSelectionOut(ticks As Integer)
+                Dim sel = ReadSelectionState()
 
-                        Dim _step = EffectiveStep(_selectionStepSeconds)
-                        Dim newOut = Math.Max(sel.selIn, sel.selOut + ticks * _step)
+                Dim _step = EffectiveStep(_selectionStepSeconds)
+                Dim newOut = Math.Max(sel.selIn, sel.selOut + ticks * _step)
 
-                        utility.CallReaperBridge(
+                utility.CallReaperBridge(
                             $"TRANSPORT_SET_TIME_SEL_OUT|{newOut.ToString("G", Ic)}")
-                        RaiseEvent On_SelectionChanged(sel.selIn, newOut)
-                    End Sub
+                RaiseEvent On_SelectionChanged(sel.selIn, newOut)
+            End Sub
 
-                    ' ── Mode ZoomHorizontal ───────────────────────────────────────────
+            ' ── Mode ZoomHorizontal ───────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Zoom horizontal de la timeline.
-                    ''' Chaque tick émet une commande <c>ZOOM_H_IN</c> ou <c>ZOOM_H_OUT</c>
-                    ''' vers le bridge.
-                    ''' </summary>
-                    Private Sub JogZoomHorizontal(ticks As Integer)
-                        Dim dir = Math.Sign(ticks)
-                        Dim count = Math.Abs(ticks)
-                        For i = 0 To count - 1
-                            If dir > 0 Then
-                                utility.CallReaperBridge("ZOOM_H_IN")
-                            Else
-                                utility.CallReaperBridge("ZOOM_H_OUT")
-                            End If
-                        Next
-                        RaiseEvent On_Zoomed(JogWheelMode.ZoomHorizontal, dir)
-                    End Sub
+            ''' <summary>
+            ''' Zoom horizontal de la timeline.
+            ''' Chaque tick émet une commande <c>ZOOM_H_IN</c> ou <c>ZOOM_H_OUT</c>
+            ''' vers le bridge.
+            ''' </summary>
+            Private Sub JogZoomHorizontal(ticks As Integer)
+                Dim dir = Math.Sign(ticks)
+                Dim count = Math.Abs(ticks)
+                For i = 0 To count - 1
+                    If dir > 0 Then
+                        utility.CallReaperBridge("ZOOM_H_IN")
+                    Else
+                        utility.CallReaperBridge("ZOOM_H_OUT")
+                    End If
+                Next
+                RaiseEvent On_Zoomed(JogWheelMode.ZoomHorizontal, dir)
+            End Sub
 
-                    ' ── Mode ZoomVertical ─────────────────────────────────────────────
+            ' ── Mode ZoomVertical ─────────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Zoom vertical sur la piste sélectionnée.
-                    ''' Chaque tick émet une commande <c>ZOOM_TRACK_IN</c> ou
-                    ''' <c>ZOOM_TRACK_OUT</c> vers le bridge.
-                    ''' </summary>
-                    Private Sub JogZoomVertical(ticks As Integer)
-                        Dim dir = Math.Sign(ticks)
-                        Dim count = Math.Abs(ticks)
-                        For i = 0 To count - 1
-                            If dir > 0 Then
-                                utility.CallReaperBridge("ZOOM_TRACK_IN")
-                            Else
-                                utility.CallReaperBridge("ZOOM_TRACK_OUT")
-                            End If
-                        Next
-                        RaiseEvent On_Zoomed(JogWheelMode.ZoomVertical, dir)
-                    End Sub
+            ''' <summary>
+            ''' Zoom vertical sur la piste sélectionnée.
+            ''' Chaque tick émet une commande <c>ZOOM_TRACK_IN</c> ou
+            ''' <c>ZOOM_TRACK_OUT</c> vers le bridge.
+            ''' </summary>
+            Private Sub JogZoomVertical(ticks As Integer)
+                Dim dir = Math.Sign(ticks)
+                Dim count = Math.Abs(ticks)
+                For i = 0 To count - 1
+                    If dir > 0 Then
+                        utility.CallReaperBridge("ZOOM_TRACK_IN")
+                    Else
+                        utility.CallReaperBridge("ZOOM_TRACK_OUT")
+                    End If
+                Next
+                RaiseEvent On_Zoomed(JogWheelMode.ZoomVertical, dir)
+            End Sub
 
-                    ' ── Helpers internes ──────────────────────────────────────────────
+            ' ── Helpers internes ──────────────────────────────────────────────
 
-                    ''' <summary>
-                    ''' Calcule le pas effectif :
-                    ''' en mode normal → <paramref name="baseStep"/> ;
-                    ''' en mode fin → <paramref name="baseStep"/> ÷ <see cref="FineDivider"/>.
-                    ''' </summary>
-                    Private Function EffectiveStep(baseStep As Double) As Double
-                        If _fineMode Then
-                            Return baseStep / _fineDivider
-                        End If
-                        Return baseStep
-                    End Function
+            ''' <summary>
+            ''' Calcule le pas effectif :
+            ''' en mode normal → <paramref name="baseStep"/> ;
+            ''' en mode fin → <paramref name="baseStep"/> ÷ <see cref="FineDivider"/>.
+            ''' </summary>
+            Private Function EffectiveStep(baseStep As Double) As Double
+                If _fineMode Then
+                    Return baseStep / _fineDivider
+                End If
+                Return baseStep
+            End Function
 
-                    ''' <summary>
-                    ''' Lit la sélection temporelle courante.
-                    ''' Utilise le cache du <see cref="TransportManager"/> si disponible,
-                    ''' sinon effectue une requête pipe directe <c>GET_TIME_SELECTION</c>.
-                    ''' Retourne (0, 0) si indisponible.
-                    ''' </summary>
-                    Private Function ReadSelectionState() As (selIn As Double, selOut As Double)
-                        If _transportManager IsNot Nothing Then
-                            Return (_transportManager.TimeSelIn, _transportManager.TimeSelOut)
-                        End If
+            ''' <summary>
+            ''' Lit la sélection temporelle courante.
+            ''' Utilise le cache du <see cref="TransportManager"/> si disponible,
+            ''' sinon effectue une requête pipe directe <c>GET_TIME_SELECTION</c>.
+            ''' Retourne (0, 0) si indisponible.
+            ''' </summary>
+            Private Function ReadSelectionState() As (selIn As Double, selOut As Double)
+                If _transportManager IsNot Nothing Then
+                    Return (_transportManager.TimeSelIn, _transportManager.TimeSelOut)
+                End If
 
-                        Dim raw = utility.CallReaperBridge("GET_TIME_SELECTION")
-                        If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
-                            Return (0, 0)
-                        End If
+                Dim raw = utility.CallReaperBridge("GET_TIME_SELECTION")
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                    Return (0, 0)
+                End If
 
-                        Dim p = raw.Split("|"c)
-                        If p.Length < 2 Then Return (0, 0)
+                Dim p = raw.Split("|"c)
+                If p.Length < 2 Then Return (0, 0)
 
-                        Dim selIn As Double = 0, selOut As Double = 0
-                        Double.TryParse(p(0), Globalization.NumberStyles.Any, Ic, selIn)
-                        Double.TryParse(p(1), Globalization.NumberStyles.Any, Ic, selOut)
-                        Return (selIn, selOut)
-                    End Function
+                Dim selIn As Double = 0, selOut As Double = 0
+                Double.TryParse(p(0), Globalization.NumberStyles.Any, Ic, selIn)
+                Double.TryParse(p(1), Globalization.NumberStyles.Any, Ic, selOut)
+                Return (selIn, selOut)
+            End Function
 
-                    ''' <summary>
-                    ''' Retourne True si Reaper est en lecture.
-                    ''' Utilise le <see cref="TransportManager"/> si disponible,
-                    ''' sinon retourne False (pas de requête pipe supplémentaire).
-                    ''' </summary>
-                    Private Function ReadIsPlaying() As Boolean
-                        If _transportManager IsNot Nothing Then
-                            Return _transportManager.IsPlaying
-                        End If
-                        Return False
-                    End Function
+            ''' <summary>
+            ''' Retourne True si Reaper est en lecture.
+            ''' Utilise le <see cref="TransportManager"/> si disponible,
+            ''' sinon retourne False (pas de requête pipe supplémentaire).
+            ''' </summary>
+            Private Function ReadIsPlaying() As Boolean
+                If _transportManager IsNot Nothing Then
+                    Return _transportManager.IsPlaying
+                End If
+                Return False
+            End Function
 
-                End Class
+        End Class
 
 
 
@@ -8683,6 +9706,7 @@ Namespace Reaper
         ''' <param name="trackIndex">Index 0-based de la piste.</param>
         Public Sub New(trackIndex As Integer)
             _trackIndex = trackIndex
+            Refresh()
         End Sub
 
         ' ── Propriétés ─────────────────────────────────────────────────────────
@@ -8969,8 +9993,11 @@ Namespace Reaper
             If new_val = Double.MinValue Then Return
             If _normalizedValue <> new_val Then
                 _normalizedValue = new_val
-                RaiseOn_ValueChange(new_val)
-                RaiseEvent On_NormalizedValueChange(_normalizedValue, _paramIndex)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(new_val)
+                    RaiseEvent On_NormalizedValueChange(_normalizedValue, _paramIndex)
+                End If
+
             End If
         End Sub
 
@@ -9032,8 +10059,11 @@ Namespace Reaper
             If vp.Vol = Double.MinValue Then Return
             If _sendUIVol <> vp.Vol Then
                 _sendUIVol = vp.Vol
-                RaiseOn_ValueChange(vp.Vol)
-                RaiseEvent On_SendUIVolChange(_sendUIVol)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(vp.Vol)
+                    RaiseEvent On_SendUIVolChange(_sendUIVol)
+                End If
+
             End If
         End Sub
 
@@ -9093,8 +10123,11 @@ Namespace Reaper
             If vp.Vol = Double.MinValue Then Return
             If _sendUIPan <> vp.Pan Then
                 _sendUIPan = vp.Pan
-                RaiseOn_ValueChange(vp.Pan)
-                RaiseEvent On_SendUIPanChange(_sendUIPan)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(vp.Pan)
+                    RaiseEvent On_SendUIPanChange(_sendUIPan)
+                End If
+
             End If
         End Sub
 
@@ -9153,8 +10186,11 @@ Namespace Reaper
             Dim new_mute = utility.GetTrackSendUIMute(TrackIndex, SendId)
             If _sendUIMute <> new_mute Then
                 _sendUIMute = new_mute
-                RaiseOn_ValueChange(GetValue())
-                RaiseEvent On_SendUIMuteChange(_sendUIMute)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(GetValue())
+                    RaiseEvent On_SendUIMuteChange(_sendUIMute)
+                End If
+
             End If
         End Sub
 
@@ -9198,8 +10234,11 @@ Namespace Reaper
             Dim mute = normValue <> 0.0
             If _trackUIMute <> mute Then
                 _trackUIMute = mute
-                RaiseOn_ValueChange(GetValue())
-                RaiseEvent On_TrackUIMuteChange(_trackUIMute)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(GetValue())
+                    RaiseEvent On_TrackUIMuteChange(_trackUIMute)
+                End If
+
             End If
         End Sub
 
@@ -9208,8 +10247,11 @@ Namespace Reaper
             Dim new_mute = utility.GetTrackUIMute(TrackIndex)
             If _trackUIMute <> new_mute Then
                 _trackUIMute = new_mute
-                RaiseOn_ValueChange(GetValue())
-                RaiseEvent On_TrackUIMuteChange(_trackUIMute)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(GetValue())
+                    RaiseEvent On_TrackUIMuteChange(_trackUIMute)
+                End If
+
             End If
         End Sub
 
@@ -9249,8 +10291,11 @@ Namespace Reaper
         Public Sub SetValueFromMonitor(pan As Double)
             If _trackUIPan <> pan Then
                 _trackUIPan = pan
-                RaiseOn_ValueChange(pan)
-                RaiseEvent On_TrackUIPanChange(_trackUIPan)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(pan)
+                    RaiseEvent On_TrackUIPanChange(_trackUIPan)
+                End If
+
             End If
         End Sub
 
@@ -9260,8 +10305,11 @@ Namespace Reaper
             If vp.Vol = Double.MinValue Then Return
             If _trackUIPan <> vp.Pan Then
                 _trackUIPan = vp.Pan
-                RaiseOn_ValueChange(GetValue())
-                RaiseEvent On_TrackUIPanChange(_trackUIPan)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(GetValue())
+                    RaiseEvent On_TrackUIPanChange(_trackUIPan)
+                End If
+
             End If
         End Sub
 
@@ -9301,8 +10349,11 @@ Namespace Reaper
         Public Sub SetValueFromMonitor(vol As Double)
             If _trackUIVol <> vol Then
                 _trackUIVol = vol
-                RaiseOn_ValueChange(vol)
-                RaiseEvent On_TrackUIVolChange(_trackUIVol)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(vol)
+                    RaiseEvent On_TrackUIVolChange(_trackUIVol)
+                End If
+
             End If
         End Sub
 
@@ -9312,8 +10363,11 @@ Namespace Reaper
             If new_vol = Double.MinValue Then Return
             If _trackUIVol <> new_vol Then
                 _trackUIVol = new_vol
-                RaiseOn_ValueChange(GetValue())
-                RaiseEvent On_TrackUIVolChange(_trackUIVol)
+                If Suspend_events = False Then
+                    RaiseOn_ValueChange(GetValue())
+                    RaiseEvent On_TrackUIVolChange(_trackUIVol)
+                End If
+
             End If
         End Sub
 
@@ -9340,15 +10394,16 @@ Namespace Reaper
         Private _active As Boolean = True
         Private _visible As Boolean = True
         Private _armed As Boolean = False
-        Private _inLane As Boolean = True
-        Private _laneHeight As Integer = 0
-        Private _defaultShape As Integer = 0
-        Private _minValue As Double = 0
-        Private _maxValue As Double = 1
-        Private _centerValue As Double = 0.5
-        Private _faderScaling As Boolean = False
-        Private _automationItemsOptions As Integer = -1
+        Private _showLane As Boolean = True
+        'Private _laneHeight As Integer = 0
+        'Private _defaultShape As Integer = 0
+        'Private _minValue As Double = 0
+        'Private _maxValue As Double = 1
+        'Private _centerValue As Double = 0.5
+        'Private _faderScaling As Boolean = False
+        'Private _automationItemsOptions As Integer = -1
         Private _sendId As Integer = -1
+        Private _Suspend_events As Boolean = False
 
         ' ── Événements ────────────────────────────────────────────────────────
         Public Event On_ActiveChange(_active As Boolean)
@@ -9362,6 +10417,14 @@ Namespace Reaper
         End Sub
 
         ' ── Identité (lecture seule) ───────────────────────────────────────────
+        Public Property Suspend_events As Boolean
+            Get
+                Return _Suspend_events
+            End Get
+            Set
+                _Suspend_events = Value
+            End Set
+        End Property
 
         Public ReadOnly Property TrackIndex As Integer
             Get
@@ -9428,75 +10491,47 @@ Namespace Reaper
             End Get
             Set
                 _armed = Value
-                SetB("ARMED", Value)
+                SetB("ARM", Value)
             End Set
         End Property
 
-        Public Property InLane As Boolean
+        Public Property ShowLane As Boolean
             Get
-                Return _inLane
+                Return _showLane
             End Get
             Set
-                _inLane = Value
-                SetB("IN_LANE", Value)
+                _showLane = Value
+                SetB("SHOWLANE", Value)
             End Set
         End Property
 
-        Public Property LaneHeight As Integer
-            Get
-                Return _laneHeight
-            End Get
-            Set
-                _laneHeight = Value
-                SetI("LANEHEIGHT", Value)
-            End Set
-        End Property
 
-        Public Property DefaultShape As Integer
-            Get
-                Return _defaultShape
-            End Get
-            Set
-                _defaultShape = Value
-                SetI("DEFSHAPE", Value)
-            End Set
-        End Property
-
-        Public Property AutomationItemsOptions As Integer
-            Get
-                Return _automationItemsOptions
-            End Get
-            Set
-                _automationItemsOptions = Value
-                SetI("AUTO_ITEMS_OPTIONS", Value)
-            End Set
-        End Property
 
         ' ── Plage de valeurs (lecture seule) ──────────────────────────────────
 
-        Public ReadOnly Property MinValue As Double
-            Get
-                Return _minValue
-            End Get
-        End Property
+        'Public ReadOnly Property MinValue As Double
+        '    Get
+        '        Return _minValue
+        '    End Get
+        'End Property
 
-        Public ReadOnly Property MaxValue As Double
-            Get
-                Return _maxValue
-            End Get
-        End Property
+        'Public ReadOnly Property MaxValue As Double
+        '    Get
+        '        Return _maxValue
+        '    End Get
+        'End Property
 
-        Public ReadOnly Property CenterValue As Double
-            Get
-                Return _centerValue
-            End Get
-        End Property
+        'Public ReadOnly Property CenterValue As Double
+        '    Get
+        '        Return _centerValue
+        '    End Get
+        'End Property
 
-        Public ReadOnly Property FaderScaling As Boolean
-            Get
-                Return _faderScaling
-            End Get
-        End Property
+        'Public ReadOnly Property FaderScaling As Boolean
+        '    Get
+        '        Return _faderScaling
+        '    End Get
+        'End Property
 
         ' ── Valeur métier (MustOverride) ──────────────────────────────────────
 
@@ -9513,7 +10548,10 @@ Namespace Reaper
         End Property
 
         Protected Sub RaiseOn_ValueChange(value As Double)
-            RaiseEvent On_ValueChange(value)
+            If Suspend_events = False Then
+                RaiseEvent On_ValueChange(value)
+            End If
+
         End Sub
 
         ' ── Chargement ─────────────────────────────────────────────────────────
@@ -9521,65 +10559,79 @@ Namespace Reaper
         Public Overridable Sub Refresh()
             ' ── Chaînes ────────────────────────────────────────────────────────
             _name = utility.GetEnvelopeName(_trackIndex, _envIndex)
-            _guid = utility.GetEnvelopeGuid(_trackIndex, _envIndex)
+            _guid = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "GUID:GUID")
 
             ' ── Active ─────────────────────────────────────────────────────────
             Dim v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "ACTIVE")
             If v <> Double.MinValue Then
                 Dim b = v <> 0
-                If _active <> b Then : _active = b : RaiseEvent On_ActiveChange(_active) : End If
-            End If
+                If _active <> b Then
+                    _active = b
+                    If Suspend_events = False Then
+                        RaiseEvent On_ActiveChange(_active)
+                    End If
 
+                End If
+            End If
             ' ── Visible ────────────────────────────────────────────────────────
             v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "VISIBLE")
             If v <> Double.MinValue Then
                 Dim b = v <> 0
-                If _visible <> b Then : _visible = b : RaiseEvent On_VisibleChange(_visible) : End If
-            End If
+                If _visible <> b Then
+                    _visible = b
+                    If Suspend_events = False Then
+                        RaiseEvent On_VisibleChange(_visible)
+                    End If
 
+                End If
+            End If
             ' ── Armed ──────────────────────────────────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "ARMED")
+            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "ARM")
             If v <> Double.MinValue Then
                 Dim b = v <> 0
-                If _armed <> b Then : _armed = b : RaiseEvent On_ArmedChange(_armed) : End If
+                If _armed <> b Then
+                    _armed = b
+                    If Suspend_events = False Then
+                        RaiseEvent On_ArmedChange(_armed)
+                    End If
+
+                End If
             End If
-
             ' ── InLane ─────────────────────────────────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "IN_LANE")
-            If v <> Double.MinValue Then _inLane = v <> 0
+            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "SHOWLANE")
+            If v <> Double.MinValue Then _showLane = v <> 0
+            '' ── LaneHeight ─────────────────────────────────────────────────────
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "LANEHEIGHT")
+            'If v <> Double.MinValue Then _laneHeight = CInt(v)
 
-            ' ── LaneHeight ─────────────────────────────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "LANEHEIGHT")
-            If v <> Double.MinValue Then _laneHeight = CInt(v)
+            '' ── DefaultShape ───────────────────────────────────────────────────
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "DEFSHAPE")
+            'If v <> Double.MinValue Then _defaultShape = CInt(v)
 
-            ' ── DefaultShape ───────────────────────────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "DEFSHAPE")
-            If v <> Double.MinValue Then _defaultShape = CInt(v)
+            '' ── Plage de valeurs (lecture seule) ───────────────────────────────
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "MINVALUE")
+            'If v <> Double.MinValue Then _minValue = v
 
-            ' ── Plage de valeurs (lecture seule) ───────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "MINVALUE")
-            If v <> Double.MinValue Then _minValue = v
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "MAXVALUE")
+            'If v <> Double.MinValue Then _maxValue = v
 
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "MAXVALUE")
-            If v <> Double.MinValue Then _maxValue = v
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "CENTERVALUE")
+            'If v <> Double.MinValue Then _centerValue = v
 
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "CENTERVALUE")
-            If v <> Double.MinValue Then _centerValue = v
+            '' ── FaderScaling ───────────────────────────────────────────────────
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "FADERSCALING")
+            'If v <> Double.MinValue Then _faderScaling = v <> 0
 
-            ' ── FaderScaling ───────────────────────────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "FADERSCALING")
-            If v <> Double.MinValue Then _faderScaling = v <> 0
-
-            ' ── AutomationItemsOptions ─────────────────────────────────────────
-            v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "AUTO_ITEMS_OPTIONS")
-            If v <> Double.MinValue Then _automationItemsOptions = CInt(v)
+            '' ── AutomationItemsOptions ─────────────────────────────────────────
+            'v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "AUTO_ITEMS_OPTIONS")
+            'If v <> Double.MinValue Then _automationItemsOptions = CInt(v)
 
             ' ── SendId (I_SEND_IDX) — lecture seule ────────────────────────────
-            ' -1 = enveloppe de piste ou de paramètre FX (pas un envoi).
-            ' ≥ 0 = index 0-based de l'envoi auquel cette enveloppe est liée.
+            '1-based index of send in P_TRACK, or 0 if not a send
             v = utility.GetEnvelopePropVal2(_trackIndex, _envIndex, "I_SEND_IDX")
-            If v <> Double.MinValue Then _sendId = CInt(v)
+            If v <> Double.MinValue Then _sendId = CInt(v - 1)
         End Sub
+
 
         ' ── Helpers privés ─────────────────────────────────────────────────────
 
@@ -9715,6 +10767,7 @@ Namespace Reaper
 
         Public Sub New(trackIndex As Integer)
             _index = trackIndex
+            _envelopes = New ReaperTrackEnvelopes(_index)
             AddHandler _envelopes.On_CountChange,
                 Sub(count As Integer)
                     RaiseEvent On_EnvelopeCountChange(count)
@@ -11199,9 +12252,19 @@ Namespace Reaper
             Set
                 If _normValue <> Value Then
                     _normValue = Value
-                    RaiseEvent SuspendMonitoring(_paramIndex, True)
-                    Reaper.SetFxParamNormalizedUI(TrackIndex, FxIndex, ParamIndex, Value)
+                    'Reaper.BeginUndoBlock()
+                    'RaiseEvent SuspendMonitoring(_paramIndex, True)
+                    Reaper.SetFxParamNormalized(TrackIndex, FxIndex, ParamIndex, Value)
+                    'Reaper.SetFxNamedConfigParm(TrackIndex, FxIndex, "param_automate", "1")
+                    'Dim _FxParamValues = Reaper.GetFxParamEx(TrackIndex, FxIndex, ParamIndex)
+                    'Dim RawValue = (Value * (_FxParamValues.maxValue - _FxParamValues.minValue)) + _FxParamValues.minValue
+                    'Reaper.SetFxParamValue(TrackIndex, FxIndex, ParamIndex, RawValue)
 
+
+
+                    'Reaper.EndUndoBlock("ParamFx Modification")
+
+                    'Reaper.SaveProject()
                     'refresh format value:
                     Dim fmtRaw =
                         utility.CallReaperBridge(
@@ -11211,7 +12274,8 @@ Namespace Reaper
                     Else
                         _formatted = "err"
                     End If
-                    RaiseEvent SuspendMonitoring(_paramIndex, False)
+
+                    'RaiseEvent SuspendMonitoring(_paramIndex, False)
 
                 End If
             End Set
@@ -11377,11 +12441,13 @@ Namespace Reaper
         Private ReadOnly _fxIndex As Integer
         Private Shared ReadOnly Ic As CultureInfo = CultureInfo.InvariantCulture
 
+
         ' ── Cache ──────────────────────────────────────────────────────────────
         Private _name As String = String.Empty
         Private _enabled As Boolean = True
         Private _preset As String = String.Empty
         Private _params As New List(Of ReaperFXParam)
+        Private _guid As String = String.Empty
 
         ' ── Événements ────────────────────────────────────────────────────────
         Public Event On_EnabledChange(_enabled As Boolean)
@@ -11391,7 +12457,16 @@ Namespace Reaper
             _trackIndex = trackIndex
             _fxIndex = fxIndex
         End Sub
-
+        ''' <summary>
+        ''' GUID unique du FX retourné par <c>TrackFX_GetFXGUID</c>.
+        ''' Format : "{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}".
+        ''' Chargé lors du premier <see cref="Refresh"/>.
+        ''' </summary>
+        Public ReadOnly Property Guid As String
+            Get
+                Return _guid
+            End Get
+        End Property
         Public ReadOnly Property TrackIndex As Integer
             Get
                 Return _trackIndex : End Get
@@ -11488,6 +12563,14 @@ Namespace Reaper
 
             _name = info(0)
 
+            ' ── GUID du FX ────────────────────────────────────────────────────
+            If String.IsNullOrEmpty(_guid) Then
+                Dim guidRaw = utility.CallReaperBridge($"GET_FX_GUID|{_trackIndex}|{_fxIndex}")
+                If Not String.IsNullOrEmpty(guidRaw) AndAlso Not guidRaw.StartsWith("ERROR") Then
+                    _guid = guidRaw
+                End If
+            End If
+
             Dim new_enabled = info(1) <> "0"
             If _enabled <> new_enabled Then
                 _enabled = new_enabled
@@ -11513,24 +12596,28 @@ Namespace Reaper
 
             ' ── GET_FX_ALL_Raw PARAMS : 1 appel pour tous les noms + valeurs ───────
             If _params.Count = 0 Then Return
-            Dim paramsRaw = utility.CallReaperBridge($"GET_FX_ALL_PARAMS|{_trackIndex}|{_fxIndex}")
-            If String.IsNullOrEmpty(paramsRaw) OrElse paramsRaw.StartsWith("ERROR") Then Return
-
-            Dim p = paramsRaw.Split("|"c)
-            For i = 0 To _params.Count - 1
-                Dim nameIdx = i * 2
-                Dim valIdx = i * 2 + 1
-                If valIdx >= p.Length Then Exit For
-
-
-                _params(i)._name = p(nameIdx)   ' ← accès direct au champ pour éviter un appel pipe
-                Dim new_val As Double = 0
-                Double.TryParse(p(valIdx), NumberStyles.Any, Ic, new_val)
-                If _params(i).RawValue <> new_val Then
-                    _params(i).RawValue = new_val
-                    _params(i).RaiseOn_RawValueChange(new_val)
-                End If
+            For Each FxParam In _params
+                FxParam.Refresh()
             Next
+
+            'Dim paramsRaw = utility.CallReaperBridge($"GET_FX_ALL_PARAMS|{_trackIndex}|{_fxIndex}")
+            'If String.IsNullOrEmpty(paramsRaw) OrElse paramsRaw.StartsWith("ERROR") Then Return
+
+            'Dim p = paramsRaw.Split("|"c)
+            'For i = 0 To _params.Count - 1
+            '    Dim nameIdx = i * 2
+            '    Dim valIdx = i * 2 + 1
+            '    If valIdx >= p.Length Then Exit For
+
+
+            '    _params(i)._name = p(nameIdx)   ' ← accès direct au champ pour éviter un appel pipe
+            '    Dim new_val As Double = 0
+            '    Double.TryParse(p(valIdx), NumberStyles.Any, Ic, new_val)
+            '    If _params(i).RawValue <> new_val Then
+            '        _params(i).RawValue = new_val
+            '        _params(i).RaiseOn_RawValueChange(new_val)
+            '    End If
+            'Next
         End Sub
 
     End Class
@@ -11547,6 +12634,7 @@ Namespace Reaper
 
         Private ReadOnly _trackIndex As Integer
         Private ReadOnly _fxList As New List(Of ReaperFX)
+
 
         ''' <summary>Déclenché quand le nombre de FX sur la piste change.</summary>
         Public Event On_CountChange(count As Integer)
@@ -11812,7 +12900,7 @@ Namespace Reaper
         Tracks = 1   ' modifications de pistes
         Items = 4   ' modifications d'items
         FX = 8   ' modifications de FX
-        All = Tracks Or Items Or FX
+        All = -1
     End Enum
 
     ' ══════════════════════════════════════════════════════════════════════════
@@ -12247,7 +13335,6 @@ Namespace Reaper
 
 
 
-
     ' ══════════════════════════════════════════════════════════════════════════
     '  REAPER SESSION — surveillance de l'index du projet actif
     ' ══════════════════════════════════════════════════════════════════════════
@@ -12272,9 +13359,12 @@ Namespace Reaper
 
         Private ReadOnly _monitor As New Monitors.ReaperSessionMonitor()
         Private ReadOnly _config As New ReaperSessionConfig()
+        Private _LastClickedTrackIndex As Integer
         Private _disposed As Boolean = False
         Private _activeProjectIndex As Integer = -1
         Private _openProjects As IReadOnlyList(Of String) = Array.Empty(Of String)()
+
+        Dim _ReaperMouseClickMonitor As Monitors.ReaperMouseClickMonitor
 
         ' ── Projet géré en interne ────────────────────────────────────────────
         Private _project As ReaperProject = Nothing
@@ -12292,13 +13382,30 @@ Namespace Reaper
         ''' initialisé et synchronisé avec Reaper — câbler la surface dessus directement.
         ''' </summary>
         Public Event On_ProjectChanged(project As ReaperProject)
+        Public Event On_ReaperGUIClick(TrackIndex As Integer)
 
         Public Sub New()
             AddHandler _monitor.On_ActiveProjectChanged, AddressOf OnActiveProjectChanged
             AddHandler _monitor.On_OpenProjectsChanged, AddressOf OnOpenProjectsChanged
+
+            _ReaperMouseClickMonitor = New Monitors.ReaperMouseClickMonitor()
+            AddHandler _ReaperMouseClickMonitor.On_MouseClick, Sub(x As Integer, y As Integer)
+                                                                   'Console.WriteLine($"Clic dans Reaper : {x}, {y}")
+                                                                   _LastClickedTrackIndex = _ReaperMouseClickMonitor.LastClickedTrackIndex
+                                                                   RefreshTrackInfos()
+                                                               End Sub
+            AddHandler ReaperPollHub.Instance.On_ProjectStateChange, AddressOf RefreshTrackInfos
+
+
         End Sub
 
         ' ── Propriétés ────────────────────────────────────────────────────────
+
+        Public ReadOnly Property LastClickedTrackIndex As Integer
+            Get
+                Return _LastClickedTrackIndex
+            End Get
+        End Property
 
         ''' <summary>
         ''' Projet Reaper actif, créé et disposé automatiquement par la session.
@@ -12357,6 +13464,7 @@ Namespace Reaper
             _openProjects = utility.EnumAllProjects()
             _activeProjectIndex = FindProjectIndex(_monitor.CurrentFilePath)
             _config.RefreshPlugins()
+            _ReaperMouseClickMonitor.Start()
 
             ' ── Créer le premier ReaperProject ────────────────────────────────
             SwapProject()
@@ -12364,6 +13472,7 @@ Namespace Reaper
 
         Public Sub [Stop]()
             _monitor.Stop()
+            _ReaperMouseClickMonitor.Stop()
         End Sub
 
         ' ── Gestion du cycle de vie du projet ─────────────────────────────────
@@ -12402,12 +13511,25 @@ Namespace Reaper
             Next
             Return -1
         End Function
+        ' ── Maj de la track modifiée du projet automatiquement ───────────────────────────
+        Private Sub RefreshTrackInfos()
+            If _project IsNot Nothing Then
+                If _LastClickedTrackIndex > 0 AndAlso _LastClickedTrackIndex <= _project.Tracks.Count - 1 Then
+                    Dim ReaperTrk = _project.Tracks(LastClickedTrackIndex)
+                    ReaperTrk.Refresh()
+
+                End If
+
+
+            End If
+        End Sub
 
         ' ── IDisposable ───────────────────────────────────────────────────────
 
         Public Sub Dispose() Implements IDisposable.Dispose
             If Not _disposed Then
                 _monitor.Dispose()
+                _ReaperMouseClickMonitor?.Dispose()
                 _project?.Dispose()   ' ← disposer le projet courant
                 _disposed = True
             End If

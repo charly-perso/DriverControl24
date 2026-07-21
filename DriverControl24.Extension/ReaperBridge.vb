@@ -288,7 +288,10 @@ Public Class ReaperBridge
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
                     If ReaperAPI.SetMediaTrackInfo_Value Is Nothing Then Return "ERROR:API unavailable"
                     Dim newVal = Double.Parse(parts(3), Globalization.CultureInfo.InvariantCulture)
-                    Return If(ReaperAPI.SetMediaTrackInfo_Value(tr, parts(2), newVal), "OK", "ERROR:Set failed")
+                    ReaperAPI.EnqueueUIAction(Sub()
+                                                  ReaperAPI.SetMediaTrackInfo_Value(tr, parts(2), newVal)
+                                              End Sub)
+                    Return "OK"
 
                 ' ── GET_TRACK_NAME|trackIndex ─────────────────────────────────
                 Case "GET_TRACK_NAME"
@@ -1713,23 +1716,26 @@ Public Class ReaperBridge
                     ReaperAPI.GetTrackUIVolPan(tr, vol, pan)
                     Return pan.ToString("G", Globalization.CultureInfo.InvariantCulture)
 
-                ' ── SET_TRACK_UI_PAN|trackIndex|pan[|isend] ──────────────────
+                                ' ── SET_TRACK_UI_PAN|trackIndex|pan[|done[|igngroupflags]] ──────────────
                 ' Écrit le pan via SetTrackUIPan (UI-safe).
                 ' Déclenche l'enregistrement d'automation si Touch/Write/Latch.
-                ' pan   : -1..1  (-1=Gauche  0=Centre  1=Droite)
-                ' isend : 0=drag en cours  1=fin de drag/commit (défaut)  -1=sans undo
-                ' Réponse : "OK" ou "ERROR:..."
+                ' pan           : -1..1  (-1=Gauche  0=Centre  1=Droite)
+                ' done          : 0=touch en cours  1=fin de touch/commit (défaut)
+                ' igngroupflags : 0=défaut  &1=ignore grouping  &2=ignore ganging
+                ' Réponse : pan réellement appliqué (InvariantCulture) ou "ERROR:..."
                 Case "SET_TRACK_UI_PAN"
-                    If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_UI_PAN|trackIndex|pan[|isend]"
+                    If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_UI_PAN|trackIndex|pan[|done[|igngroupflags]]"
                     If ReaperAPI.SetTrackUIPan Is Nothing Then Return "ERROR:API unavailable"
                     Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                    Dim ic = Globalization.CultureInfo.InvariantCulture
                     Dim pan As Double = 0
-                    Double.TryParse(parts(2), Globalization.NumberStyles.Any,
-                                    Globalization.CultureInfo.InvariantCulture, pan)
-                    Dim isend As Integer = 1
-                    If parts.Length >= 4 Then Integer.TryParse(parts(3), isend)
-                    Return If(ReaperAPI.SetTrackUIPan(tr, pan, isend), "OK", "ERROR:Set failed")
+                    Double.TryParse(parts(2), Globalization.NumberStyles.Any, ic, pan)
+                    Dim done As Boolean = Not (parts.Length >= 4 AndAlso parts(3) = "0")
+                    Dim igngroupflags As Integer = 0
+                    If parts.Length >= 5 Then Integer.TryParse(parts(4), igngroupflags)
+                    Dim applied = ReaperAPI.SetTrackUIPan(tr, pan, False, done, igngroupflags)
+                    Return applied.ToString("G", ic)
 
                                     ' ── GET_TRACK_UI_MUTE|trackIndex ──────────────────────────────
                 ' Retourne l'état mute POST-automation via GetTrackUIMute.
@@ -1743,21 +1749,23 @@ Public Class ReaperBridge
                     ReaperAPI.GetTrackUIMute(tr, mute)
                     Return If(mute, "1", "0")
 
-                    ' ── SET_TRACK_UI_MUTE|trackIndex|mute[|isend] ────────────────
+                                   ' ── SET_TRACK_UI_MUTE|trackIndex|mute[|igngroupflags] ──────────────────
                 ' Écrit l'état mute via SetTrackUIMute (UI-safe).
                 ' Déclenche l'enregistrement d'automation si Touch/Write/Latch.
-                ' mute  : "1"=muet  "0"=actif
-                ' isend : 0=drag en cours  1=fin de drag/commit (défaut)  -1=sans undo
-                ' Réponse : "OK" ou "ERROR:..."
+                ' mute          : -1=toggle  0=unmute  1=mute
+                ' igngroupflags : 0=défaut  &1=ignore grouping  &2=ignore ganging
+                ' Réponse : nouvel état mute ("0" ou "1"), "-1" si erreur Reaper, ou "ERROR:..."
                 Case "SET_TRACK_UI_MUTE"
-                    If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_UI_MUTE|trackIndex|mute[|isend]"
+                    If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_UI_MUTE|trackIndex|mute[|igngroupflags]"
                     If ReaperAPI.SetTrackUIMute Is Nothing Then Return "ERROR:API unavailable"
                     Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                    Dim mute = parts(2) = "1"
-                    Dim isend As Integer = 1
-                    If parts.Length >= 4 Then Integer.TryParse(parts(3), isend)
-                    Return If(ReaperAPI.SetTrackUIMute(tr, mute, isend), "OK", "ERROR:Set failed")
+                    Dim mute As Integer = 0
+                    Integer.TryParse(parts(2), mute)
+                    Dim igngroupflags As Integer = 0
+                    If parts.Length >= 4 Then Integer.TryParse(parts(3), igngroupflags)
+                    Dim result = ReaperAPI.SetTrackUIMute(tr, mute, igngroupflags)
+                    Return result.ToString()
                 ' ── GET_TRACKS_SENDS|sendIndex|category|trackIdx0|trackIdx1|... ──
                 ' Retourne 10 champs par piste séparés par | :
                 ' vol|pan|panLaw|mute|phase|mono|sendMode|srcChan|dstChan|midiFlags
@@ -1869,65 +1877,75 @@ Public Class ReaperBridge
                 ' Retourne le GUID stable de l'enveloppe ex: "{A1B2C3D4-…}".
                 ' Ce GUID est persistant entre les sessions (sauvegardé dans le .rpp).
                 ' Réponse : chaîne GUID ou "ERROR:..."
-                Case "GET_ENVELOPE_GUID"
-                    If parts.Length < 3 Then Return "ERROR:Usage GET_ENVELOPE_GUID|trackIndex|envIndex"
-                    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
-                       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
+                'Case "GET_ENVELOPE_GUID"
+                    'If parts.Length < 3 Then Return "ERROR:Usage GET_ENVELOPE_GUID|trackIndex|envIndex"
+                    'If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                    '   ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
+                    'Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                    'If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                    'Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
+                    'If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
+                    'Dim buf = Marshal.AllocHGlobal(64)
+                    'Try
+                    '    ReaperAPI.GetSetEnvelopeInfo_String(env, "GUID", buf, 64, False)
+                    '    Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
+                    'Finally
+                    '    Marshal.FreeHGlobal(buf)
+                    'End Try
+
+                    ' ── GET_TRACK_GUID|trackIndex ─────────────────────
+                ' Retourne le GUID stable d'une track ex: "{A1B2C3D4-…}".
+                ' Ce GUID est persistant entre les sessions (sauvegardé dans le .rpp).
+                ' Réponse : chaîne GUID ou "ERROR:..."
+                Case "GET_TRACK_GUID"
+                    If parts.Length < 2 Then Return "ERROR:Usage GET_ENVELOPE_GUID|trackIndex"
                     Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                    Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
-                    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
-                    Dim buf = Marshal.AllocHGlobal(64)
-                    Try
-                        ReaperAPI.GetSetEnvelopeInfo_String(env, "GUID", buf, 64, False)
-                        Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
-                    Finally
-                        Marshal.FreeHGlobal(buf)
-                    End Try
+                    Return ReaperAPI.GetTrackGUID(tr)
 
                 ' ── GET_ENVELOPE_EXT|trackIndex|envIndex|key ──────────────────
                 ' Lit l'état d'extension personnalisé ("P_EXT:key") de l'enveloppe.
                 ' Utile pour stocker des métadonnées arbitraires attachées à l'enveloppe.
                 ' Réponse : valeur chaîne (vide si la clé n'existe pas), ou "ERROR:..."
-                Case "GET_ENVELOPE_EXT"
-                    If parts.Length < 4 Then Return "ERROR:Usage GET_ENVELOPE_EXT|trackIndex|envIndex|key"
-                    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
-                       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
-                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                    Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
-                    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
-                    Dim key = $"P_EXT:{parts(3)}"
-                    Dim buf = Marshal.AllocHGlobal(4096)
-                    Try
-                        ReaperAPI.GetSetEnvelopeInfo_String(env, key, buf, 4096, False)
-                        Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
-                    Finally
-                        Marshal.FreeHGlobal(buf)
-                    End Try
+                'Case "GET_ENVELOPE_EXT"
+                '    If parts.Length < 4 Then Return "ERROR:Usage GET_ENVELOPE_EXT|trackIndex|envIndex|key"
+                '    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                '       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
+                '    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                '    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                '    Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
+                '    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
+                '    Dim key = $"P_EXT:{parts(3)}"
+                '    Dim buf = Marshal.AllocHGlobal(4096)
+                '    Try
+                '        ReaperAPI.GetSetEnvelopeInfo_String(env, key, buf, 4096, False)
+                '        Return If(Marshal.PtrToStringAnsi(buf), String.Empty)
+                '    Finally
+                '        Marshal.FreeHGlobal(buf)
+                '    End Try
 
                 ' ── SET_ENVELOPE_EXT|trackIndex|envIndex|key|value ────────────
                 ' Écrit l'état d'extension personnalisé ("P_EXT:key") de l'enveloppe.
                 ' La valeur est persistée dans le fichier .rpp.
                 ' Réponse : "OK" ou "ERROR:..."
-                Case "SET_ENVELOPE_EXT"
-                    If parts.Length < 5 Then Return "ERROR:Usage SET_ENVELOPE_EXT|trackIndex|envIndex|key|value"
-                    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
-                       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
-                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                    Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
-                    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
-                    Dim key = $"P_EXT:{parts(3)}"
-                    Dim value = String.Join("|", parts, 4, parts.Length - 4)
-                    Dim buf = Marshal.StringToHGlobalAnsi(value)
-                    Try
-                        Dim ok = ReaperAPI.GetSetEnvelopeInfo_String(
-                                     env, key, buf, value.Length + 1, True)
-                        Return If(ok, "OK", "ERROR:Set failed")
-                    Finally
-                        Marshal.FreeHGlobal(buf)
-                    End Try
+                'Case "SET_ENVELOPE_EXT"
+                '    If parts.Length < 5 Then Return "ERROR:Usage SET_ENVELOPE_EXT|trackIndex|envIndex|key|value"
+                '    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                '       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
+                '    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                '    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                '    Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
+                '    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
+                '    Dim key = $"P_EXT:{parts(3)}"
+                '    Dim value = String.Join("|", parts, 4, parts.Length - 4)
+                '    Dim buf = Marshal.StringToHGlobalAnsi(value)
+                '    Try
+                '        Dim ok = ReaperAPI.GetSetEnvelopeInfo_String(
+                '                     env, key, buf, value.Length + 1, True)
+                '        Return If(ok, "OK", "ERROR:Set failed")
+                '    Finally
+                '        Marshal.FreeHGlobal(buf)
+                '    End Try
                                     ' ── GET_ENVELOPE_PROP_VAL|trackIndex|envIndex|paramName ────────
                 ' Lit une propriété numérique d'une enveloppe via GetSetEnvelopeInfo_Value.
                 ' Paramètres courants : "ACTIVE" "VISIBLE" "ARMED" "IN_LANE"
@@ -1937,16 +1955,52 @@ Public Class ReaperBridge
                 Case "GET_ENVELOPE_PROP_VAL"
                     If parts.Length < 4 Then Return "ERROR:Usage GET_ENVELOPE_PROP_VAL|trackIndex|envIndex|paramName"
                     If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
-                       ReaperAPI.GetSetEnvelopeInfo_Value Is Nothing Then Return "ERROR:API unavailable"
+       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
                     Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
                     Dim envIdx As Integer = 0
                     If Not Integer.TryParse(parts(2), envIdx) Then Return "ERROR:Invalid envIndex"
                     Dim env = ReaperAPI.GetTrackEnvelope(tr, envIdx)
                     If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
-                    Dim value = ReaperAPI.GetSetEnvelopeInfo_Value(env, parts(3), 0, False)
-                    Return value.ToString("G", Globalization.CultureInfo.InvariantCulture)
+                    Dim buf = Marshal.AllocHGlobal(256)
+                    Try
+                        Marshal.WriteByte(buf, 0)
+                        Dim ok = ReaperAPI.GetSetEnvelopeInfo_String(env, parts(3), buf, False)
+                        If Not ok Then Return String.Empty
+                        Return Marshal.PtrToStringAnsi(buf)
+                    Finally
+                        Marshal.FreeHGlobal(buf)
+                    End Try
+                    ' ── SET_ENVELOPE_PROP_VAL|trackIndex|envIndex|paramName|value ─────────
+' Écrit une propriété de type chaîne d'une enveloppe via GetSetEnvelopeInfo_String.
+' Paramètres courants :
+'   "ACTIVE"     → "0" ou "1"
+'   "ARM"        → "0" ou "1"
+'   "VISIBLE"    → "0" ou "1"
+'   "SHOWLANE"   → "0" ou "1"
+'   "P_EXT:xyz"  → valeur arbitraire persistée dans le .rpp
+' Réponse : "OK" ou "ERROR:..."
+                Case "SET_ENVELOPE_PROP_VAL"
+                    If parts.Length < 5 Then Return "ERROR:Usage SET_ENVELOPE_PROP_VAL|trackIndex|envIndex|paramName|value"
+                    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing Then Return "ERROR:API unavailable"
+                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                    Dim envIdx As Integer = 0
+                    If Not Integer.TryParse(parts(2), envIdx) Then Return "ERROR:Invalid envIndex"
+                    Dim env = ReaperAPI.GetTrackEnvelope(tr, envIdx)
+                    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
+                    Dim value = String.Join("|", parts, 4, parts.Length - 4)
+                    Dim buf = Marshal.StringToHGlobalAnsi(value)
+                    Try
 
+                        Dim ok = ReaperAPI.GetSetEnvelopeInfo_String(env, parts(3), buf, True)
+                        Return If(ok, "OK", "ERROR:Set failed")
+
+
+                    Finally
+                        Marshal.FreeHGlobal(buf)
+                    End Try
                                     ' ── GET_ENVELOPE_PROP_VAL|trackIndex|envIndex|paramName ────────
                 ' Lit une propriété numérique d'une enveloppe.
                 ' Priorité : GetEnvelopeInfo_Value (read-only, Reaper 6+)
@@ -2051,280 +2105,352 @@ Public Class ReaperBridge
                     Dim chunk = String.Join("|", parts, 3, parts.Length - 3).Replace("\n", vbLf)
                     Return If(ReaperAPI.SetEnvelopeStateChunk(env, chunk, False), "OK", "ERROR:SetEnvelopeStateChunk failed")
 
-                                    ' ── SET_TRACK_UI_VOL|trackIndex|vol[|isend] ───────────────────
-                ' Écrit le volume via SetTrackUIVolume (UI-safe).
-                ' Déclenche l'enregistrement d'automation si Touch/Write/Latch.
-                ' vol   : 0..4  (1.0 = 0 dB)
-                ' isend : 0=drag en cours  1=fin de drag/commit (défaut)  -1=sans undo
-                ' Réponse : "OK" ou "ERROR:..."
+                                    ' ── SET_TRACK_UI_VOL|trackIndex|vol[|relative[|done[|igngroupflags]]] ───
+' vol          : 0..4  (1.0 = 0 dB)
+' relative     : 0=absolu (défaut)  1=delta
+' done         : 0=touch en cours (défaut)  1=fin du touch/commit
+' igngroupflags: 0=défaut  &1=ignore grouping  &2=ignore ganging
+' Réponse      : volume réellement appliqué (InvariantCulture) ou "ERROR:..."
                 Case "SET_TRACK_UI_VOL"
-                    If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_UI_VOL|trackIndex|vol[|isend]"
+                    If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_UI_VOL|trackIndex|vol[|relative[|done[|igngroupflags]]]"
                     If ReaperAPI.SetTrackUIVolume Is Nothing Then Return "ERROR:API unavailable"
                     Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
                     Dim ic = Globalization.CultureInfo.InvariantCulture
                     Dim vol As Double = 0
                     Double.TryParse(parts(2), Globalization.NumberStyles.Any, ic, vol)
-                    Dim isend As Integer = 1
-                    If parts.Length >= 4 Then Integer.TryParse(parts(3), isend)
-                    Return If(ReaperAPI.SetTrackUIVolume(tr, vol, isend), "OK", "ERROR:Set failed")
+                    Dim relative As Boolean = parts.Length >= 4 AndAlso parts(3) = "1"
+                    Dim done As Boolean = Not (parts.Length >= 5 AndAlso parts(4) = "0")
+                    Dim igngroupflags As Integer = 0
+                    If parts.Length >= 6 Then Integer.TryParse(parts(5), igngroupflags)
+                    Dim applied = ReaperAPI.SetTrackUIVolume(tr, vol, relative, done, igngroupflags)
+                    Return applied.ToString("G", ic)
 
                                     ' ── COUNT_TRACK_ENVELOPES|trackIndex ─────────────────────────
                 ' Retourne le nombre d'enveloppes présentes sur la piste.
                 ' Inclut : vol, pan, mute, width + toutes les enveloppes FX activées.
                 ' Réponse : nombre entier ≥ 0, ou "ERROR:..."
                 Case "COUNT_TRACK_ENVELOPES"
-                    If parts.Length < 2 Then Return "ERROR:Usage COUNT_TRACK_ENVELOPES|trackIndex"
-                    If ReaperAPI.CountTrackEnvelopes Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
-                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                    Return ReaperAPI.CountTrackEnvelopes(tr).ToString()
+                                                  If parts.Length < 2 Then Return "ERROR:Usage COUNT_TRACK_ENVELOPES|trackIndex"
+                                                  If ReaperAPI.CountTrackEnvelopes Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                                                  If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                                                  Return ReaperAPI.CountTrackEnvelopes(tr).ToString()
 
                                     ' ── GET_ENVELOPE_NAME|trackIndex|envIndex ────────────────────
                 ' Retourne le nom affiché de l'enveloppe (ex: "Volume", "Pan",
                 ' ou le nom du paramètre FX associé).
                 ' Réponse : nom brut (chaîne) ou "ERROR:..."
-                Case "GET_ENVELOPE_NAME"
-                    If parts.Length < 3 Then Return "ERROR:Usage GET_ENVELOPE_NAME|trackIndex|envIndex"
-                    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                                                  Case "GET_ENVELOPE_NAME"
+                                                  If parts.Length < 3 Then Return "ERROR:Usage GET_ENVELOPE_NAME|trackIndex|envIndex"
+                                                  If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
                        ReaperAPI.GetEnvelopeName Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
-                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                    Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
-                    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
-                    Dim buf As New System.Text.StringBuilder(256)
-                    ReaperAPI.GetEnvelopeName(env, buf, buf.Capacity)
-                    Return buf.ToString()
+                                                  Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                                                  If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                                                  Dim env = ReaperAPI.GetTrackEnvelope(tr, Integer.Parse(parts(2)))
+                                                  If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
+                                                  Dim buf As New System.Text.StringBuilder(256)
+                                                  ReaperAPI.GetEnvelopeName(env, buf, buf.Capacity)
+                                                  Return buf.ToString()
 
                                     ' ── SET_TRANSPORT_STATE|playState ─────────────────────────────
                 ' Impose un état de transport par sa valeur numérique.
                 ' 0=stop  1=play  2=pause  4=rec  5=rec+play  6=pause+rec
                 ' Utilise Main_OnCommand avec les IDs de commandes Reaper standard.
                 ' Réponse : "OK" ou "ERROR:..."
-                Case "SET_TRANSPORT_STATE"
-                    If parts.Length < 2 Then Return "ERROR:Usage SET_TRANSPORT_STATE|playState"
-                    If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
-                    Dim state As Integer = 0
-                    If Not Integer.TryParse(parts(1), state) Then Return "ERROR:Invalid playState"
-                    Select Case state
-                        Case 0  ' Stop
-                            ReaperAPI.Main_OnCommand(1016, 0)
-                        Case 1  ' Play
-                            ReaperAPI.Main_OnCommand(1007, 0)
-                        Case 2  ' Pause
-                            ReaperAPI.Main_OnCommand(1008, 0)
-                        Case 4  ' Record
-                            ReaperAPI.Main_OnCommand(1013, 0)
-                        Case 5  ' Record + Play → lancer l'enregistrement (play implicite)
-                            ReaperAPI.Main_OnCommand(1013, 0)
-                        Case 6  ' Pause + Record → pause
-                            ReaperAPI.Main_OnCommand(1008, 0)
-                        Case Else
-                            Return "ERROR:Unknown playState"
-                    End Select
-                    Return "OK"
+                                                  Case "SET_TRANSPORT_STATE"
+                                                  If parts.Length < 2 Then Return "ERROR:Usage SET_TRANSPORT_STATE|playState"
+                                                  If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim state As Integer = 0
+                                                  If Not Integer.TryParse(parts(1), state) Then Return "ERROR:Invalid playState"
+                                                  Select Case state
+                                                      Case 0  ' Stop
+                                                          ReaperAPI.Main_OnCommand(1016, 0)
+                                                      Case 1  ' Play
+                                                          ReaperAPI.Main_OnCommand(1007, 0)
+                                                      Case 2  ' Pause
+                                                          ReaperAPI.Main_OnCommand(1008, 0)
+                                                      Case 4  ' Record
+                                                          ReaperAPI.Main_OnCommand(1013, 0)
+                                                      Case 5  ' Record + Play → lancer l'enregistrement (play implicite)
+                                                          ReaperAPI.Main_OnCommand(1013, 0)
+                                                      Case 6  ' Pause + Record → pause
+                                                          ReaperAPI.Main_OnCommand(1008, 0)
+                                                      Case Else
+                                                          Return "ERROR:Unknown playState"
+                                                  End Select
+                                                  Return "OK"
 
                                     ' ── GET_ALL_PEAKS|idx0|idx1|...|idxN ─────────────────────────
                 ' Retourne L et R pour chaque piste en un seul appel.
                 ' Format réponse : "L0|R0|L1|R1|...|LN|RN"
                 ' Valeur -1 si la piste n'existe pas.
-                Case "GET_ALL_PEAKS"
-                    If parts.Length < 2 Then Return "ERROR:Usage GET_ALL_PEAKS|idx0|idx1|..."
-                    If ReaperAPI.Track_GetPeakInfo Is Nothing Then Return "ERROR:API unavailable"
-                    Dim ic = Globalization.CultureInfo.InvariantCulture
-                    Dim tokens As New List(Of String)
-                    For i = 1 To parts.Length - 1
-                        Dim tIdx As Integer = 0
-                        If Not Integer.TryParse(parts(i), tIdx) Then
-                            tokens.Add("-1")
-                            tokens.Add("-1")
-                            Continue For
-                        End If
-                        Dim tr = GetTrackByIndex(tIdx)
-                        If tr = IntPtr.Zero Then
-                            tokens.Add("-1")
-                            tokens.Add("-1")
-                            Continue For
-                        End If
-                        tokens.Add(ReaperAPI.Track_GetPeakInfo(tr, 0).ToString("G", ic))
-                        tokens.Add(ReaperAPI.Track_GetPeakInfo(tr, 1).ToString("G", ic))
-                    Next
-                    Return String.Join("|", tokens)
+                                                  Case "GET_ALL_PEAKS"
+                                                  If parts.Length < 2 Then Return "ERROR:Usage GET_ALL_PEAKS|idx0|idx1|..."
+                                                  If ReaperAPI.Track_GetPeakInfo Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim ic = Globalization.CultureInfo.InvariantCulture
+                                                  Dim tokens As New List(Of String)
+                                                  For i = 1 To parts.Length - 1
+                                                      Dim tIdx As Integer = 0
+                                                      If Not Integer.TryParse(parts(i), tIdx) Then
+                                                          tokens.Add("-1")
+                                                          tokens.Add("-1")
+                                                          Continue For
+                                                      End If
+                                                      Dim tr = GetTrackByIndex(tIdx)
+                                                      If tr = IntPtr.Zero Then
+                                                          tokens.Add("-1")
+                                                          tokens.Add("-1")
+                                                          Continue For
+                                                      End If
+                                                      tokens.Add(ReaperAPI.Track_GetPeakInfo(tr, 0).ToString("G", ic))
+                                                      tokens.Add(ReaperAPI.Track_GetPeakInfo(tr, 1).ToString("G", ic))
+                                                  Next
+                                                  Return String.Join("|", tokens)
 
                                     ' ── GET_MASTER_TEMPO ──────────────────────────────────────────
-                Case "GET_MASTER_TEMPO"
-                    If ReaperAPI.Master_GetTempo Is Nothing Then Return "ERROR:Master_GetTempo unavailable"
-                    Return ReaperAPI.Master_GetTempo().ToString("G", Globalization.CultureInfo.InvariantCulture)
+                                                  Case "GET_MASTER_TEMPO"
+                                                  If ReaperAPI.Master_GetTempo Is Nothing Then Return "ERROR:Master_GetTempo unavailable"
+                                                  Return ReaperAPI.Master_GetTempo().ToString("G", Globalization.CultureInfo.InvariantCulture)
 
                 ' ── GET_TIMESIG_NUMERATOR ─────────────────────────────────────
                 ' Retourne le numérateur (beats per bar) à la position curseur.
-                Case "GET_TIMESIG_NUMERATOR"
-                    If ReaperAPI.TimeMap_GetTimeSigAtTime Is Nothing OrElse ReaperAPI.GetCursorPosition Is Nothing Then
-                        Return "ERROR:TimeMap_GetTimeSigAtTime unavailable"
-                    End If
-                    Dim pos As Double = ReaperAPI.GetCursorPosition()
-                    Dim numerator As Integer = 0
-                    Dim denominator As Integer = 0
-                    Dim tempo As Double = 0
-                    ReaperAPI.TimeMap_GetTimeSigAtTime(IntPtr.Zero, pos, numerator, denominator, tempo)
-                    Return numerator.ToString()
+                                                  Case "GET_TIMESIG_NUMERATOR"
+                                                  If ReaperAPI.TimeMap_GetTimeSigAtTime Is Nothing OrElse ReaperAPI.GetCursorPosition Is Nothing Then
+                                                      Return "ERROR:TimeMap_GetTimeSigAtTime unavailable"
+                                                  End If
+                                                  Dim pos As Double = ReaperAPI.GetCursorPosition()
+                                                  Dim numerator As Integer = 0
+                                                  Dim denominator As Integer = 0
+                                                  Dim tempo As Double = 0
+                                                  ReaperAPI.TimeMap_GetTimeSigAtTime(IntPtr.Zero, pos, numerator, denominator, tempo)
+                                                  Return numerator.ToString()
 
                                     ' ── NEW_PROJECT ───────────────────────────────────────────────
                 ' Crée un projet vierge (action 40023 = File: New project).
                 ' Réponse : "OK" ou "ERROR:API unavailable"
-                Case "NEW_PROJECT"
-                    If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
-                    ReaperAPI.Main_OnCommand(40023, 0)
-                    Return "OK"
+                                                  Case "NEW_PROJECT"
+                                                  If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
+                                                  ReaperAPI.Main_OnCommand(40023, 0)
+                                                  Return "OK"
 
                 ' ── ADD_TRACK ─────────────────────────────────────────────────
                 ' Insère une piste à la fin du projet actif.
                 ' Réponse : index 0-based de la piste créée
-                Case "ADD_TRACK"
-                    If ReaperAPI.InsertTrackAtIndex Is Nothing Then Return "ERROR:API unavailable"
-                    If ReaperAPI.CountTracks Is Nothing Then Return "ERROR:API unavailable"
-                    Dim trackCount = ReaperAPI.CountTracks(IntPtr.Zero)
-                    ReaperAPI.InsertTrackAtIndex(trackCount, False)
-                    Return trackCount.ToString()
+                                                  Case "ADD_TRACK"
+                                                  If ReaperAPI.InsertTrackAtIndex Is Nothing Then Return "ERROR:API unavailable"
+                                                  If ReaperAPI.CountTracks Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim trackCount = ReaperAPI.CountTracks(IntPtr.Zero)
+                                                  ReaperAPI.InsertTrackAtIndex(trackCount, False)
+                                                  Return trackCount.ToString()
 
                 ' ── CLOSE_PROJECT_NO_SAVE ─────────────────────────────────────
                 ' Ferme le projet actif sans sauvegarder.
                 ' Force dirty=0 avant de fermer pour éviter la boîte "Save ?".
                 ' Action 40199 = File: Close current project tab (Reaper ≥ 6).
                 ' Réponse : "OK" ou "ERROR:API unavailable"
-                Case "CLOSE_PROJECT_NO_SAVE"
-                    If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
-                    If ReaperAPI.EnumProjects IsNot Nothing Then
-                        Dim proj = ReaperAPI.EnumProjects(-1, IntPtr.Zero, 0)
-                        If proj <> IntPtr.Zero AndAlso ReaperAPI.MarkProjectDirty IsNot Nothing Then
-                            ' MarkProjectDirty avec le projet = marque dirty.
-                            ' On passe IntPtr.Zero pour effacer le flag dirty du projet actif.
-                            ReaperAPI.MarkProjectDirty(IntPtr.Zero)
-                        End If
-                    End If
-                    ReaperAPI.Main_OnCommand(40199, 0)
-                    Return "OK"
+                                                  Case "CLOSE_PROJECT_NO_SAVE"
+                                                  If ReaperAPI.Main_OnCommand Is Nothing Then Return "ERROR:API unavailable"
+                                                  If ReaperAPI.EnumProjects IsNot Nothing Then
+                                                      Dim proj = ReaperAPI.EnumProjects(-1, IntPtr.Zero, 0)
+                                                      If proj <> IntPtr.Zero AndAlso ReaperAPI.MarkProjectDirty IsNot Nothing Then
+                                                          ' MarkProjectDirty avec le projet = marque dirty.
+                                                          ' On passe IntPtr.Zero pour effacer le flag dirty du projet actif.
+                                                          ReaperAPI.MarkProjectDirty(IntPtr.Zero)
+                                                      End If
+                                                  End If
+                                                  ReaperAPI.Main_OnCommand(40199, 0)
+                                                  Return "OK"
 
                 ' ── OPEN_PROJECT|path ─────────────────────────────────────────
                 ' Ouvre un fichier .rpp existant.
                 ' Réponse : "OK" ou "ERROR:missing path" / "ERROR:API unavailable"
-                Case "OPEN_PROJECT"
-                    If parts.Length < 2 OrElse String.IsNullOrEmpty(parts(1)) Then
-                        Return "ERROR:missing path"
-                    End If
-                    If ReaperAPI.main_openProject Is Nothing Then Return "ERROR:API unavailable"
-                    ' Reconstituer le chemin (peut contenir des | dans les noms de dossiers)
-                    Dim path = String.Join("|", parts, 1, parts.Length - 1)
-                    ReaperAPI.main_openProject(path)
-                    Return "OK"
+                                                  Case "OPEN_PROJECT"
+                                                  If parts.Length < 2 OrElse String.IsNullOrEmpty(parts(1)) Then
+                                                      Return "ERROR:missing path"
+                                                  End If
+                                                  If ReaperAPI.main_openProject Is Nothing Then Return "ERROR:API unavailable"
+                                                  ' Reconstituer le chemin (peut contenir des | dans les noms de dossiers)
+                                                  Dim path = String.Join("|", parts, 1, parts.Length - 1)
+                                                  ReaperAPI.main_openProject(path)
+                                                  Return "OK"
                                     ' ── DELETE_TRACK|trackIndex ───────────────────────────────────
-                Case "DELETE_TRACK"
-                    If parts.Length < 2 Then Return "ERROR:missing index"
-                    If ReaperAPI.GetTrack Is Nothing OrElse ReaperAPI.DeleteTrack Is Nothing Then
-                        Return "ERROR:API unavailable"
-                    End If
-                    Dim delIdx As Integer = 0
-                    If Not Integer.TryParse(parts(1), delIdx) Then Return "ERROR:invalid index"
-                    Dim delTr = ReaperAPI.GetTrack(IntPtr.Zero, delIdx)
-                    If delTr = IntPtr.Zero Then Return "ERROR:track not found"
-                    ReaperAPI.DeleteTrack(delTr)
-                    Return "OK"
+                                                  Case "DELETE_TRACK"
+                                                  If parts.Length < 2 Then Return "ERROR:missing index"
+                                                  If ReaperAPI.GetTrack Is Nothing OrElse ReaperAPI.DeleteTrack Is Nothing Then
+                                                      Return "ERROR:API unavailable"
+                                                  End If
+                                                  Dim delIdx As Integer = 0
+                                                  If Not Integer.TryParse(parts(1), delIdx) Then Return "ERROR:invalid index"
+                                                  Dim delTr = ReaperAPI.GetTrack(IntPtr.Zero, delIdx)
+                                                  If delTr = IntPtr.Zero Then Return "ERROR:track not found"
+                                                  ReaperAPI.DeleteTrack(delTr)
+                                                  Return "OK"
 
-                Case "GET_FX_PARAM_STEP_SIZES"
-                    If parts.Length < 4 Then Return "ERROR:missing_args"
-                    If ReaperAPI.TrackFX_GetParamStepSizes Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tIdx As Integer = 0, fIdx As Integer = 0, pIdx As Integer = 0
-                    If Not Integer.TryParse(parts(1), tIdx) OrElse
+                                                  Case "GET_FX_PARAM_STEP_SIZES"
+                                                  If parts.Length < 4 Then Return "ERROR:missing_args"
+                                                  If ReaperAPI.TrackFX_GetParamStepSizes Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tIdx As Integer = 0, fIdx As Integer = 0, pIdx As Integer = 0
+                                                  If Not Integer.TryParse(parts(1), tIdx) OrElse
                        Not Integer.TryParse(parts(2), fIdx) OrElse
                        Not Integer.TryParse(parts(3), pIdx) Then Return "ERROR:invalid_args"
-                    Dim stepTr = If(tIdx = -1,
+                                                  Dim stepTr = If(tIdx = -1,
                                     ReaperAPI.GetMasterTrack?.Invoke(IntPtr.Zero),
                                     ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, tIdx))
-                    If stepTr = IntPtr.Zero Then Return "ERROR:track_not_found"
-                    Dim stepV As Double = 0, smallStepV As Double = 0
-                    Dim largeStepV As Double = 0, isToggleV As Boolean = False
-                    ReaperAPI.TrackFX_GetParamStepSizes(stepTr, fIdx, pIdx, stepV, smallStepV, largeStepV, isToggleV)
-                    Dim ic = Globalization.CultureInfo.InvariantCulture
-                    Return stepV.ToString("G", ic) & "|" &
+                                                  If stepTr = IntPtr.Zero Then Return "ERROR:track_not_found"
+                                                  Dim stepV As Double = 0, smallStepV As Double = 0
+                                                  Dim largeStepV As Double = 0, isToggleV As Boolean = False
+                                                  ReaperAPI.TrackFX_GetParamStepSizes(stepTr, fIdx, pIdx, stepV, smallStepV, largeStepV, isToggleV)
+                                                  Dim ic = Globalization.CultureInfo.InvariantCulture
+                                                  Return stepV.ToString("G", ic) & "|" &
                            smallStepV.ToString("G", ic) & "|" &
                            largeStepV.ToString("G", ic) & "|" &
                            If(isToggleV, "1", "0")
-                Case "GET_FX_PARAM_EX"
-                    If parts.Length < 4 Then Return "ERROR:missing_args"
-                    If ReaperAPI.TrackFX_GetParamEx Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tIdx As Integer = 0, fIdx As Integer = 0, pIdx As Integer = 0
-                    If Not Integer.TryParse(parts(1), tIdx) OrElse
+                                                  Case "GET_FX_PARAM_EX"
+                                                  If parts.Length < 4 Then Return "ERROR:missing_args"
+                                                  If ReaperAPI.TrackFX_GetParamEx Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tIdx As Integer = 0, fIdx As Integer = 0, pIdx As Integer = 0
+                                                  If Not Integer.TryParse(parts(1), tIdx) OrElse
                        Not Integer.TryParse(parts(2), fIdx) OrElse
                        Not Integer.TryParse(parts(3), pIdx) Then Return "ERROR:invalid_args"
-                    Dim exTr = If(tIdx = -1,
+                                                  Dim exTr = If(tIdx = -1,
                                   ReaperAPI.GetMasterTrack?.Invoke(IntPtr.Zero),
                                   ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, tIdx))
-                    If exTr = IntPtr.Zero Then Return "ERROR:track_not_found"
-                    Dim exMin As Double = 0, exMax As Double = 1, exMid As Double = 0.5
-                    Dim exVal = ReaperAPI.TrackFX_GetParamEx(exTr, fIdx, pIdx, exMin, exMax, exMid)
-                    Dim ic = Globalization.CultureInfo.InvariantCulture
-                    Return exVal.ToString("G", ic) & "|" &
+                                                  If exTr = IntPtr.Zero Then Return "ERROR:track_not_found"
+                                                  Dim exMin As Double = 0, exMax As Double = 1, exMid As Double = 0.5
+                                                  Dim exVal = ReaperAPI.TrackFX_GetParamEx(exTr, fIdx, pIdx, exMin, exMax, exMid)
+                                                  Dim ic = Globalization.CultureInfo.InvariantCulture
+                                                  Return exVal.ToString("G", ic) & "|" &
                            exMin.ToString("G", ic) & "|" &
                            exMax.ToString("G", ic) & "|" &
                            exMid.ToString("G", ic)
-                Case "GET_FX_PARAM_FORMATTED_AT"
-                    If parts.Length < 5 Then Return "ERROR:missing_args"
-                    If ReaperAPI.TrackFX_FormatParamValueNormalized Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tIdx As Integer = 0, fIdx As Integer = 0, pIdx As Integer = 0
-                    Dim normAt As Double = 0
-                    If Not Integer.TryParse(parts(1), tIdx) OrElse
+                                                  Case "GET_FX_PARAM_FORMATTED_AT"
+                                                  If parts.Length < 5 Then Return "ERROR:missing_args"
+                                                  If ReaperAPI.TrackFX_FormatParamValueNormalized Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tIdx As Integer = 0, fIdx As Integer = 0, pIdx As Integer = 0
+                                                  Dim normAt As Double = 0
+                                                  If Not Integer.TryParse(parts(1), tIdx) OrElse
                        Not Integer.TryParse(parts(2), fIdx) OrElse
                        Not Integer.TryParse(parts(3), pIdx) Then Return "ERROR:invalid_args"
-                    If Not Double.TryParse(parts(4), Globalization.NumberStyles.Any,
+                                                  If Not Double.TryParse(parts(4), Globalization.NumberStyles.Any,
                                            Globalization.CultureInfo.InvariantCulture, normAt) Then Return "ERROR:invalid_args"
-                    Dim fmtTr = If(tIdx = -1,
+                                                  Dim fmtTr = If(tIdx = -1,
                                    ReaperAPI.GetMasterTrack?.Invoke(IntPtr.Zero),
                                    ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, tIdx))
-                    If fmtTr = IntPtr.Zero Then Return "ERROR:track_not_found"
-                    Dim fmtBuf = Marshal.AllocHGlobal(256)
-                    Try
-                        ReaperAPI.TrackFX_FormatParamValueNormalized(fmtTr, fIdx, pIdx, normAt, fmtBuf, 256)
-                        Return If(Marshal.PtrToStringAnsi(fmtBuf), String.Empty)
-                    Finally
-                        Marshal.FreeHGlobal(fmtBuf)
-                    End Try
+                                                  If fmtTr = IntPtr.Zero Then Return "ERROR:track_not_found"
+                                                  Dim fmtBuf = Marshal.AllocHGlobal(256)
+                                                  Try
+                                                      ReaperAPI.TrackFX_FormatParamValueNormalized(fmtTr, fIdx, pIdx, normAt, fmtBuf, 256)
+                                                      Return If(Marshal.PtrToStringAnsi(fmtBuf), String.Empty)
+                                                  Finally
+                                                      Marshal.FreeHGlobal(fmtBuf)
+                                                  End Try
 
                                                 ' ── TRACKFX_SHOW|trackIndex|fxIndex|showFlag ──────────────────
                 ' GetTrack ET TrackFX_Show doivent s'exécuter sur le main thread Reaper.
                 ' showFlag : 0=cacher  1=chaîne  2=toggle float  3=ouvrir float
-                Case "TRACKFX_SHOW"
-                    If parts.Length < 4 Then Return "ERROR:Usage TRACKFX_SHOW|trackIndex|fxIndex|showFlag"
-                    If ReaperAPI.TrackFX_Show Is Nothing Then Return "ERROR:API unavailable"
-                    If ReaperAPI.EnqueueUIAction Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tIdxShow As Integer = Integer.Parse(parts(1))
-                    Dim fxShow As Integer = Integer.Parse(parts(2))
-                    Dim flagShow As Integer = Integer.Parse(parts(3))
-                    ReaperAPI.EnqueueUIAction(
+                                                  Case "TRACKFX_SHOW"
+                                                  If parts.Length < 4 Then Return "ERROR:Usage TRACKFX_SHOW|trackIndex|fxIndex|showFlag"
+                                                  If ReaperAPI.TrackFX_Show Is Nothing Then Return "ERROR:API unavailable"
+                                                  If ReaperAPI.EnqueueUIAction Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tIdxShow As Integer = Integer.Parse(parts(1))
+                                                  Dim fxShow As Integer = Integer.Parse(parts(2))
+                                                  Dim flagShow As Integer = Integer.Parse(parts(3))
+                                                  ReaperAPI.EnqueueUIAction(
                         Sub()
                             Dim tr As IntPtr = GetTrackByIndex(tIdxShow)
                             If tr = IntPtr.Zero Then Return
                             ReaperAPI.TrackFX_Show(tr, fxShow, flagShow)
                         End Sub)
-                    Return "OK"
+                                                  Return "OK"
 
                 ' ── SET_FX_OPEN → redirige vers TRACKFX_SHOW (main thread) ────
-                Case "SET_FX_OPEN"
-                    If parts.Length < 4 Then Return "ERROR:Usage SET_FX_OPEN|trackIndex|fxIndex|open"
-                    If ReaperAPI.TrackFX_Show Is Nothing Then Return "ERROR:API unavailable"
-                    If ReaperAPI.EnqueueUIAction Is Nothing Then Return "ERROR:API unavailable"
-                    Dim tIdxOpen As Integer = Integer.Parse(parts(1))
-                    Dim fxOpen As Integer = Integer.Parse(parts(2))
-                    Dim flagOpen As Integer = If(parts(3) <> "0", 3, 0)
-                    ReaperAPI.EnqueueUIAction(
+                                                  Case "SET_FX_OPEN"
+                                                  If parts.Length < 4 Then Return "ERROR:Usage SET_FX_OPEN|trackIndex|fxIndex|open"
+                                                  If ReaperAPI.TrackFX_Show Is Nothing Then Return "ERROR:API unavailable"
+                                                  If ReaperAPI.EnqueueUIAction Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tIdxOpen As Integer = Integer.Parse(parts(1))
+                                                  Dim fxOpen As Integer = Integer.Parse(parts(2))
+                                                  Dim flagOpen As Integer = If(parts(3) <> "0", 3, 0)
+                                                  ReaperAPI.EnqueueUIAction(
                         Sub()
                             Dim tr As IntPtr = GetTrackByIndex(tIdxOpen)
                             If tr = IntPtr.Zero Then Return
                             ReaperAPI.TrackFX_Show(tr, fxOpen, flagOpen)
                         End Sub)
-                    Return "OK"
+                                                  Return "OK"
+
+
+                                    ' ── GET_TRACK_STATE_CHUNK|trackIndex ──────────────────────────
+                ' Sérialise l'état complet d'une piste au format .rpp.
+                ' Les sauts de ligne sont encodés en "\n" littéral pour le transport pipe.
+                ' Réponse : chunk encodé, ou "ERROR:..."
+                                                  Case "GET_TRACK_STATE_CHUNK"
+                                                  If parts.Length < 2 Then Return "ERROR:Usage GET_TRACK_STATE_CHUNK|trackIndex"
+                                                  If ReaperAPI.GetTrackStateChunk Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                                                  If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                                                  Const TrackChunkBufSize As Integer = 524288
+                                                  Dim buf = Marshal.AllocHGlobal(TrackChunkBufSize)
+                                                  Try
+                                                      Dim ok = ReaperAPI.GetTrackStateChunk(tr, buf, TrackChunkBufSize, False)
+                                                      If Not ok Then Return "ERROR:GetTrackStateChunk failed"
+                                                      Dim chunk = If(Marshal.PtrToStringAnsi(buf), String.Empty)
+                                                      Return chunk.Replace(vbCrLf, vbLf).Replace(vbCr, "").Replace(vbLf, "\n")
+                                                  Finally
+                                                      Marshal.FreeHGlobal(buf)
+                                                  End Try
+
+                ' ── SET_TRACK_STATE_CHUNK|trackIndex|chunk ────────────────────
+                ' Restaure l'état d'une piste depuis un state chunk .rpp.
+                ' Le chunk doit avoir ses sauts de ligne encodés en "\n" littéral
+                ' (tel que retourné par GET_TRACK_STATE_CHUNK).
+                ' Réponse : "OK" ou "ERROR:..."
+                                                  Case "SET_TRACK_STATE_CHUNK"
+
+                                                  If parts.Length < 3 Then Return "ERROR:Usage SET_TRACK_STATE_CHUNK|trackIndex|chunk"
+                                                  If ReaperAPI.SetTrackStateChunk Is Nothing Then Return "ERROR:API unavailable"
+                                                  Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                                                  If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                                                  Dim chunk = String.Join("|", parts, 2, parts.Length - 2).Replace("\n", vbLf)
+                                                  ReaperAPI.EnqueueUIAction(Sub()
+                                                                                ReaperAPI.SetTrackStateChunk(tr, chunk, False)
+                                                                            End Sub)
+                                                  Return "OK"
+
+                                    ' ── GET_TRACK_FROM_POINT|x|y ──────────────────────────────────────────
+                ' Retourne la piste se trouvant aux coordonnées écran (x, y).
+                ' Réponse : "trackIndex|infoOut"
+                '   trackIndex : index 0-based (-1 = master ou aucune piste)
+                '   infoOut    : bits d'information sur la zone pointée
+                ' Retourne "-1|0" si aucune piste n'est à cette position.
+                Case "GET_TRACK_FROM_POINT"
+                    If parts.Length < 3 Then Return "ERROR:Usage GET_TRACK_FROM_POINT|x|y"
+                    If ReaperAPI.GetTrackFromPoint Is Nothing Then Return "ERROR:API unavailable"
+                    If ReaperAPI.GetMediaTrackInfo_Value Is Nothing Then Return "ERROR:API unavailable"
+                    Dim scrX As Integer = 0
+                    Dim scrY As Integer = 0
+                    If Not Integer.TryParse(parts(1), scrX) Then Return "ERROR:Invalid x"
+                    If Not Integer.TryParse(parts(2), scrY) Then Return "ERROR:Invalid y"
+                    Dim infoOut As Integer = 0
+                    Dim tr = ReaperAPI.GetTrackFromPoint(scrX, scrY, infoOut)
+                    If tr = IntPtr.Zero Then Return "-1|0"
+
+                    Dim trackNum = CInt(ReaperAPI.GetMediaTrackInfo_Value(tr, "IP_TRACKNUMBER"))
+                    Return $"{trackNum - 1}|{infoOut}"
+
+                                    ' ── GET_MAIN_HWND ─────────────────────────────────────────────
+                ' Retourne le HWND de la fenêtre principale Reaper.
+                ' Réponse : valeur IntPtr sérialisée en entier décimal (Int64)
+                '           "0" si le HWND est nul ou l'API indisponible.
+                Case "GET_MAIN_HWND"
+                    If ReaperAPI.GetMainHwnd Is Nothing Then Return "ERROR:API unavailable"
+                    Dim hwnd = ReaperAPI.GetMainHwnd()
+                    Return hwnd.ToInt64().ToString(Globalization.CultureInfo.InvariantCulture)
+
 
                 Case Else
-                    Return $"ERROR:Unknown {parts(0)}"
+                                                  Return $"ERROR:Unknown {parts(0)}"
 
 
             End Select

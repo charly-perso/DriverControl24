@@ -199,6 +199,62 @@ Public Class Main
                             Console.WriteLine("?" & "|" & "?")
                         End If
                     End If
+                Case "C24desk_OnFaderVolChange"
+                    If parts.Count < 4 Then
+                        Console.WriteLine("Usage : C24desk_OnFaderVolChange <Group> <Name> <VolDb>")
+                        Console.WriteLine("Exemple : C24desk_OnFaderVolChange ChannelStrip_1 Fader_1 -1")
+                    Else
+                        Dim group = _desk.GroupComponents(parts(1))
+                        If group IsNot Nothing Then
+                            For Each cpn In group
+                                Dim C24_Fader = TryCast(cpn, Control24.Hardware.C24_Fader)
+                                If C24_Fader IsNot Nothing AndAlso C24_Fader.Name = parts(2) Then
+                                    Dim value As Integer = 0
+                                    Dim trackNb As Integer = CInt(C24_Fader.Name.Split("_")(1))
+                                    If Integer.TryParse(parts(3), value) Then
+
+                                        C24_Fader.OnFaderManualChange(trackNb, value)
+                                        Console.WriteLine(parts(1) & "|" & parts(2) & "=OK|Value=" & value)
+                                        Exit Select
+                                    Else
+                                        Console.WriteLine("Value " & parts(3) & "is not correct value ! (ex of correct values : -2/-1/1/2 etc...")
+                                    End If
+
+                                End If
+                            Next
+                            Console.WriteLine(parts(1) & "|" & "?")
+                        Else
+                            Console.WriteLine("?" & "|" & "?")
+                        End If
+                    End If
+                Case "C24desk_OnFaderNormChange"
+                    If parts.Count < 4 Then
+                        Console.WriteLine("Usage : C24desk_OnFaderNormChange <Group> <Name> <NormValue>")
+                        Console.WriteLine("Exemple : C24desk_OnFaderNormChange ChannelStrip_1 Fader_1 -1")
+                    Else
+                        Dim group = _desk.GroupComponents(parts(1))
+                        If group IsNot Nothing Then
+                            For Each cpn In group
+                                Dim C24_Fader = TryCast(cpn, Control24.Hardware.C24_Fader)
+                                If C24_Fader IsNot Nothing AndAlso C24_Fader.Name = parts(2) Then
+                                    Dim value As Integer = 0
+                                    Dim trackNb As Integer = CInt(C24_Fader.Name.Split("_")(1))
+                                    If Integer.TryParse(parts(3), value) Then
+
+                                        C24_Fader.OnFaderManualChange(trackNb, , value)
+                                        Console.WriteLine(parts(1) & "|" & parts(2) & "=OK|Value=" & value)
+                                        Exit Select
+                                    Else
+                                        Console.WriteLine("Value " & parts(3) & "is not correct value ! (ex of correct values : -2/-1/1/2 etc...")
+                                    End If
+
+                                End If
+                            Next
+                            Console.WriteLine(parts(1) & "|" & "?")
+                        Else
+                            Console.WriteLine("?" & "|" & "?")
+                        End If
+                    End If
                 Case "ConvertTxt2Csv"
                     If parts.Count < 3 Then
                         Console.WriteLine("Usage : ConvertTxt2Csv ""<inputTxtPath>"" ""<outputCsvPath>""")
@@ -279,6 +335,10 @@ Public Class Main
         Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
         Console.WriteLine("  C24desk_OnVpotRotate <Group> <Name> <Value> — Simule la rotation d'un composant Vpot C24")
         Console.WriteLine("                                                Exemple : C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 -1")
+        Console.WriteLine("  C24desk_OnFaderVolChange <Group> <Name> <VolDb> — Simule le deplacement d'un composant Fader C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnFaderVolChange ChannelStrip_1 Fader_1 -1")
+        Console.WriteLine("  C24desk_OnFaderNormChange <Group> <Name> <NormValue> — Simule le deplacement d'un composant Fader C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnFaderNormChange ChannelStrip_1 Fader_1 -1")
         Console.WriteLine("  ConvertTxt2Csv <input> <output>             — Convertit un log Wireshark TXT en CSV")
         Console.WriteLine("                                                Exemple : ConvertTxt2Csv ""C:\cap.txt"" ""C:\out.csv""")
         Console.WriteLine("  quit / exit                                 — Arrête le driver")

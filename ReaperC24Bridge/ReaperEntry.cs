@@ -87,7 +87,7 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetAppVersion = GetDel<ReaperAPI.GetAppVersionDel>(getFn, "GetAppVersion");
             ReaperAPI.GetResourcePath = GetDel<ReaperAPI.GetResourcePathDel>(getFn, "GetResourcePath");
             ReaperAPI.GetExePath = GetDel<ReaperAPI.GetExePathDel>(getFn, "GetExePath");
-
+           
             // Projet
             ReaperAPI.InsertTrackAtIndex = GetDel<ReaperAPI.InsertTrackAtIndexDel>(getFn, "InsertTrackAtIndex");
             ReaperAPI.main_openProject = GetDel<ReaperAPI.main_openProjectDel>(getFn, "main_openProject");
@@ -133,6 +133,7 @@ public static unsafe class ReaperEntry
 
             // Pistes
             ReaperAPI.GetTrack = GetDel<ReaperAPI.GetTrackDel>(getFn, "GetTrack");
+            ReaperAPI.GetTrackGUID = GetDel<ReaperAPI.GetTrackGUIDDel>(getFn, "GetTrackGUID");
             ReaperAPI.GetMasterTrack = GetDel<ReaperAPI.GetMasterTrackDel>(getFn, "GetMasterTrack");
             ReaperAPI.GetTrackName = GetDel<ReaperAPI.GetTrackNameDel>(getFn, "GetTrackName");
             ReaperAPI.GetMediaTrackInfo_Value = GetDel<ReaperAPI.GetMediaTrackInfo_ValueDel>(getFn, "GetMediaTrackInfo_Value");
@@ -183,6 +184,10 @@ public static unsafe class ReaperEntry
             ReaperAPI.TrackFX_GetParamEx = GetDel<ReaperAPI.TrackFX_GetParamExDel>(getFn, "TrackFX_GetParamEx");
             ReaperAPI.TrackFX_FormatParamValueNormalized = GetDel<ReaperAPI.TrackFX_FormatParamValueNormalizedDel>(getFn, "TrackFX_FormatParamValueNormalized");
             ReaperAPI.TrackFX_Show = GetDel<ReaperAPI.TrackFX_ShowDel>(getFn, "TrackFX_Show");
+            ReaperAPI.TrackFX_SetNamedConfigParm = GetDel<ReaperAPI.TrackFX_SetNamedConfigParmDel>(getFn, "TrackFX_SetNamedConfigParm");
+            ReaperAPI.TrackFX_GetNamedConfigParm = GetDel<ReaperAPI.TrackFX_GetNamedConfigParmDel>(getFn, "TrackFX_GetNamedConfigParm");
+            ReaperAPI.TrackFX_GetFXGUID = GetDel<ReaperAPI.TrackFX_GetFXGUIDDel>(getFn, "TrackFX_GetFXGUID");
+           
 
 
             // ── Exposer EnqueueUIAction via ReaperAPI ─────────────────────────
@@ -277,7 +282,7 @@ public static unsafe class ReaperEntry
             ReaperAPI.UpdateTimeline = GetDel<ReaperAPI.UpdateTimelineDel>(getFn, "UpdateTimeline");
             ReaperAPI.UpdateArrange = GetDel<ReaperAPI.UpdateArrangeDel>(getFn, "UpdateArrange");
             ReaperAPI.TrackList_AdjustWindows = GetDel<ReaperAPI.TrackList_AdjustWindowsDel>(getFn, "TrackList_AdjustWindows");
-
+            ReaperAPI.GetTrackFromPoint = GetDel<ReaperAPI.GetTrackFromPointDel>(getFn, "GetTrackFromPoint");
             ReaperAPI.GetProjectStateChangeCount = GetDel<ReaperAPI.GetProjectStateChangeCountDel>(getFn, "GetProjectStateChangeCount");
             ReaperAPI.IsProjectDirty = GetDel<ReaperAPI.IsProjectDirtyDel>(getFn, "IsProjectDirty");
             ReaperAPI.Main_SaveProject = GetDel<ReaperAPI.Main_SaveProjectDel>(getFn, "Main_SaveProject");

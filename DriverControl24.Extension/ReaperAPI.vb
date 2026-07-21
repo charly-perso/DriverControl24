@@ -305,6 +305,51 @@ Public Class ReaperAPI
     ''' </summary>
     Public Delegate Sub EnqueueUIActionDel(action As Action)
     Public Shared EnqueueUIAction As EnqueueUIActionDel
+
+    ''' <summary>
+    ''' Écrit un paramètre de configuration nommé sur un FX de piste.
+    ''' <br/>
+    ''' Paramètres courants :
+    ''' <list type="bullet">
+    ''' <item><c>"wet"</c> — niveau wet/dry [0..1]</item>
+    ''' <item><c>"bypass"</c> — bypass ("0" ou "1")</item>
+    ''' <item><c>"renamed_name"</c> — nom affiché dans la chaîne FX</item>
+    ''' <item><c>"floatpos"</c> — position de la fenêtre flottante "x y w h"</item>
+    ''' <item><c>"online"</c> — en ligne / hors ligne ("0" ou "1")</item>
+    ''' </list>
+    ''' Retourne True si Reaper a accepté la valeur.
+    ''' </summary>
+    Public Delegate Function TrackFX_SetNamedConfigParmDel(
+        track As IntPtr,
+        fx As Integer,
+        <MarshalAs(UnmanagedType.LPStr)> parmname As String,
+        <MarshalAs(UnmanagedType.LPStr)> value As String) As Boolean
+    Public Shared TrackFX_SetNamedConfigParm As TrackFX_SetNamedConfigParmDel
+
+    ''' <summary>
+    ''' Lit un paramètre de configuration nommé sur un FX de piste.
+    ''' <br/>
+    ''' Mêmes clés que <see cref="TrackFX_SetNamedConfigParmDel"/>.
+    ''' La valeur est copiée dans <paramref name="buf"/> (alloué par l'appelant).
+    ''' Retourne True si la clé existe.
+    ''' </summary>
+    Public Delegate Function TrackFX_GetNamedConfigParmDel(
+        track As IntPtr,
+        fx As Integer,
+        <MarshalAs(UnmanagedType.LPStr)> parmname As String,
+        buf As IntPtr,
+        bufsz As Integer) As Boolean
+    Public Shared TrackFX_GetNamedConfigParm As TrackFX_GetNamedConfigParmDel
+
+    ''' Retourne un pointeur vers la structure GUID du FX (16 octets).
+    ''' Utiliser <c>Marshal.PtrToStructure(Of Guid)(ptr)</c> pour lire la valeur.
+    ''' Retourne <c>IntPtr.Zero</c> si le FX n'existe pas.
+    ''' </summary>
+    Public Delegate Function TrackFX_GetFXGUIDDel(
+        track As IntPtr,
+        fx As Integer) As IntPtr
+    Public Shared TrackFX_GetFXGUID As TrackFX_GetFXGUIDDel
+
     ' ═══════════════════════════════════════════════════════════════
     '  ITEMS / TAKES
     ' ═══════════════════════════════════════════════════════════════
@@ -320,6 +365,10 @@ Public Class ReaperAPI
     ''' <summary>Take actif d'un item.</summary>
     Public Delegate Function GetActiveTakeDel(item As IntPtr) As IntPtr
     Public Shared GetActiveTake As GetActiveTakeDel
+
+    ''' <summary>Get Track GUID.</summary>
+    Public Delegate Function GetTrackGUIDDel(item As IntPtr) As IntPtr
+    Public Shared GetTrackGUID As GetTrackGUIDDel
 
     ''' <summary>Valeur d'un paramètre d'item ("D_POSITION","D_LENGTH","D_VOL"…).</summary>
     Public Delegate Function GetMediaItemInfo_ValueDel(
@@ -462,14 +511,19 @@ Public Class ReaperAPI
 
 
     ''' <summary>
-    ''' Écrit le pan d'une piste au niveau UI.
+    ''' Écrit le pan d'une piste au niveau UI (surface-safe).
     ''' Pendant la lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
-    ''' pan   : -1..1  (-1=Gauche  0=Centre  1=Droite)
-    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' pan           : -1..1  (-1=Gauche  0=Centre  1=Droite)
+    ''' relative      : True=delta relatif  False=valeur absolue
+    ''' done          : False=touch en cours  True=fin de touch/commit
+    ''' igngroupflags : &1=ignore grouping  &2=ignore ganging
+    ''' Retourne le pan réellement appliqué par Reaper.
     ''' </summary>
     Public Delegate Function SetTrackUIPanDel(track As IntPtr,
                                                pan As Double,
-                                               isend As Integer) As Boolean
+                                               relative As Boolean,
+                                               done As Boolean,
+                                               igngroupflags As Integer) As Double
     Public Shared SetTrackUIPan As SetTrackUIPanDel
 
     ''' <summary>
@@ -482,13 +536,15 @@ Public Class ReaperAPI
                                                 ByRef muteOut As Boolean) As Boolean
     Public Shared GetTrackUIMute As GetTrackUIMuteDel
     ''' <summary>
-    ''' Écrit l'état mute d'une piste au niveau UI.
+    ''' Écrit l'état mute d'une piste au niveau UI (surface-safe).
     ''' Pendant la lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
-    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' mute          : &lt;0=toggle  0=unmute  &gt;0=mute
+    ''' igngroupflags : &amp;1=ignore grouping  &amp;2=ignore selection ganging
+    ''' Retourne le nouvel état mute (0 ou 1), ou -1 en cas d'erreur.
     ''' </summary>
     Public Delegate Function SetTrackUIMuteDel(track As IntPtr,
-                                                mute As Boolean,
-                                                isend As Integer) As Boolean
+                                               mute As Integer,
+                                               igngroupflags As Integer) As Integer
     Public Shared SetTrackUIMute As SetTrackUIMuteDel
     ''' <summary>
     ''' Retourne l'état mute POST-automation d'un envoi (category=0 uniquement).
@@ -516,15 +572,34 @@ Public Class ReaperAPI
     ''' <summary>
     ''' Écrit le volume d'une piste au niveau UI (post-automation, surface-safe).
     ''' Pendant la lecture d'automation, enregistre si la piste est en Touch/Write/Latch.
-    ''' vol   : 0..4  (1.0 = 0 dB)
-    ''' isend : 0=drag en cours  1=fin de drag/commit  -1=écriture directe sans undo
+    ''' volume   : 0..4  (1.0 = 0 dB)
+    ''' relative : False=absolu  True=delta
+    ''' done     : False=touch en cours  True=fin du touch/commit
+    ''' igngroupflags : &amp;1=ignore grouping  &amp;2=ignore selection ganging
+    ''' Retourne le volume réellement appliqué.
     ''' </summary>
     Public Delegate Function SetTrackUIVolumeDel(track As IntPtr,
-                                                  vol As Double,
-                                                  isend As Integer) As Boolean
+                                              volume As Double,
+                                              relative As Boolean,
+                                              done As Boolean,
+                                              igngroupflags As Integer) As Double
     Public Shared SetTrackUIVolume As SetTrackUIVolumeDel
 
+    ' ══════════════════════════════════════════════════════════════════════════
+    '  POINT HIT-TEST
+    ' ══════════════════════════════════════════════════════════════════════════
 
+    ''' <summary>
+    ''' Retourne le pointeur sur la piste se trouvant aux coordonnées écran données.
+    ''' <paramref name="infoOut"/> reçoit des bits d'information sur la zone pointée
+    ''' (ex. : boutons TCP, zone principale…).
+    ''' Retourne <c>IntPtr.Zero</c> si aucune piste n'est à cette position.
+    ''' </summary>
+    Public Delegate Function GetTrackFromPointDel(
+        screen_x As Integer,
+        screen_y As Integer,
+        ByRef infoOut As Integer) As IntPtr
+    Public Shared GetTrackFromPoint As GetTrackFromPointDel
     ' ═══════════════════════════════════════════════════════════════
     '  UNDO / UI
     ' ═══════════════════════════════════════════════════════════════
@@ -942,11 +1017,10 @@ Public Class ReaperAPI
     ''' Retourne True si la propriété a été traitée avec succès.
     ''' </summary>
     Public Delegate Function GetSetEnvelopeInfo_StringDel(
-            env As IntPtr,
-            <MarshalAs(UnmanagedType.LPStr)> parmname As String,
-            stringNeedBig As IntPtr,
-            stringNeedBig_sz As Integer,
-            setNewValue As Boolean) As Boolean
+        env As IntPtr,
+        <MarshalAs(UnmanagedType.LPStr)> parmname As String,
+        stringNeedBig As IntPtr,
+        setNewValue As Boolean) As Boolean
     Public Shared GetSetEnvelopeInfo_String As GetSetEnvelopeInfo_StringDel
 
     ''' <summary>

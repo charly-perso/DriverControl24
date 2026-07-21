@@ -96,6 +96,12 @@ Namespace Control24
                     AddHandler Me.BlinkStateChange, AddressOf C24_scribble.BlinkingScribble
                 End If
 
+                'Register Blinking Led
+                Dim C24_AutoModeLed As C24_AutoModeLed = TryCast(C24_Component, C24_AutoModeLed)
+                If C24_AutoModeLed IsNot Nothing Then
+                    AddHandler Me.BlinkStateChange, AddressOf C24_AutoModeLed.BlinkingLed
+                End If
+
             End Sub
             ''' <summary>
             ''' Components which are refreshed on C24 only with the Desk SendingTimingQueueThread you can set on the Desk component.
@@ -200,6 +206,7 @@ Namespace Control24
             ''' <summary>Déclenché quand le bouton est relâché sur le C24.</summary>
             Public Event OnButtonReleased(TrackNb As Integer?)
 
+
             ''' <summary>True si le bouton est actuellement pressé.</summary>
             Public ReadOnly Property IsPressed As Boolean
                 Get
@@ -242,6 +249,7 @@ Namespace Control24
             End Sub
 
             Public Sub ButtonCmd_OnButtonStatusChange(Status As Boolean) Handles _ButtonCmd.OnButtonStatusChange
+
                 If Status Then
                     RaiseEvent OnButtonPressed(_TrackNb)
                 Else
@@ -331,9 +339,24 @@ Namespace Control24
 
             Private ReadOnly _AutoModeLedCmd As Commands.AutoModeLed_Cmd
             Private _AutoMode As Commands.AutoMode = Commands.AutoMode.None
+            Private _IsBlinking As Boolean
+
+            Public Event On_AutomodeChange(AutoMode As AutoMode)
 
             ' ── Propriétés ────────────────────────────────────────────────────
-
+            ''' <summary>Active ou désactive le clignotement de la LED.</summary>
+            Public Property IsBlinking As Boolean
+                Get
+                    Return _IsBlinking
+                End Get
+                Set
+                    _IsBlinking = Value
+                    'remet la led on a l'arret du blinking
+                    If Value = False Then
+                        _AutoModeLedCmd.AutoModeLed = _AutoMode
+                    End If
+                End Set
+            End Property
             ''' <summary>
             ''' Mode d'automation affiché sur les LEDs.
             ''' Envoie immédiatement la commande vers le C24.
@@ -345,6 +368,7 @@ Namespace Control24
                 Set
                     _AutoMode = Value
                     _AutoModeLedCmd.AutoModeLed = _AutoMode
+                    RaiseEvent On_AutomodeChange(_AutoMode)
                 End Set
             End Property
 
@@ -392,6 +416,19 @@ Namespace Control24
                 End Select
             End Sub
 
+            ''' <summary>
+            ''' Appelé par le timer de blink du <see cref="C24_Desk"/>.
+            ''' Fait clignoter la LED si <see cref="IsBlinking"/> est activé.
+            ''' </summary>
+            Public Sub BlinkingLed(Blink_State As Boolean)
+                If IsBlinking Then
+                    If Blink_State Then
+                        _AutoModeLedCmd.AutoModeLed = _AutoMode
+                    Else
+                        _AutoModeLedCmd.AutoModeLed = AutoMode.None
+                    End If
+                End If
+            End Sub
         End Class
 
         ''' <summary>
@@ -642,6 +679,7 @@ Namespace Control24
             Private _OriginalText As String = String.Empty
             Private _IsShowingTemp As Boolean = False
             Private _TempTimer As System.Threading.Timer
+            Private _pendingTempText As String = Nothing
             Private Const TempDisplayMs As Integer = 2000
             Event OnOriginaltextBack()
             ' ── Clignotement ──────────────────────────────────────────────────
@@ -732,16 +770,45 @@ Namespace Control24
                 End If
                 _prevBlinkingState = IsBlinking
                 IsBlinking = False
+                _pendingTempText = Nothing
                 _ScribbleStripCmd.Text = tempText
                 _TempTimer.Change(TempDisplayMs, System.Threading.Timeout.Infinite)
             End Sub
 
-            ''' <summary>Restaure le texte original après expiration du timer.</summary>
+            ''' <summary>
+            ''' Affiche <paramref name="text1"/> pendant <see cref="TempDisplayMs"/> ms,
+            ''' puis <paramref name="text2"/> pendant <see cref="TempDisplayMs"/> ms,
+            ''' avant de restaurer automatiquement le texte précédent.
+            ''' Si un affichage temporaire est déjà en cours, la séquence repart depuis le début.
+            ''' </summary>
+            ''' <param name="text1">Premier texte à afficher (max 4 caractères).</param>
+            ''' <param name="text2">Deuxième texte à afficher à la suite (max 4 caractères).</param>
+            Public Sub ShowTempText(text1 As String, text2 As String)
+                If Not _IsShowingTemp Then
+                    _OriginalText = _ScribbleStripCmd.Text
+                    _IsShowingTemp = True
+                End If
+                _prevBlinkingState = IsBlinking
+                IsBlinking = False
+                _pendingTempText = text2
+                _ScribbleStripCmd.Text = text1
+                _TempTimer.Change(TempDisplayMs, System.Threading.Timeout.Infinite)
+            End Sub
+
+            ''' <summary>Restaure le texte original après expiration du timer.
+            ''' Enchaîne sur le deuxième texte si <c>_pendingTempText</c> est défini.</summary>
             Private Sub OnTempTimer(state As Object)
-                _IsShowingTemp = False
-                _ScribbleStripCmd.Text = _OriginalText
-                IsBlinking = _prevBlinkingState
-                RaiseEvent OnOriginaltextBack()
+                If _pendingTempText IsNot Nothing Then
+                    Dim nextText As String = _pendingTempText
+                    _pendingTempText = Nothing
+                    _ScribbleStripCmd.Text = nextText
+                    _TempTimer.Change(TempDisplayMs, System.Threading.Timeout.Infinite)
+                Else
+                    _IsShowingTemp = False
+                    _ScribbleStripCmd.Text = _OriginalText
+                    IsBlinking = _prevBlinkingState
+                    RaiseEvent OnOriginaltextBack()
+                End If
             End Sub
 
             Sub New(Name As String, Track_Nb As Integer)
@@ -950,7 +1017,7 @@ Namespace Control24
                     Return _Min_Value
                 End Get
                 Set
-                    _Min_Value = Math.Round(Value, 1)
+                    _Min_Value = Value
                 End Set
             End Property
 
@@ -959,7 +1026,7 @@ Namespace Control24
                     Return _Max_Value
                 End Get
                 Set
-                    _Max_Value = Math.Round(Value, 1)
+                    _Max_Value = Value
                 End Set
             End Property
             Public Property FxParam_SmallStepValue As Double?
@@ -1018,7 +1085,10 @@ Namespace Control24
                     Return _Value
                 End Get
                 Set
-                    _Value = Math.Round(Math.Min(Math.Max(Value, Min_Value), Max_Value), 1)
+                    _Value = Value
+
+                    _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
+
                     RefreshLedStatus()
                 End Set
             End Property
@@ -1028,7 +1098,7 @@ Namespace Control24
                     Return _Value2
                 End Get
                 Set
-                    _Value2 = Math.Round(Math.Min(Math.Max(Value, Min_Value), Max_Value), 1)
+                    _Value2 = Math.Min(Math.Max(Value, Min_Value), Max_Value)
                     RefreshLedStatus()
                 End Set
             End Property
@@ -1208,10 +1278,12 @@ Namespace Control24
             Public Sub UpdateValueFromCmd(Optional Manual_Rotate_Velocity As Integer? = Nothing) Handles _VpotCmd.OnCmdChange
                 If Manual_Rotate_Velocity IsNot Nothing Then
                     Dim Value As Integer = Manual_Rotate_Velocity
+
                     _VpotCmd.Rotate_Velocity = Value
                 End If
                 Select Case VpotMode
                     Case VpotModeType.Pan
+
                         If Adjust_Value2 Then
                             If Math.Abs(_Value2) <> 0 AndAlso Math.Abs(_Value2) <= 0.05 Then
                                 _Value2 = 0
@@ -1226,12 +1298,16 @@ Namespace Control24
                             If Math.Abs(_Value) <> 0 AndAlso Math.Abs(_Value) <= 0.05 Then
                                 _Value = 0
                             Else
+
                                 _Value += _VpotCmd.Rotate_Velocity * Step_Value
+
                                 _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
+
                             End If
                             RefreshLedStatus()
                             RefreshScribbleStrip(_Value * 100)
                             RaiseEvent OnVpotValueChange(_TrackNb, _Value)
+
                         End If
 
                     Case VpotModeType.VolumeLinear
@@ -1335,12 +1411,21 @@ Namespace Control24
 
 #Region "Led"
             Private Sub RefreshLedStatus()
+
                 Dim ValueLedStatus As BitArray = GetLedsStatus(_Value)
                 If Display_Value2 Then
                     Dim Value2LedStatus As BitArray = GetLedsStatus(_Value2)
                     ValueLedStatus = ValueLedStatus.Or(Value2LedStatus)
                 End If
                 VpotLedCmd.Leds_Status = ValueLedStatus
+
+                'display led status 
+                'Console.WriteLine(Me.Name & " [")
+                'For Each bit In ValueLedStatus
+                '    Console.Write(If(bit, "1", "0") & ",")
+                'Next
+                'Console.Write("]")
+
             End Sub
 
             Public Sub SetLedsOff()
@@ -1357,7 +1442,7 @@ Namespace Control24
                     LedsStatus.Item(DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)) = True
                 ElseIf LedMode = LedModeType.Gauge Then
                     Dim LedIndex As Integer = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
-                    For i = 0 To LedIndex - 1
+                    For i = 0 To LedIndex
                         LedsStatus.Item(i) = True
                     Next
                 ElseIf LedMode = LedModeType.Central_Dot Then
@@ -3683,37 +3768,37 @@ Namespace Control24
                 '*      init Automation Buttons     *
                 '*----------------------------------*
 
-                _Auto_Write = New C24_LedButton("Auto_Write", Btn_Region.Middle_Strip, &H17)
+                _Auto_Write = New C24_LedButton("Auto_Write", Btn_Region.Left_Strip, &H17)
                 Me.Add_C24_Component(_Auto_Write, "Automation")
-                _Auto_Fader = New C24_LedButton("Auto_Fader", Btn_Region.Middle_Strip, &H18)
+                _Auto_Fader = New C24_LedButton("Auto_Fader", Btn_Region.Left_Strip, &H18)
                 Me.Add_C24_Component(_Auto_Fader, "Automation")
-                _Auto_Touch = New C24_LedButton("Auto_Touch", Btn_Region.Middle_Strip, &H19)
+                _Auto_Touch = New C24_LedButton("Auto_Touch", Btn_Region.Left_Strip, &H19)
                 Me.Add_C24_Component(_Auto_Touch, "Automation")
-                _Auto_Pan = New C24_LedButton("Auto_Pan", Btn_Region.Middle_Strip, &H1A)
+                _Auto_Pan = New C24_LedButton("Auto_Pan", Btn_Region.Left_Strip, &H1A)
                 Me.Add_C24_Component(_Auto_Pan, "Automation")
-                _Auto_Latch = New C24_LedButton("Auto_Latch", Btn_Region.Middle_Strip, &H1B)
+                _Auto_Latch = New C24_LedButton("Auto_Latch", Btn_Region.Left_Strip, &H1B)
                 Me.Add_C24_Component(_Auto_Latch, "Automation")
-                _Auto_Mute = New C24_LedButton("Auto_Mute", Btn_Region.Middle_Strip, &H1C)
+                _Auto_Mute = New C24_LedButton("Auto_Mute", Btn_Region.Left_Strip, &H1C)
                 Me.Add_C24_Component(_Auto_Mute, "Automation")
-                _Auto_Trim = New C24_LedButton("Auto_Trim", Btn_Region.Middle_Strip, &H1D)
+                _Auto_Trim = New C24_LedButton("Auto_Trim", Btn_Region.Left_Strip, &H1D)
                 Me.Add_C24_Component(_Auto_Trim, "Automation")
-                _Auto_Send_Level = New C24_LedButton("Auto_Send_Level", Btn_Region.Middle_Strip, &H1E)
+                _Auto_Send_Level = New C24_LedButton("Auto_Send_Level", Btn_Region.Left_Strip, &H1E)
                 Me.Add_C24_Component(_Auto_Send_Level, "Automation")
-                _Auto_Read = New C24_LedButton("Auto_Read", Btn_Region.Middle_Strip, &H1F)
+                _Auto_Read = New C24_LedButton("Auto_Read", Btn_Region.Left_Strip, &H1F)
                 Me.Add_C24_Component(_Auto_Read, "Automation")
-                _Auto_Send_Mute = New C24_LedButton("Auto_Send_Mute", Btn_Region.Middle_Strip, &H20)
+                _Auto_Send_Mute = New C24_LedButton("Auto_Send_Mute", Btn_Region.Left_Strip, &H20)
                 Me.Add_C24_Component(_Auto_Send_Mute, "Automation")
-                _Auto_Off = New C24_LedButton("Auto_Off", Btn_Region.Middle_Strip, &H21)
+                _Auto_Off = New C24_LedButton("Auto_Off", Btn_Region.Left_Strip, &H21)
                 Me.Add_C24_Component(_Auto_Off, "Automation")
-                _Auto_Plug_In = New C24_LedButton("Auto_Plug_In", Btn_Region.Middle_Strip, &H22)
+                _Auto_Plug_In = New C24_LedButton("Auto_Plug_In", Btn_Region.Left_Strip, &H22)
                 Me.Add_C24_Component(_Auto_Plug_In, "Automation")
-                _Auto_Suspend = New C24_LedButton("Auto_Suspend", Btn_Region.Middle_Strip, &H15)
+                _Auto_Suspend = New C24_LedButton("Auto_Suspend", Btn_Region.Left_Strip, &H15)
                 Me.Add_C24_Component(_Auto_Suspend, "Automation")
-                _Write_Auto_To_End = New C24_LedButton("Write_Auto_To_End", Btn_Region.Middle_Strip, &H31)
+                _Write_Auto_To_End = New C24_LedButton("Write_Auto_To_End", Btn_Region.Left_Strip, &H31)
                 Me.Add_C24_Component(_Write_Auto_To_End, "Automation")
-                _Write_Auto_To_Start = New C24_LedButton("Write_Auto_To_Start", Btn_Region.Middle_Strip, &H2F)
+                _Write_Auto_To_Start = New C24_LedButton("Write_Auto_To_Start", Btn_Region.Left_Strip, &H2F)
                 Me.Add_C24_Component(_Write_Auto_To_Start, "Automation")
-                _Write_Auto_To_All = New C24_LedButton("Write_Auto_To_All", Btn_Region.Middle_Strip, &H30)
+                _Write_Auto_To_All = New C24_LedButton("Write_Auto_To_All", Btn_Region.Left_Strip, &H30)
                 Me.Add_C24_Component(_Write_Auto_To_All, "Automation")
 
                 '*----------------------------------*
@@ -4542,12 +4627,12 @@ Namespace Control24
         End Class
 
         ''' <summary>
-        ''' Représente un fader motorisé du Control24.
+        ''' OBSOLETTE : Représente un fader motorisé du Control24.
         ''' Bidirectionnel : reçoit les mouvements manuels et envoie la position au moteur.
         ''' Intègre un <see cref="FaderTouch"/>, un <see cref="ScribbleStrip"/> et
         ''' l'affichage temporaire du volume en dB (restauration automatique après 2 s).
         ''' </summary>
-        Public Class C24_Fader
+        Public Class OldC24_Fader
             Inherits C24_Component
 
             Private WithEvents _FaderCmd As Commands.Fader_Cmd
@@ -4569,6 +4654,8 @@ Namespace Control24
             Private _VerifyRetryCount As Integer = 0
             Private _VerifyTimer As System.Threading.Timer
             Private _Fader_Mode As Mode = Mode.Fader
+            Private _PanValue As Double
+            Private _PanValueText As String
             Private Const VerifyDelayMs As Integer = 150
             Private Const MaxVerifyRetry As Integer = 5
 
@@ -4591,10 +4678,12 @@ Namespace Control24
             ''' </summary>
             Public Event On_FaderHumanChangeDbValue(TrackNb As Integer, DbValue As Double)
             Public Event On_FaderHumanChangeNormValue(TrackNb As Integer, _NormFormatedValues As Tuple(Of Double, String))
+            Public Event On_FaderHumanChangePanValue(TrackNb As Integer, _PanValue As Double)
 
             Enum Mode
                 Fader
                 NormValue
+                Pan
             End Enum
             ' ── Propriétés ────────────────────────────────────────────────────
             Public Property Fader_Mode As Mode
@@ -4654,9 +4743,7 @@ Namespace Control24
                     Return _NormFormatedValues
                 End Get
                 Set
-                    'If _NormValue = Value.Item1 Then
-                    '    Return
-                    'End If
+
                     _NormValue = Value.Item1
                     _NormFormatedValues = Value
 
@@ -4684,6 +4771,49 @@ Namespace Control24
 
                 End Set
             End Property
+
+
+            Public Property PanValue As Double
+                Get
+                    Return _PanValue
+                End Get
+                Set
+                    _PanValue = Value
+
+
+                    Dim Value_int As Integer = CInt(_PanValue)
+                    If Value_int = 0 Then
+                        _PanValueText = "<0>"
+                    ElseIf Value_int > 0 Then
+                        _PanValueText = Value_int & ">"
+                    ElseIf Value_int < 0 Then
+                        _PanValueText = "<" & Math.Abs(Value_int)
+                    End If
+
+
+
+                    If _IsShowingValue = False Then
+                        _OriginalScribbleText = _ScribbleStrip.Text
+                        _IsShowingValue = True
+                    End If
+
+
+                    _ScribbleStrip.Text = _PanValueText
+
+
+                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+
+                End Set
+            End Property
+            Public Property PanValueText As String
+                Get
+                    Return _PanValueText
+                End Get
+                Set
+                    _PanValueText = Value
+                End Set
+            End Property
+
             ''' <summary>
             ''' Volume en dB.
             ''' Affiche la valeur sur le <see cref="ScribbleStrip"/> uniquement si elle change.
@@ -4772,7 +4902,11 @@ Namespace Control24
                 NormFormatedValues = _NormFormatedValues
                 SendAndArmVerify(NormValueToRawFaderCmdValue(_NormFormatedValues.Item1))
             End Sub
+            Public Sub SetFaderPanValue(_PanValue As Double)
 
+                PanValue = _PanValue
+                SendAndArmVerify(NormValueToRawFaderCmdValue((_PanValue + 1) / 2))
+            End Sub
             ''' <summary>
             ''' Initialise la position du fader sans vérification d'affichage.
             ''' Lance quand même la vérification de position hardware.
@@ -4798,10 +4932,34 @@ Namespace Control24
                             _NormValue = RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)
                             _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
                             RaiseEvent On_FaderHumanChangeNormValue(FaderCmd.Track_Number, _NormFormatedValues)
+                        Case Mode.Pan
+                            _PanValue = (2 * RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)) - 1
+                            RaiseEvent On_FaderHumanChangePanValue(FaderCmd.Track_Number, _PanValue)
                     End Select
 
 
                 End If
+            End Sub
+            Public Sub OnFaderManualChange(Track_Number As Integer, Optional DbVol As Double? = Nothing, Optional NormValue As Double? = Nothing)
+
+                Select Case Fader_Mode
+                    Case Mode.Fader
+                        If DbVol IsNot Nothing Then
+                            DbVolume = DbVol
+                        End If
+                        RaiseEvent On_FaderHumanChangeDbValue(Track_Number, DbVolume)
+                    Case Mode.NormValue
+                        If NormValue IsNot Nothing Then
+                            _NormValue = NormValue
+                            _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
+                            RaiseEvent On_FaderHumanChangeNormValue(Track_Number, _NormFormatedValues)
+                        End If
+
+
+                End Select
+
+
+
             End Sub
 
             Private Sub OnFaderTouchPressed(componentId As String)
@@ -4887,6 +5045,353 @@ Namespace Control24
 
         End Class
 
+        ''' <summary>
+        ''' Représente un fader motorisé du Control24.
+        ''' Bidirectionnel : reçoit les mouvements manuels et envoie la position au moteur.
+        ''' Intègre un <see cref="FaderTouch"/>, un <see cref="ScribbleStrip"/> et
+        ''' l'affichage temporaire du volume en dB (restauration automatique après 2 s).
+        ''' </summary>
+        Public Class C24_Fader
+            Inherits C24_Component
+
+            Private WithEvents _FaderCmd As Commands.Fader_Cmd
+            Private ReadOnly _FaderTouch As C24_Button
+            Private ReadOnly _ScribbleStrip As C24_ScribbleStrip
+            Private _NormValue As Double
+            Private _NormFormatedValues As Tuple(Of Double, String)
+            Private _DbVolume As Double = 0
+
+            ' ── Restauration ScribbleStrip ─────────────────────────────────────
+            Private _OriginalScribbleText As String = ""
+            Private _IsShowingValue As Boolean = False
+            Private _RestoreTimer As System.Threading.Timer
+            Private Const RestoreDelayMs As Integer = 2000
+
+            ' ── Cible moteur (jamais envoyée si IsTouched) ─────────────────────
+            Private _TargetFaderValue As Integer = 0
+            Private _Fader_Mode As Mode = Mode.Db
+            Private _PanValue As Double
+            Private _PanValueText As String
+
+            ' ── Constantes ────────────────────────────────────────────────────
+            Private Const FaderMin As Integer = 0
+            Private Const FaderMax As Integer = 1023
+            Private Const BtnFaderTouch As Byte = &H9
+
+            ' ── Événements ────────────────────────────────────────────────────
+            ''' <summary>Déclenché quand un humain pose la main sur le fader.</summary>
+            Public Event On_FaderTouched(Component_Id As String)
+            ''' <summary>Déclenché quand la main quitte le fader.</summary>
+            Public Event On_FaderReleased(Component_Id As String)
+            ''' <summary>Déclenché quand le hardware envoie une nouvelle position pendant que le fader est touché.</summary>
+            Public Event On_FaderHumanChangeDbValue(TrackNb As Integer, DbValue As Double)
+            Public Event On_FaderHumanChangeNormValue(TrackNb As Integer, _NormFormatedValues As Tuple(Of Double, String))
+            Public Event On_FaderHumanChangePanValue(TrackNb As Integer, _PanValue As Double)
+
+            Enum Mode
+                Db
+                NormValue
+                Pan
+            End Enum
+
+            ' ── Propriétés ────────────────────────────────────────────────────
+            ''' <summary>Mode de fonctionnement du fader.</summary>
+            Public Property Fader_Mode As Mode
+                Get
+                    Return _Fader_Mode
+                End Get
+                Set
+                    _Fader_Mode = Value
+                End Set
+            End Property
+
+            ''' <summary>Commande fader sous-jacente.</summary>
+            Public ReadOnly Property FaderCmd As Commands.Fader_Cmd
+                Get
+                    Return _FaderCmd
+                End Get
+            End Property
+
+            ''' <summary>Bouton de détection de contact humain.</summary>
+            Public ReadOnly Property FaderTouch As C24_Button
+                Get
+                    Return _FaderTouch
+                End Get
+            End Property
+
+            ''' <summary>ScribbleStrip associé.</summary>
+            Public ReadOnly Property ScribbleStrip As C24_ScribbleStrip
+                Get
+                    Return _ScribbleStrip
+                End Get
+            End Property
+
+            ''' <summary>True si un humain touche actuellement le fader.</summary>
+            Public ReadOnly Property IsTouched As Boolean
+                Get
+                    Return _FaderTouch.IsPressed
+                End Get
+            End Property
+
+            ''' <summary>Valeur brute du fader de 0 à 1023.</summary>
+            Public Property FaderValue As Integer
+                Get
+                    Return _FaderCmd.FaderValue
+                End Get
+                Set
+                    _FaderCmd.FaderValue = Math.Min(Math.Max(Value, FaderMin), FaderMax)
+                End Set
+            End Property
+
+            ''' <summary>Valeur normalisée + texte formaté.</summary>
+            Public Property NormFormatedValues As Tuple(Of Double, String)
+                Get
+                    Return _NormFormatedValues
+                End Get
+                Set
+                    _NormValue = Value.Item1
+                    _NormFormatedValues = Value
+
+                    If _IsShowingValue = False Then
+                        _OriginalScribbleText = _ScribbleStrip.Text
+                        _IsShowingValue = True
+                    End If
+
+                    Dim DblValue As Double = 0
+                    If Double.TryParse(Value.Item2, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, DblValue) Then
+                        _ScribbleStrip.Value = DblValue
+                    ElseIf Value.Item2 IsNot Nothing AndAlso Value.Item2 <> "" Then
+                        _ScribbleStrip.Text = Value.Item2
+                    Else
+                        _ScribbleStrip.Value = Value.Item1
+                    End If
+
+                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+                End Set
+            End Property
+
+            ''' <summary>Valeur pan (-1.0 à +1.0).</summary>
+            Public Property PanValue As Double
+                Get
+                    Return _PanValue
+                End Get
+                Set
+                    _PanValue = Value
+
+                    Dim Value_int As Integer = CInt(_PanValue)
+                    If Value_int = 0 Then
+                        _PanValueText = "<0>"
+                    ElseIf Value_int > 0 Then
+                        _PanValueText = Value_int & ">"
+                    ElseIf Value_int < 0 Then
+                        _PanValueText = "<" & Math.Abs(Value_int)
+                    End If
+
+                    If _IsShowingValue = False Then
+                        _OriginalScribbleText = _ScribbleStrip.Text
+                        _IsShowingValue = True
+                    End If
+
+                    _ScribbleStrip.Text = _PanValueText
+                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+                End Set
+            End Property
+
+            ''' <summary>Texte pan affiché.</summary>
+            Public Property PanValueText As String
+                Get
+                    Return _PanValueText
+                End Get
+                Set
+                    _PanValueText = Value
+                End Set
+            End Property
+
+            ''' <summary>
+            ''' Volume en dB. Affiche la valeur sur le ScribbleStrip.
+            ''' Restauration automatique après <see cref="RestoreDelayMs"/> ms.
+            ''' </summary>
+            Public Property DbVolume As Double
+                Get
+                    Return _DbVolume
+                End Get
+                Set
+                    If _DbVolume = Value Then
+                        Return
+                    End If
+
+                    _DbVolume = Value
+
+                    If _IsShowingValue = False Then
+                        _OriginalScribbleText = _ScribbleStrip.Text
+                        _IsShowingValue = True
+                    End If
+
+                    _ScribbleStrip.Value = _DbVolume
+                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+                End Set
+            End Property
+
+            ' ── Restauration ScribbleStrip ─────────────────────────────────────
+            Private Sub OnRestoreTimer(state As Object)
+                _IsShowingValue = False
+                _ScribbleStrip.Text = _OriginalScribbleText
+            End Sub
+
+            ' ── Envoi moteur avec gate tactile ─────────────────────────────────
+            ''' <summary>
+            ''' Mémorise la cible et envoie la commande moteur UNIQUEMENT si le fader
+            ''' n'est pas touché par un humain.
+            ''' Si touché : la cible est stockée et sera envoyée à la libération.
+            ''' Aucun timer de vérification — pas d'interférence avec l'écriture d'enveloppe.
+            ''' </summary>
+            Private Sub SendMotorIfNotTouched(rawValue As Integer)
+                _TargetFaderValue = Math.Min(Math.Max(rawValue, FaderMin), FaderMax)
+                If Not IsTouched Then
+                    FaderValue = _TargetFaderValue
+                End If
+            End Sub
+
+            ' ── API publique ──────────────────────────────────────────────────
+            ''' <summary>Pilote le fader depuis Reaper (volume en dB).</summary>
+            Public Sub SetFaderDbVolume(Db_Volume As Double)
+                DbVolume = Db_Volume
+                SendMotorIfNotTouched(DbToRawFaderCmdValue(Db_Volume))
+            End Sub
+
+            ''' <summary>Pilote le fader depuis Reaper (valeur normalisée).</summary>
+            Public Sub SetFaderNormValue(_NormFormatedValues As Tuple(Of Double, String))
+                NormFormatedValues = _NormFormatedValues
+                SendMotorIfNotTouched(NormValueToRawFaderCmdValue(_NormFormatedValues.Item1))
+            End Sub
+
+            ''' <summary>Pilote le fader depuis Reaper (pan).</summary>
+            Public Sub SetFaderPanValue(_PanValue As Double)
+                PanValue = _PanValue
+                SendMotorIfNotTouched(NormValueToRawFaderCmdValue((_PanValue + 1) / 2))
+            End Sub
+
+            ''' <summary>Initialise la position sans affichage scribble.</summary>
+            Public Sub SetInitFaderDbVolume(Db_Volume As Double)
+                _DbVolume = Db_Volume
+                SendMotorIfNotTouched(DbToRawFaderCmdValue(Db_Volume))
+            End Sub
+
+            ' ── Lecture hardware ──────────────────────────────────────────────
+            ''' <summary>
+            ''' Appelé à chaque mouvement fader reçu du hardware.
+            ''' Ne lève les événements humains que si le fader est touché.
+            ''' </summary>
+            Private Sub OnFaderCmdChange() Handles _FaderCmd.OnCmdChange
+                If IsTouched Then
+                    Select Case Fader_Mode
+                        Case Mode.Db
+                            DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
+                            RaiseEvent On_FaderHumanChangeDbValue(FaderCmd.Track_Number, DbVolume)
+                        Case Mode.NormValue
+                            _NormValue = RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)
+                            _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
+                            RaiseEvent On_FaderHumanChangeNormValue(FaderCmd.Track_Number, _NormFormatedValues)
+                        Case Mode.Pan
+                            _PanValue = (2 * RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)) - 1
+                            RaiseEvent On_FaderHumanChangePanValue(FaderCmd.Track_Number, _PanValue)
+                    End Select
+                End If
+            End Sub
+
+            ''' <summary>Manipulation manuelle simulée (hors hardware).</summary>
+            Public Sub OnFaderManualChange(Track_Number As Integer, Optional DbVol As Double? = Nothing, Optional NormValue As Double? = Nothing)
+                Select Case Fader_Mode
+                    Case Mode.Db
+                        If DbVol IsNot Nothing Then
+                            DbVolume = DbVol
+                        End If
+                        RaiseEvent On_FaderHumanChangeDbValue(Track_Number, DbVolume)
+                    Case Mode.NormValue
+                        If NormValue IsNot Nothing Then
+                            _NormValue = NormValue
+                            _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
+                            RaiseEvent On_FaderHumanChangeNormValue(Track_Number, _NormFormatedValues)
+                        End If
+                End Select
+            End Sub
+
+            ''' <summary>
+            ''' Appui détecté — suspend les envois moteur (déjà géré par IsTouched).
+            ''' </summary>
+            Private Sub OnFaderTouchPressed(componentId As String)
+                RaiseEvent On_FaderTouched(_Component_Id)
+            End Sub
+
+            ''' <summary>
+            ''' Relâchement détecté — resynchronise le moteur sur la dernière cible Reaper.
+            ''' Garantit que le fader rejoint la position correcte après manipulation humaine.
+            ''' </summary>
+            Private Sub OnFaderTouchReleased(componentId As String)
+                FaderValue = _TargetFaderValue
+                RaiseEvent On_FaderReleased(_Component_Id)
+            End Sub
+
+            ' ── Constructeur ──────────────────────────────────────────────────
+            ''' <summary>
+            ''' Crée un fader motorisé.
+            ''' </summary>
+            Public Sub New(name As String, trackNumber As Integer, scribbleStrip As C24_ScribbleStrip)
+                _Name = name
+                _FaderCmd = New Commands.Fader_Cmd(trackNumber)
+                _C24_ReceivingCommand = _FaderCmd
+                C24_SendingCommands.Add(_FaderCmd)
+                _Component_Id = _FaderCmd.Cmd_Id
+                _ScribbleStrip = scribbleStrip
+
+                _FaderTouch = New C24_Button($"FaderTouch_{trackNumber}", BtnFaderTouch, trackNumber)
+                AddHandler _FaderTouch.OnButtonPressed, AddressOf OnFaderTouchPressed
+                AddHandler _FaderTouch.OnButtonReleased, AddressOf OnFaderTouchReleased
+
+                _RestoreTimer = New System.Threading.Timer(
+                    AddressOf OnRestoreTimer,
+                    Nothing,
+                    System.Threading.Timeout.Infinite,
+                    System.Threading.Timeout.Infinite)
+            End Sub
+
+            ' ── Conversions dB ↔ raw ──────────────────────────────────────────
+            Private Function DbToRawFaderCmdValue(Db As Double) As Integer
+                If Db <= -150 Then
+                    Return 0
+                ElseIf Db > -150 AndAlso Db <= -90 Then
+                    Return CInt(Math.Round((1.1811 * Db) - 43.701, 0))
+                ElseIf Db > -90 AndAlso Db <= -20 Then
+                    Return CInt(Math.Round((563.83 * Math.Exp(0.0298 * Db))))
+                ElseIf Db > -20 AndAlso Db < 6 Then
+                    Return CInt(Math.Round((27.308 * Db) + 861.66))
+                ElseIf Db >= 6 Then
+                    Return 1023
+                End If
+                Return 0
+            End Function
+
+            Private Function RawFaderCmdValueToNormValue(raw As Integer) As Double
+                Return Math.Round(_FaderCmd.FaderValue / CDbl(FaderMax), 4)
+            End Function
+
+            Private Function NormValueToRawFaderCmdValue(NormValue As Double) As Integer
+                Return CInt(Math.Round(Math.Min(Math.Max(NormValue, 0.0), 1.0) * FaderMax))
+            End Function
+
+            Private Function RawFaderCmdValueToDb(raw As Integer) As Double
+                If raw <= 0 Then
+                    Return -150.0
+                ElseIf raw >= 1023 Then
+                    Return 6.0
+                ElseIf raw <= 313 Then
+                    Return Math.Log(raw / 563.83) / 0.0298
+                Else
+                    Return (raw - 861.66) / 27.308
+                End If
+            End Function
+
+        End Class
 
         ''' <summary>
         ''' Représente un channel strip complet du Control24.
