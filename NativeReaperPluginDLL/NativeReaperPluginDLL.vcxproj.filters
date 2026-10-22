@@ -21,6 +21,9 @@
     <ClInclude Include="pch.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="reaper_plugin.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -31,8 +34,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="NativeReaperPluginDLL.def">
-      <Filter>Fichiers sources</Filter>
-    </None>
+    <Text Include="CMakeLists.txt" />
   </ItemGroup>
 </Project>
