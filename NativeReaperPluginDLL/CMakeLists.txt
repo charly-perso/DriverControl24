@@ -17,4 +17,4 @@ target_compile_definitions(reaper_c24events PRIVATE SWELL_PROVIDED_BY_APP)
 set_target_properties(reaper_c24events PROPERTIES
     PREFIX ""
     SUFFIX ".dylib"
-    CXX_VISIBILITY_PRESET hidden)
+    CXX_VISIBILITY_PRESET hidden) 
