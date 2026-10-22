@@ -1,0 +1,718 @@
+No.     Time           Source                Destination           Protocol Length Info
+      2 0.020589       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 2: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b3 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+      3 0.027854       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 3: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b3 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+      4 1.070582       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 4: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b4 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+      5 1.077704       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 5: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b4 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+      6 1.922818       AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 6: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 03 83 00 00 00 00 00 00 e1 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+
+No.     Time           Source                Destination           Protocol Length Info
+      7 2.109619       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 7: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b5 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+      8 2.114421       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 8: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b5 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     10 3.154770       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 10: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b6 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     11 3.159592       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 11: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b6 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     12 4.201482       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 12: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b7 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     13 4.206164       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 13: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b7 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     26 5.244820       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 26: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b8 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     27 5.247573       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 27: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b8 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     33 6.284301       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 33: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 b9 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     34 6.288085       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 34: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 b9 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     35 7.114421       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 35: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 22 00 00 00 00 00 00 00 01   ...1..."........
+0010  b0 40 41 5f 00 00 00 00 00 00 00 00 00 00 00 00   .@A_............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     36 7.145324       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 36: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 22 00 00 00 00 00 01 00 01   ...1..."........
+0010  b0 40 41 20 00 00 00 00 00 00 00 00 00 00 00 00   .@A ............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     37 7.155818       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 37: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 22 00 00 a0 00   ..........."....
+
+No.     Time           Source                Destination           Protocol Length Info
+     38 7.187532       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 38: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 22 00 00 a0 00   ..........."....
+
+No.     Time           Source                Destination           Protocol Length Info
+     39 7.194215       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 39: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 23 00 00 00 00 00 00 00 01   ...1...#........
+0010  b0 40 41 b7 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     40 7.226509       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 40: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 23 00 00 00 00 00 01 00 01   ...1...#........
+0010  b0 40 41 ff 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     41 7.250217       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 41: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 23 00 00 a0 00   ...........#....
+
+No.     Time           Source                Destination           Protocol Length Info
+     42 7.253012       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 42: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 23 00 00 a0 00   ...........#....
+
+No.     Time           Source                Destination           Protocol Length Info
+     43 7.330010       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 43: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 ba 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     44 7.332750       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 44: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 ba 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     45 7.394141       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 45: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 24 00 00 00 00 00 00 00 01   ...1...$........
+0010  b0 40 41 32 00 00 00 00 00 00 00 00 00 00 00 00   .@A2............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     46 7.423997       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 46: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 24 00 00 00 00 00 01 00 01   ...1...$........
+0010  b0 40 41 06 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     47 7.441761       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 47: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 24 00 00 a0 00   ...........$....
+
+No.     Time           Source                Destination           Protocol Length Info
+     48 7.444305       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 48: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 24 00 00 a0 00   ...........$....
+
+No.     Time           Source                Destination           Protocol Length Info
+     49 7.473239       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 49: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 25 00 00 00 00 00 00 00 01   ...1...%........
+0010  b0 40 41 00 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     50 7.504237       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 50: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 25 00 00 00 00 00 01 00 01   ...1...%........
+0010  b0 40 41 5f 00 00 00 00 00 00 00 00 00 00 00 00   .@A_............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     51 7.521048       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 51: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 25 00 00 a0 00   ...........%....
+
+No.     Time           Source                Destination           Protocol Length Info
+     52 7.524120       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 52: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 25 00 00 a0 00   ...........%....
+
+No.     Time           Source                Destination           Protocol Length Info
+     53 7.613436       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 53: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 26 00 00 00 00 00 00 00 01   ...1...&........
+0010  b0 40 41 20 00 00 00 00 00 00 00 00 00 00 00 00   .@A ............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     54 7.647388       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 54: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 26 00 00 00 00 00 01 00 01   ...1...&........
+0010  b0 40 41 b7 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     55 7.647873       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 55: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 26 00 00 a0 00   ...........&....
+
+No.     Time           Source                Destination           Protocol Length Info
+     56 7.693508       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 56: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 26 00 00 a0 00   ...........&....
+
+No.     Time           Source                Destination           Protocol Length Info
+     57 7.733066       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 57: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 27 00 00 00 00 00 00 00 01   ...1...'........
+0010  b0 40 41 ff 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     58 7.748522       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 58: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 27 00 00 a0 00   ...........'....
+
+No.     Time           Source                Destination           Protocol Length Info
+     59 7.892696       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 59: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 28 00 00 00 00 00 00 00 01   ...1...(........
+0010  b0 40 41 00 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     60 7.923410       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 60: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 28 00 00 00 00 00 01 00 01   ...1...(........
+0010  b0 40 41 00 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     61 7.938347       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 61: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 28 00 00 a0 00   ...........(....
+
+No.     Time           Source                Destination           Protocol Length Info
+     62 7.940015       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 62: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 28 00 00 a0 00   ...........(....
+
+No.     Time           Source                Destination           Protocol Length Info
+     63 8.052936       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 63: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 29 00 00 00 00 00 00 00 01   ...1...)........
+0010  b0 40 41 00 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     64 8.080904       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 64: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 29 00 00 a0 00   ...........)....
+
+No.     Time           Source                Destination           Protocol Length Info
+     65 8.083160       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 65: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 29 00 00 00 00 00 01 00 01   ...1...)........
+0010  b0 40 41 31 00 00 00 00 00 00 00 00 00 00 00 00   .@A1............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     66 8.114253       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 66: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 29 00 00 00 00 00 02 00 01   ...1...)........
+0010  b0 40 41 a3 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     67 8.144370       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 67: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 29 00 00 a0 00   ...........)....
+
+No.     Time           Source                Destination           Protocol Length Info
+     68 8.145052       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 68: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 29 00 00 00 00 00 03 00 01   ...1...)........
+0010  b0 40 41 06 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     69 8.145435       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 69: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 29 00 00 a0 00   ...........)....
+
+No.     Time           Source                Destination           Protocol Length Info
+     70 8.146680       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 70: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 2a 00 00 00 00 00 00 00 01   ...1...*........
+0010  b0 40 41 00 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     71 8.177046       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 71: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 13 01 31 00 00 00 2a 00 00 00 00 00 01 00 01   ...1...*........
+0010  b0 40 41 a2 00 00 00 00 00 00 00 00 00 00 00 00   .@A.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     72 8.201195       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 72: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 29 00 00 a0 00   ...........)....
+
+No.     Time           Source                Destination           Protocol Length Info
+     73 8.202486       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 73: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 2a 00 00 a0 00   ...........*....
+
+No.     Time           Source                Destination           Protocol Length Info
+     74 8.203880       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 74: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 2a 00 00 a0 00   ...........*....
+
+No.     Time           Source                Destination           Protocol Length Info
+     75 8.378170       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 75: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 bb 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     76 8.381522       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 76: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 bb 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     78 8.408791       AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 78: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 03 84 00 00 00 00 00 00 e1 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+
+No.     Time           Source                Destination           Protocol Length Info
+     79 9.411075       Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 79: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 bc 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     80 9.415014       AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 80: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 bc 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+     94 10.450754      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 94: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 bd 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+     95 10.454194      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 95: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 bd 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+    101 11.492438      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 101: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 be 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+    102 11.494966      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 102: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 be 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+    104 12.526169      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 104: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 bf 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+    105 12.530025      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 105: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 bf 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+    114 13.567112      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 114: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 c0 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+    115 13.570481      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 115: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 c0 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+
+No.     Time           Source                Destination           Protocol Length Info
+    119 14.609930      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   38     Ethernet II
+
+Frame 119: Packet, 38 bytes on wire (304 bits), 38 bytes captured (304 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+Data (24 bytes)
+
+0000  00 18 00 00 00 00 00 c1 00 00 00 00 00 00 00 01   ................
+0010  f0 13 01 10 00 00 3f f7                           ......?.
+
+No.     Time           Source                Destination           Protocol Length Info
+    120 14.616935      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 120: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 c1 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............

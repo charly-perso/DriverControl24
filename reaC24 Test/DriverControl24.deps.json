@@ -1,0 +1,128 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "DriverControl24/1.0.0": {
+        "dependencies": {
+          "Nager.TcpClient": "1.3.1",
+          "PacketDotNet": "1.4.8",
+          "Rug.Osc": "1.2.5",
+          "SharpPcap": "6.3.1"
+        },
+        "runtime": {
+          "DriverControl24.dll": {}
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.1": {
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.324.11423"
+          }
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions/8.0.1": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.1"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.324.11423"
+          }
+        }
+      },
+      "Nager.TcpClient/1.3.1": {
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.1"
+        },
+        "runtime": {
+          "lib/net8.0/Nager.TcpClient.dll": {
+            "assemblyVersion": "1.3.1.0",
+            "fileVersion": "1.3.1.0"
+          }
+        }
+      },
+      "PacketDotNet/1.4.8": {
+        "runtime": {
+          "lib/net9.0/PacketDotNet.dll": {
+            "assemblyVersion": "1.4.8.0",
+            "fileVersion": "1.4.8.0"
+          }
+        }
+      },
+      "Rug.Osc/1.2.5": {
+        "runtime": {
+          "lib/Rug.Osc.dll": {
+            "assemblyVersion": "1.2.5.17694",
+            "fileVersion": "1.2.5.0"
+          }
+        }
+      },
+      "SharpPcap/6.3.1": {
+        "dependencies": {
+          "PacketDotNet": "1.4.8"
+        },
+        "runtime": {
+          "lib/net8.0/SharpPcap.dll": {
+            "assemblyVersion": "6.3.1.0",
+            "fileVersion": "6.3.1.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "DriverControl24/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions/8.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fGLiCRLMYd00JYpClraLjJTNKLmMJPnqxMaiRzEBIIvevlzxz33mXy39Lkd48hu1G+N21S7QpaO5ZzKsI6FRuA==",
+      "path": "microsoft.extensions.dependencyinjection.abstractions/8.0.1",
+      "hashPath": "microsoft.extensions.dependencyinjection.abstractions.8.0.1.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Logging.Abstractions/8.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-RIFgaqoaINxkM2KTOw72dmilDmTrYA0ns2KW4lDz4gZ2+o6IQ894CzmdL3StM2oh7QQq44nCWiqKqc4qUI9Jmg==",
+      "path": "microsoft.extensions.logging.abstractions/8.0.1",
+      "hashPath": "microsoft.extensions.logging.abstractions.8.0.1.nupkg.sha512"
+    },
+    "Nager.TcpClient/1.3.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fgAxwYGOfZ7vQbfoXyoNC7xKj1KQu5nP/B7+nhfF09T+74jGYLU8NPRyJYC8xSOdMMg0ffCpvMLM6eARuMPj7g==",
+      "path": "nager.tcpclient/1.3.1",
+      "hashPath": "nager.tcpclient.1.3.1.nupkg.sha512"
+    },
+    "PacketDotNet/1.4.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-j4C4QaJmaPCk0KXsIdsZqmBteKWj5znXBmfbPpu48rE5SW2xwXKVlRf7C3g7VM9aZqMHIQedApEuC71nNX5PaQ==",
+      "path": "packetdotnet/1.4.8",
+      "hashPath": "packetdotnet.1.4.8.nupkg.sha512"
+    },
+    "Rug.Osc/1.2.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-nbujIPTk+QO90qv+U9E5reGFEBDpu8c4I65dkVxR4/xBL+WXUzUjvfBm5mEmtRRqFeoqfK7VLje+FEdz/FmoTg==",
+      "path": "rug.osc/1.2.5",
+      "hashPath": "rug.osc.1.2.5.nupkg.sha512"
+    },
+    "SharpPcap/6.3.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-EWclXz+QdffBRppFR7GDBLyKiAz045RGvu4t4gcMGocVMEq6dRfCnAEx7Ep6qxcPPhH2kz13Y8FqBaHZhsh3Pg==",
+      "path": "sharppcap/6.3.1",
+      "hashPath": "sharppcap.6.3.1.nupkg.sha512"
+    }
+  }
+}

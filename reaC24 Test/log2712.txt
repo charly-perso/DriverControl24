@@ -1,0 +1,444 @@
+Microsoft Windows [version 10.0.26200.7462]
+(c) Microsoft Corporation. Tous droits réservés.
+
+C:\Windows\System32>C:\Python27\python "C:\Python27\install\ReaControl24-Release\control24d.py" -n {E1CECD01-6D4F-4A25-A0B3-B37A66803CCE} -d
+MP Listener waiting for connection at ('192.168.1.83', 9123)
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:73 retry:0 cmd:0xe0 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Desk detected: CNTRL|1  1.08 at 00 a0 7e a2 1d 46
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 01 00 00 00 00 00 00 e2 00
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 02 44 00 00 00 02 00 00 00 00 00 00 00 01 f0 13 01 30 19 00 00 00 00 00 00 00 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:1 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:74 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:2 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:75 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 03 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:3 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:76 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 04 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:4 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:77 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 05 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:5 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:78 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:19 c_cnt:0 s_cnt:83 retry:0 cmd:0x0 nc:1 90 09 4b 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 83
+TODESK ACK: 83
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 53 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:21 c_cnt:0 s_cnt:84 retry:0 cmd:0x0 nc:1 b0 0b 00 2b 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 84
+TODESK ACK: 84
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 54 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:21 c_cnt:0 s_cnt:85 retry:0 cmd:0x0 nc:1 b0 0b 00 2b 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 85
+TODESK ACK: 85
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 55 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:19 c_cnt:0 s_cnt:86 retry:0 cmd:0x0 nc:1 90 09 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 86
+TODESK ACK: 86
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 56 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:19 c_cnt:0 s_cnt:87 retry:0 cmd:0x0 nc:1 90 09 4b 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 87
+TODESK ACK: 87
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 57 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:21 c_cnt:0 s_cnt:88 retry:0 cmd:0x0 nc:1 b0 0b 00 2b 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 88
+TODESK ACK: 88
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 58 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:21 c_cnt:0 s_cnt:89 retry:0 cmd:0x0 nc:1 b0 0b 00 2b 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 89
+TODESK ACK: 89
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 59 00 00 a0 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:19 c_cnt:0 s_cnt:90 retry:0 cmd:0x0 nc:1 90 09 0b 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK 90
+TODESK ACK: 90
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 00 00 00 00 5a 00 00 a0 00
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:79 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+MP Listener Received connection from ('192.168.1.83', 55916)
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 06 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:6 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:80 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:81 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+MP recv: c:1 s:3 d:90 0f 1c
+TODESK CMD 6
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 07 00 00 00 00 00 00 00 01 90 0f 1c
+MP recv: c:1 s:3 d:90 10 5c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:7 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+TODESK CMD 7
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 08 00 00 00 00 00 00 00 01 90 10 5c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:8 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7b 7e 30 00 30 00 00 f7
+TODESK CMD 8
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 09 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7b 7e 30 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:9 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7f 6d 30 00 30 00 00 f7
+TODESK CMD 9
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 0a 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7f 6d 30 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:10 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5f 33 30 00 30 00 00 f7
+TODESK CMD 10
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 0b 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5f 33 30 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:11 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5b 5f 30 00 30 00 00 f7
+TODESK CMD 11
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 0c 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5b 5f 30 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:12 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 79 7f 30 00 30 00 00 f7
+TODESK CMD 12
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 0d 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 79 7f 30 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:13 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 6d 7e 6d 00 30 00 00 f7
+TODESK CMD 13
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 0e 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 6d 7e 6d 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:14 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7e 6d 6d 00 30 00 00 f7
+TODESK CMD 14
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 0f 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7e 6d 6d 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:15 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7b 79 6d 00 30 00 00 f7
+TODESK CMD 15
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 10 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7b 79 6d 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:16 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7f 5b 6d 00 30 00 00 f7
+TODESK CMD 16
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 11 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7f 5b 6d 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:17 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5f 70 6d 00 30 00 00 f7
+TODESK CMD 17
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 12 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5f 70 6d 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:18 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5b 7b 6d 00 30 00 00 f7
+TODESK CMD 18
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 13 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5b 7b 6d 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:19 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 79 30 79 00 30 00 00 f7
+TODESK CMD 19
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 14 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 79 30 79 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:20 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 6d 79 79 00 30 00 00 f7
+TODESK CMD 20
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 15 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 6d 79 79 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:21 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7e 5b 79 00 30 00 00 f7
+TODESK CMD 21
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 16 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7e 5b 79 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:22 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7b 5f 79 00 30 00 00 f7
+TODESK CMD 22
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 17 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7b 5f 79 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:23 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7f 7f 79 00 30 00 00 f7
+TODESK CMD 23
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 18 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7f 7f 79 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:24 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 30 30 33 00 30 00 00 f7
+TODESK CMD 24
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 19 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 30 30 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:25 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5b 6d 33 00 30 00 00 f7
+TODESK CMD 25
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 1a 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5b 6d 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:26 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 79 33 33 00 30 00 00 f7
+TODESK CMD 26
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 1b 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 79 33 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:27 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 70 5f 33 00 30 00 00 f7
+TODESK CMD 27
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 1c 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 70 5f 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:28 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:2 s:6 d:90 0f 5c 90 10 1c
+TODESK CMD 28
+Sending Packet of 36 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 16 00 00 00 00 00 1e 00 00 00 00 00 00 00 02 90 0f 5c 90 10 1c
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5b 7f 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:30 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+TODESK CMD 30
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 1f 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5b 7f 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:31 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:82 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+MP recv: c:1 s:3 d:90 0f 1c
+TODESK CMD 31
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 20 00 00 00 00 00 00 00 01 90 0f 1c
+MP recv: c:1 s:3 d:90 10 5c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:32 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+TODESK CMD 32
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 21 00 00 00 00 00 00 00 01 90 10 5c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:33 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 33 7b 33 00 30 00 00 f7
+TODESK CMD 33
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 22 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 33 7b 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:34 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 79 30 30 00 6d 00 00 f7
+TODESK CMD 34
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 23 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 79 30 30 00 6d 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:35 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 30 79 30 00 6d 00 00 f7
+TODESK CMD 35
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 24 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 30 79 30 00 6d 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:36 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7e 5b 30 00 6d 00 00 f7
+TODESK CMD 36
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 25 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7e 5b 30 00 6d 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:37 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 7f 5f 30 00 6d 00 00 f7
+TODESK CMD 37
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 26 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 7f 5f 30 00 6d 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:38 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 6d 7f 30 00 6d 00 00 f7
+TODESK CMD 38
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 27 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 6d 7f 30 00 6d 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:39 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+MP recv: c:2 s:6 d:90 0f 5c 90 10 1c
+FROMDESK ACK
+TODESK CMD 39
+Sending Packet of 36 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 16 00 00 00 00 00 29 00 00 00 00 00 00 00 02 90 0f 5c 90 10 1c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:41 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:15 d:f0 13 01 30 19 14 00 5b 7f 33 00 30 00 00 f7
+TODESK CMD 41
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 00 00 00 00 00 2a 00 00 00 00 00 00 00 01 f0 13 01 30 19 14 00 5b 7f 33 00 30 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:42 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 0f 1c
+TODESK CMD 42
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 2b 00 00 00 00 00 00 00 01 90 0f 1c
+MP recv: c:1 s:3 d:90 10 5c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:43 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+TODESK CMD 43
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 2c 00 00 00 00 00 00 00 01 90 10 5c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:44 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 0f 5c
+TODESK CMD 44
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 2d 00 00 00 00 00 00 00 01 90 0f 5c
+MP recv: c:1 s:3 d:90 10 1c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:45 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+TODESK CMD 45
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 2e 00 00 00 00 00 00 00 01 90 10 1c
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:46 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:83 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+MP recv: c:1 s:3 d:90 08 40
+TODESK CMD 46
+
+Mute 1 on
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 2f 00 00 00 00 00 00 00 01 90 08 40
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:47 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 08 00
+TODESK CMD 47
+
+Mute 1 off
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 30 00 00 00 00 00 00 00 01 90 08 00
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:48 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 08 41
+TODESK CMD 48
+
+Mute 2 on
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 31 00 00 00 00 00 00 00 01 90 08 41
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:49 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 08 01
+TODESK CMD 49
+
+Mute 2 off
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 32 00 00 00 00 00 00 00 01 90 08 01
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:50 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:84 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 33 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:51 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:85 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:86 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 34 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:52 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:87 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 35 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:53 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:88 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 36 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:54 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:89 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:90 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 37 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:55 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:91 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 38 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:56 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:92 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:93 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 39 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:57 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:94 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 3a 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:58 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:95 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 3b 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:59 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:96 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 3c 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:60 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:97 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:98 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 3d 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:61 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:99 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 3e 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:62 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:100 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+MP recv: c:1 s:3 d:90 2e 58
+TODESK CMD 62
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 3f 00 00 00 00 00 00 00 01 90 2e 58
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:63 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 07 40
+TODESK CMD 63
+
+solo 1 on
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 40 00 00 00 00 00 00 00 01 90 07 40
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:64 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 2e 18
+TODESK CMD 64
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 41 00 00 00 00 00 00 00 01 90 2e 18
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:65 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 07 00
+TODESK CMD 65
+
+solo 1 off
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 42 00 00 00 00 00 00 00 01 90 07 00
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:66 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:101 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+MP recv: c:1 s:3 d:90 2e 58
+TODESK CMD 66
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 43 00 00 00 00 00 00 00 01 90 2e 58
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:67 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 07 41
+TODESK CMD 67
+
+solo 2 on
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 44 00 00 00 00 00 00 00 01 90 07 41
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:68 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 2e 18
+TODESK CMD 68
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 45 00 00 00 00 00 00 00 01 90 2e 18
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:69 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+MP recv: c:1 s:3 d:90 07 01
+TODESK CMD 69
+
+solo 2 off
+Sending Packet of 33 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 13 00 00 00 00 00 46 00 00 00 00 00 00 00 01 90 07 01
+
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:70 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:102 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76

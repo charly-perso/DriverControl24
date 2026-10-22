@@ -1,0 +1,35 @@
+No.     Time           Source                Destination           Protocol Length Info
+    328 19.629684      192.168.1.53          192.168.1.53          UDP      56     9125 → 9125 Len=24
+
+Frame 328: Packet, 56 bytes on wire (448 bits), 56 bytes captured (448 bits) on interface \Device\NPF_Loopback, id 0
+Null/Loopback
+Internet Protocol Version 4, Src: 192.168.1.53, Dst: 192.168.1.53
+User Datagram Protocol, Src Port: 9125, Dst Port: 9125
+Data (24 bytes)
+
+0000  2f 74 72 61 63 6b 2f 31 2f 70 61 6e 00 00 00 00   /track/1/pan....
+0010  2c 66 00 00 bf 00 00 00                           ,f......
+
+No.     Time           Source                Destination           Protocol Length Info
+   1346 67.604873      192.168.1.53          192.168.1.53          UDP      56     9125 → 9125 Len=24
+
+Frame 1346: Packet, 56 bytes on wire (448 bits), 56 bytes captured (448 bits) on interface \Device\NPF_Loopback, id 0
+Null/Loopback
+Internet Protocol Version 4, Src: 192.168.1.53, Dst: 192.168.1.53
+User Datagram Protocol, Src Port: 9125, Dst Port: 9125
+Data (24 bytes)
+
+0000  2f 74 72 61 63 6b 2f 31 2f 70 61 6e 00 00 00 00   /track/1/pan....
+0010  2c 66 00 00 bf 00 00 00                           ,f......
+
+No.     Time           Source                Destination           Protocol Length Info
+   4595 403.645505     192.168.1.53          192.168.1.53          UDP      56     9125 → 9125 Len=24
+
+Frame 4595: Packet, 56 bytes on wire (448 bits), 56 bytes captured (448 bits) on interface \Device\NPF_Loopback, id 0
+Null/Loopback
+Internet Protocol Version 4, Src: 192.168.1.53, Dst: 192.168.1.53
+User Datagram Protocol, Src Port: 9125, Dst Port: 9125
+Data (24 bytes)
+
+0000  2f 74 72 61 63 6b 2f 31 2f 70 61 6e 00 00 00 00   /track/1/pan....
+0010  2c 66 00 00 bf 00 00 00                           ,f......

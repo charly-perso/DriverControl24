@@ -1,0 +1,2124 @@
+No.     Time           Source                Destination           Protocol Length Info
+      2 3.593886       AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 2: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 08 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a300000208000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+      3 9.649337       AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 3: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 09 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a300000209000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+      4 11.643868      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 4: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 01 00 00 00 00 00 00 e2 00   ................
+    Data: 0010000000000001000000000000e200
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+      5 11.643944      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 5: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 01 00 00 00 00 00 00 e2 00   ................
+    Data: 0010000000000001000000000000e200
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+      6 11.649948      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 6: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 01 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000010000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+      7 11.650038      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 7: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 0a 00 00 00 00 00 00 e1 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a30000020a000000000000e101109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+      8 11.735413      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   47     Ethernet II
+
+Frame 8: Packet, 47 bytes on wire (376 bits), 47 bytes captured (376 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (33 bytes)
+
+0000  00 1f 02 44 00 00 00 02 00 00 00 00 00 00 00 01   ...D............
+0010  00 01 f0 13 01 30 19 00 00 00 00 00 00 00 00 00   .....0..........
+0020  f7                                                .
+    Data: 001f02440000000200000000000000010001f013013019000000000000000000f7
+    [Length: 33]
+
+No.     Time           Source                Destination           Protocol Length Info
+      9 11.735484      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   47     Ethernet II
+
+Frame 9: Packet, 47 bytes on wire (376 bits), 47 bytes captured (376 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (33 bytes)
+
+0000  00 1f 02 44 00 00 00 02 00 00 00 00 00 00 00 01   ...D............
+0010  00 01 f0 13 01 30 19 00 00 00 00 00 00 00 00 00   .....0..........
+0020  f7                                                .
+    Data: 001f02440000000200000000000000010001f013013019000000000000000000f7
+    [Length: 33]
+
+No.     Time           Source                Destination           Protocol Length Info
+     10 18.008381      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 10: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 0b 00 00 00 00 00 00 e1 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a30000020b000000000000e101109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+     11 18.275422      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 11: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 03 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000003000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+     12 18.275497      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 12: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 03 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000003000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+     13 18.280800      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 13: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 03 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000030000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     14 22.180505      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 14: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 00 00 01   ................
+0010  90 08 44 ff 00 00 00 00 00 00 00 00 00 00 00 00   ..D.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b0000000000000001900844ff0000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     15 22.210898      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 15: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 01 00 01   ................
+0010  90 08 44 00 00 00 00 00 00 00 00 00 00 00 00 00   ..D.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b0000000000010001900844000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     16 22.242404      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 16: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 02 00 01   ................
+0010  90 08 44 4a 00 00 00 00 00 00 00 00 00 00 00 00   ..DJ............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b00000000000200019008444a0000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     17 22.272809      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 17: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 03 00 01   ................
+0010  90 08 44 06 00 00 00 00 00 00 00 00 00 00 00 00   ..D.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b0000000000030001900844060000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     18 22.304155      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 18: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 04 00 01   ................
+0010  90 08 44 00 00 00 00 00 00 00 00 00 00 00 00 00   ..D.............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b0000000000040001900844000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     19 22.335602      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 19: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 05 00 01   ................
+0010  90 08 44 5f 00 00 00 00 00 00 00 00 00 00 00 00   ..D_............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b00000000000500019008445f0000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     20 22.365956      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 20: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 dc 00 00 00 0b 00 00 00 00 00 06 00 01   ................
+0010  90 08 44 20 00 00 00 00 00 00 00 00 00 00 00 00   ..D ............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 001300dc0000000b0000000000060001900844200000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     21 22.376410      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 21: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     22 22.376491      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 22: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     23 22.382719      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 23: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 00 00 01   ................
+0010  90 08 04 b7 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000000001900804b70000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     24 22.413851      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 24: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 01 00 01   ................
+0010  90 08 04 ff 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000010001900804ff0000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     25 22.443516      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 25: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 02 00 01   ................
+0010  90 08 04 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000020001900804000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     26 22.474734      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 26: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 03 00 01   ................
+0010  90 08 04 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000030001900804000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     27 22.505290      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 27: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 04 00 01   ................
+0010  90 08 04 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000040001900804000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     28 22.538087      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 28: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 05 00 01   ................
+0010  90 08 04 31 00 00 00 00 00 00 00 00 00 00 00 00   ...1............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000050001900804310000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     29 22.567053      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 29: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 06 00 01   ................
+0010  90 08 04 a3 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000060001900804a30000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     30 22.598366      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 30: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 07 00 01   ................
+0010  90 08 04 06 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000070001900804060000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     31 22.629573      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 31: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 08 00 01   ................
+0010  90 08 04 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000080001900804000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     32 22.660425      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 32: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 09 00 01   ................
+0010  90 08 04 a2 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000090001900804a20000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     33 22.691849      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 33: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 0a 00 01   ................
+0010  90 08 04 52 00 00 00 00 00 00 00 00 00 00 00 00   ...R............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c00000000000a0001900804520000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     34 22.722170      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 34: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 0b 00 01   ................
+0010  90 08 04 01 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c00000000000b0001900804010000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     35 22.752517      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 35: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 0c 00 01   ................
+0010  90 08 04 ff 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c00000000000c0001900804ff0000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     36 22.782926      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 36: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 0d 00 01   ................
+0010  90 08 04 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c00000000000d0001900804000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     37 22.813223      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 37: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 0e 00 01   ................
+0010  90 08 04 56 00 00 00 00 00 00 00 00 00 00 00 00   ...V............
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c00000000000e0001900804560000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     38 22.844658      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 38: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 0f 00 01   ................
+0010  90 08 04 06 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c00000000000f0001900804060000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     39 22.875059      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 39: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 13 00 9c 00 00 00 0c 00 00 00 00 00 10 00 01   ................
+0010  90 08 04 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0013009c0000000c0000000000100001900804000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     40 23.537668      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 40: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     41 23.537762      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 41: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     42 24.057744      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 42: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     43 24.057848      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 43: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     44 24.553388      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 44: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     45 24.553461      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 45: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     46 25.085156      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 46: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     47 25.085234      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 47: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     48 25.886859      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 48: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     49 25.886931      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 49: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     50 26.379486      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 50: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     51 26.379557      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 51: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0b 00 00 a0 00   ................
+    Data: 00100000000000000000000b0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     52 26.566037      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 52: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 0c 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a30000020c000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+     53 26.923083      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 53: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     54 26.923153      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 54: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     55 27.506379      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 55: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     56 27.506454      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 56: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     57 28.215001      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 57: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     58 28.215069      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 58: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     59 28.243976      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 59: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 04 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000004000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+     60 28.244046      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 60: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 04 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000004000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+     61 28.248097      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 61: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 04 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000040000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     62 28.851646      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 62: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     63 28.851713      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 63: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     64 29.394110      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 64: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     65 29.394179      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 65: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     66 29.968212      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 66: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     67 29.968284      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 67: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     68 30.426728      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 68: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     69 30.426803      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 69: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     70 31.002131      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 70: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     71 31.002204      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 71: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     73 31.525586      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 73: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     74 31.525653      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 74: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     75 32.068814      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 75: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     76 32.068883      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 76: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     77 32.594739      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 77: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     78 32.594815      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 78: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     79 33.160529      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 79: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     80 33.160586      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 80: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     81 33.711776      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 81: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     82 33.713445      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 82: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     83 35.314510      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 83: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     84 35.314586      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 84: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     85 35.579764      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 85: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 0d 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a30000020d000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+     86 36.367213      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 86: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     87 36.367282      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 87: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     89 37.284049      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 89: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     90 37.284118      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 90: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     91 38.290706      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 91: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 05 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000005000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+     92 38.290781      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 92: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 05 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000005000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+     93 38.296870      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 93: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 05 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000050000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+     94 38.375521      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 94: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     95 38.375646      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   30     Ethernet II
+
+Frame 95: Packet, 30 bytes on wire (240 bits), 30 bytes captured (240 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (16 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 0c 00 00 a0 00   ................
+    Data: 00100000000000000000000c0000a000
+    [Length: 16]
+
+No.     Time           Source                Destination           Protocol Length Info
+     96 40.772606      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 96: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 0e 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a30000020e000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+     98 47.258493      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 98: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 0f 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a30000020f000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+     99 48.167561      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 99: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 06 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000006000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+    100 48.167636      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 100: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 06 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000006000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+    101 48.173944      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 101: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 06 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000060000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+    102 56.556894      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 102: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 10 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a300000210000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+    103 58.208208      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 103: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 07 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000007000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+    104 58.208352      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 104: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 07 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000007000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+    105 58.214666      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 105: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 07 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000070000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+    107 62.372415      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 107: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 11 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a300000211000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]
+
+No.     Time           Source                Destination           Protocol Length Info
+    108 68.240639      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 108: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 08 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000008000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+    109 68.240743      Dell_b7:13:84         AvidTechnolo_a2:1d:46 0x885f   31     Ethernet II
+
+Frame 109: Packet, 31 bytes on wire (248 bits), 31 bytes captured (248 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: Dell_b7:13:84 (10:98:19:b7:13:84), Dst: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+    Destination: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (17 bytes)
+
+0000  00 11 00 00 00 00 00 08 00 00 00 00 00 00 00 01   ................
+0010  00                                                .
+    Data: 0011000000000008000000000000000100
+    [Length: 17]
+
+No.     Time           Source                Destination           Protocol Length Info
+    110 68.253757      AvidTechnolo_a2:1d:46 Dell_b7:13:84         0x885f   60     Ethernet II
+
+Frame 110: Packet, 60 bytes on wire (480 bits), 60 bytes captured (480 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Dell_b7:13:84 (10:98:19:b7:13:84)
+    Destination: Dell_b7:13:84 (10:98:19:b7:13:84)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 2]
+Data (46 bytes)
+
+0000  00 10 00 00 00 00 00 00 00 00 00 08 00 00 a0 00   ................
+0010  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ................
+0020  00 00 00 00 00 00 00 00 00 00 00 00 00 00         ..............
+    Data: 0010000000000000000000080000a000000000000000000000000000000000000000000000000000000000000000
+    [Length: 46]
+
+No.     Time           Source                Destination           Protocol Length Info
+    111 70.200769      AvidTechnolo_a2:1d:46 Broadcast             0x885f   64     Ethernet II
+
+Frame 111: Packet, 64 bytes on wire (512 bits), 64 bytes captured (512 bits) on interface \Device\NPF_{F34B8A3D-CCD2-4EB1-BB73-EEEB006E5B21}, id 0
+Ethernet II, Src: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46), Dst: Broadcast (ff:ff:ff:ff:ff:ff)
+    Destination: Broadcast (ff:ff:ff:ff:ff:ff)
+        .... ..1. .... .... .... .... = LG bit: Locally administered address (this is NOT the factory default)
+        .... ...1 .... .... .... .... = IG bit: Group address (multicast/broadcast)
+    Source: AvidTechnolo_a2:1d:46 (00:a0:7e:a2:1d:46)
+        .... ..0. .... .... .... .... = LG bit: Globally unique address (factory default)
+        .... ...0 .... .... .... .... = IG bit: Individual address (unicast)
+    Type: Unknown (0x885f)
+    [Stream index: 1]
+Data (50 bytes)
+
+0000  00 32 05 a3 00 00 02 12 00 00 00 00 00 00 e0 01   .2..............
+0010  10 98 19 b7 13 84 00 00 00 01 00 00 00 06 76 31   ..............v1
+0020  2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20   .08.....CNTRL|1 
+0030  00 00                                             ..
+    Data: 003205a300000212000000000000e001109819b71384000000010000000676312e30380000000000434e54524c7c31200000
+    [Length: 50]

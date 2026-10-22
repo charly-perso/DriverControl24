@@ -25,14 +25,6 @@ Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "DriverConfig", "DriverConfi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NativeReaperPluginDLL", "NativeReaperPluginDLL\NativeReaperPluginDLL.vcxproj", "{19CF4BBC-3A6E-43C8-95C9-A92A1B4C1BF2}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ReaperMedia", "ReaperMedia", "{8DFDCF7D-78E5-48AC-90EA-01C8EE1F1401}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\01 Let me out V10.5-master [chan 1].wav = ..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\01 Let me out V10.5-master [chan 1].wav
-		..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\01 Let me out V10.5-master [chan 2].wav = ..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\01 Let me out V10.5-master [chan 2].wav
-		..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\test.rpp = ..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\test.rpp
-		..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\tet2.rpp = ..\..\..\OneDrive - GROUPE ISAGRI SERVICES\Documents 1\REAPER Media\tet2.rpp
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

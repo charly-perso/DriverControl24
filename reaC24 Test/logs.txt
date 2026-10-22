@@ -1,0 +1,69 @@
+Microsoft Windows [version 10.0.26100.6584]
+(c) Microsoft Corporation. Tous droits réservés.
+
+C:\Windows\System32>cd..
+
+C:\Windows>cd..
+
+C:\>cd python
+Le chemin d’accès spécifié est introuvable.
+
+C:\>cd python27
+
+C:\Python27>python C:\Users\charl\OneDrive\Documents\reacontrol24\install\ReaControl24-Release\control24d.py --help
+Usage: control24d.py [options]
+
+control24d Communication Daemon         part of ReaControl24  Copyright
+(c)2018 Phase Walker          This program comes with ABSOLUTELY NO WARRANTY;
+This is free software, and you are welcome to redistribute it         under
+certain conditions; see COPYING.md for details.
+
+Options:
+  -h, --help            show this help message and exit
+  -d, --debug           logger should use debug level. default = off / INFO
+                        level
+  -o LOGDIR, --logdir=LOGDIR
+                        logger should create dir and files here. default =
+                        ./logs
+  -n NETWORK, --network=NETWORK
+                        Ethernet interface to the same network as the
+                        Control24. Default =
+                        {76EA65B6-D285-4E55-9D40-357489E39932}
+  -l LISTEN, --listen=LISTEN
+                        listen on given host:port. Default = 192.168.1.83:9123
+
+C:\Python27>python C:\Users\charl\OneDrive\Documents\reacontrol24\install\ReaControl24-Release\control24d.py -n -d
+{E1CECD01-6D4F-4A25-A0B3-B37A66803CCE} Ethernet 5
+{33B24DB3-AF7A-4DF1-83D5-89BA7A171E3D} Connexion au rÚseau local* 2
+{4AACD351-2026-4C7F-A096-24724950CC33} Ethernet 4
+{A75924D6-EC65-11E9-8DCE-806E6F6E6963}
+{C52AB8F7-09B3-44F0-8445-00495A3536C1} Connexion rÚseau Bluetooth
+{76EA65B6-D285-4E55-9D40-357489E39932} Wi-Fi
+{BECC6B94-22E8-41DF-A838-C11FD4EA7659} Connexion au rÚseau local* 1
+{417D3B6A-9B32-4327-B3D7-2F2A6FE5C416} Ethernet 3
+Traceback (most recent call last):
+  File "C:\Users\charl\OneDrive\Documents\reacontrol24\install\ReaControl24-Release\control24d.py", line 650, in <module>
+    main()
+  File "C:\Users\charl\OneDrive\Documents\reacontrol24\install\ReaControl24-Release\control24d.py", line 624, in main
+    'network'
+optparse.OptionError: option network: Specified network does not exist. Known networks are listed to the output.
+
+C:\Python27>python C:\Users\charl\OneDrive\Documents\reacontrol24\install\ReaControl24-Release\control24d.py -n {E1CECD01-6D4F-4A25-A0B3-B37A66803CCE} -d
+MP Listener waiting for connection at ('192.168.1.83', 9123)
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:50 retry:0 cmd:0xe0 nc:1 00 00 00 00 00 00 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 00 00 00 00 00 00 00 00 01 00 00 00 06 76
+Desk detected: CNTRL|1  1.08 at 00 a0 7e a2 1d 46
+Sending Packet of 30 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 10 00 00 00 00 00 01 00 00 00 00 00 00 e2 00
+Sending Packet of 45 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 1f 02 44 00 00 00 02 00 00 00 00 00 00 00 01 f0 13 01 30 19 00 00 00 00 00 00 00 00 00 f7
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:1 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:51 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:2 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
+Packet Received: to:ff ff ff ff ff ff from:00 a0 7e a2 1d 46 prot:88 5f bytes:50 c_cnt:0 s_cnt:52 retry:0 cmd:0xe1 nc:1 00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76 31 2e 30 38 00 00 00 00 00 43 4e 54 52 4c 7c 31 20 00 00
+BCAST d:CNTRL|1  v:1.08 u1:00 e0 4c 68 00 11 00 00 00 01 00 00 00 06 76
+TODESK KeepAlive
+Sending Packet of 31 bytes: 00 a0 7e a2 1d 46 00 e0 4c 68 00 11 88 5f 00 11 00 00 00 00 00 03 00 00 00 00 00 00 00 01 00
+Packet Received: to:00 e0 4c 68 00 11 from:00 a0 7e a2 1d 46 prot:88 5f bytes:16 c_cnt:3 s_cnt:0 retry:0 cmd:0xa0 nc:0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+FROMDESK ACK
