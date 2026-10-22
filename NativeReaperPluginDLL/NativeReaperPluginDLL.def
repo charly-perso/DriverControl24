@@ -1,0 +1,3 @@
+LIBRARY "reaper_nativereaperplugin"
+EXPORTS
+    REAPER_PLUGIN_ENTRYPOINT

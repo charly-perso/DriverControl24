@@ -8,6 +8,7 @@ Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports DriverReaperControl24.Control24.Commands
 Imports DriverReaperControl24.Utility.Bit
+Imports DriverReaperControl24.Utility
 
 
 Namespace Control24
@@ -35,6 +36,54 @@ Namespace Control24
     {Commands.AutoMode.Read, 4},
     {Commands.AutoMode.None, 5}
 }
+            Public Function GetScribbleTextfromDouble(Value As Double) As String
+                Dim ic = CultureInfo.InvariantCulture
+                Dim ValueAbs = Math.Abs(Value)
+                Dim Text As String = ""
+                ' ── [1 000 000 000+] → ±inf ───────────────────────────────────
+                If ValueAbs >= 1000000000 Then
+                    If Value < 0 Then
+                        Text = "-inf"
+                    Else
+                        Text = "+inf"
+                    End If
+
+                    ' ── [1 000 000 .. 999 999 999] → ex : "12m3" ──────────────────
+                ElseIf ValueAbs >= 1000000 Then
+                    Dim newVal As Double = Math.Round(Value / 1000000.0, 1)
+                    Text = newVal.ToString("F0", ic) & "m" & GetCombineGlyph(newVal)
+
+                    ' ── [1 000 .. 999 999] → ex : "1k5" ──────────────────────────
+                ElseIf ValueAbs >= 1000 Then
+                    Dim newVal As Double = Math.Round(Value / 1000.0, 1)
+                    Text = newVal.ToString("F0", ic) & "k" & GetCombineGlyph(newVal)
+
+                    ' ── [100 .. 999] → entier sans décimale ───────────────────────
+                ElseIf ValueAbs >= 100 Then
+                    Text = Value.ToString("F0", ic)
+
+                    ' ── [0 .. 99] → entier + décimale combinée ────────────────────
+                Else
+                    Text = Value.ToString("F0", ic) & GetCombineGlyph(Value)
+                End If
+
+                Return Text
+            End Function
+            Private Function GetCombineGlyph(Number As Double) As String
+                Dim parts = Number.ToString("G", CultureInfo.InvariantCulture).Split("."c)
+
+                If parts.Length < 2 OrElse parts(1).Length = 0 Then
+                    Return "."
+                End If
+
+                Dim nco As Integer = AscW(parts(1)(0))
+
+                If nco <> 48 Then
+                    Return ChrW(nco - 26).ToString()
+                End If
+
+                Return "."
+            End Function
         End Module
 
 
@@ -249,10 +298,12 @@ Namespace Control24
             End Sub
 
             Public Sub ButtonCmd_OnButtonStatusChange(Status As Boolean) Handles _ButtonCmd.OnButtonStatusChange
-
+                _ButtonCmd.Is_On = Status
                 If Status Then
+
                     RaiseEvent OnButtonPressed(_TrackNb)
                 Else
+
                     RaiseEvent OnButtonReleased(_TrackNb)
                 End If
             End Sub
@@ -275,10 +326,25 @@ Namespace Control24
                     Return _IsBlinking
                 End Get
                 Set
-                    _IsBlinking = Value
-
                     If Value = False Then
                         Led = False
+                    End If
+
+                    If Value <> _IsBlinking Then
+
+                        _IsBlinking = Value
+
+
+
+
+                        'If Me.Name.Contains("Mute") Or Me.Name.Contains("Solo") Then
+                        '    If _IsBlinking Then
+                        '        Console.WriteLine(Me.Name & "|Blinking")
+                        '    Else
+                        '        Console.WriteLine(Me.Name & "|Not Blinking")
+                        '    End If
+                        'End If
+
                     End If
                 End Set
             End Property
@@ -288,10 +354,23 @@ Namespace Control24
                     Return _Led
                 End Get
                 Set
-                    '_IsBlinking = False
-                    _Led = Value
-                    ButtonCmd.Is_On = _Led
-                    ButtonCmd.SendCmd()
+                    If Value <> _Led Then
+
+                        _Led = Value
+                        ButtonCmd.Is_On = _Led
+                        ButtonCmd.SendCmd()
+
+                        'If Me.Name.Contains("Mute") Or Me.Name.Contains("Solo") Then
+                        '    If _Led Then
+                        '        Console.WriteLine(Me.Name & "|On")
+                        '    Else
+                        '        Console.WriteLine(Me.Name & "|Off")
+                        '    End If
+
+                        'End If
+
+                    End If
+
                 End Set
             End Property
 
@@ -350,10 +429,12 @@ Namespace Control24
                     Return _IsBlinking
                 End Get
                 Set
-                    _IsBlinking = Value
-                    'remet la led on a l'arret du blinking
-                    If Value = False Then
-                        _AutoModeLedCmd.AutoModeLed = _AutoMode
+                    If Value <> _IsBlinking Then
+                        _IsBlinking = Value
+                        'remet la led on a l'arret du blinking
+                        If Value = False Then
+                            _AutoModeLedCmd.AutoModeLed = _AutoMode
+                        End If
                     End If
                 End Set
             End Property
@@ -366,9 +447,11 @@ Namespace Control24
                     Return _AutoMode
                 End Get
                 Set
-                    _AutoMode = Value
-                    _AutoModeLedCmd.AutoModeLed = _AutoMode
-                    RaiseEvent On_AutomodeChange(_AutoMode)
+                    If Value <> _AutoMode Then
+                        _AutoMode = Value
+                        _AutoModeLedCmd.AutoModeLed = _AutoMode
+                        RaiseEvent On_AutomodeChange(_AutoMode)
+                    End If
                 End Set
             End Property
 
@@ -469,7 +552,9 @@ Namespace Control24
                     Return _beatsPerBar
                 End Get
                 Set
-                    _beatsPerBar = Value
+                    If Value <> _beatsPerBar Then
+                        _beatsPerBar = Value
+                    End If
                 End Set
             End Property
 
@@ -478,7 +563,10 @@ Namespace Control24
                     Return _bpm
                 End Get
                 Set
-                    _bpm = Value
+                    If Value <> _bpm Then
+                        _bpm = Value
+                    End If
+
                 End Set
             End Property
 
@@ -491,12 +579,14 @@ Namespace Control24
                     Return _ClockMode
                 End Get
                 Set
-                    _ClockMode = Value
-                    _ClockLedCmd.ClockMode = _ClockMode
-                    _ClockCmd.ClockMode = _ClockMode
-                    ' ── Renvoie la valeur courante avec le nouveau mode ────────
-                    If _Clock_Value IsNot Nothing AndAlso _Clock_Value.Length > 0 Then
-                        _ClockCmd.Clock_Value = _Clock_Value
+                    If Value <> _ClockMode Then
+                        _ClockMode = Value
+                        _ClockLedCmd.ClockMode = _ClockMode
+                        _ClockCmd.ClockMode = _ClockMode
+                        ' ── Renvoie la valeur courante avec le nouveau mode ────────
+                        If _Clock_Value IsNot Nothing AndAlso _Clock_Value.Length > 0 Then
+                            _ClockCmd.Clock_Value = _Clock_Value
+                        End If
                     End If
                 End Set
             End Property
@@ -510,8 +600,10 @@ Namespace Control24
                     Return _Clock_Value
                 End Get
                 Set
-                    _Clock_Value = Value
-                    _ClockCmd.Clock_Value = _Clock_Value
+                    If Value <> _Clock_Value Then
+                        _Clock_Value = Value
+                        _ClockCmd.Clock_Value = _Clock_Value
+                    End If
                 End Set
             End Property
 
@@ -680,12 +772,15 @@ Namespace Control24
             Private _IsShowingTemp As Boolean = False
             Private _TempTimer As System.Threading.Timer
             Private _pendingTempText As String = Nothing
-            Private Const TempDisplayMs As Integer = 2000
+            Public TempDisplayMs As Integer = 2000
             Event OnOriginaltextBack()
             ' ── Clignotement ──────────────────────────────────────────────────
             Private _IsBlinking As Boolean = False
             Private _BlinkOriginalText As String = String.Empty
             Private _prevBlinkingState As Boolean = False
+
+            Public Event OnScribbleTextDisplay(Track_Nb As Integer, Text As String)
+
 
             ''' <summary>
             ''' Active ou désactive le clignotement du texte du ScribbleStrip.
@@ -710,6 +805,7 @@ Namespace Control24
                 End Set
             End Property
 
+
             ''' <summary>
             ''' Appelé par le timer de blink du <see cref="C24_Desk"/>.
             ''' Fait clignoter le texte si <see cref="IsBlinking"/> est activé.
@@ -730,11 +826,17 @@ Namespace Control24
                     Return _Text
                 End Get
                 Set
-                    _Text = Value
-                    _ScribbleStripCmd.Text = _Text
-                    ' ── Met à jour le texte de référence du blink ─────────────
-                    If _IsBlinking Then
-                        _BlinkOriginalText = _Text
+                    If Value <> _Text Then
+                        _Text = Value
+                        _OriginalText = Value
+                        _ScribbleStripCmd.Text = _Text
+
+                        RaiseEvent OnScribbleTextDisplay(_ScribbleStripCmd.Track_Number, Text)
+                        ' ── Met à jour le texte de référence du blink ─────────────
+                        If _IsBlinking Then
+                            _BlinkOriginalText = _Text
+                        End If
+                        'Console.WriteLine(Me.Name & " SetTxt:" & Value)
                     End If
                 End Set
             End Property
@@ -745,8 +847,13 @@ Namespace Control24
                     Return _Value
                 End Get
                 Set
-                    _Value = Value
-                    _ScribbleStripCmd.Value = _Value
+                    If Value <> _Value Then
+                        _Value = Value
+                        _Text = Value
+
+                        RaiseEvent OnScribbleTextDisplay(_ScribbleStripCmd.Track_Number, _Text)
+                        _ScribbleStripCmd.Value = _Value
+                    End If
                 End Set
             End Property
 
@@ -763,7 +870,8 @@ Namespace Control24
             ''' et le texte temporaire est mis à jour.
             ''' </summary>
             ''' <param name="tempText">Texte à afficher temporairement (max 4 caractères).</param>
-            Public Sub ShowTempText(tempText As String)
+            Public Sub ShowTempText(tempText As String, Optional _TempDisplayMs As Integer = 2000)
+                TempDisplayMs = _TempDisplayMs
                 If Not _IsShowingTemp Then
                     _OriginalText = _ScribbleStripCmd.Text
                     _IsShowingTemp = True
@@ -783,7 +891,8 @@ Namespace Control24
             ''' </summary>
             ''' <param name="text1">Premier texte à afficher (max 4 caractères).</param>
             ''' <param name="text2">Deuxième texte à afficher à la suite (max 4 caractères).</param>
-            Public Sub ShowTempText(text1 As String, text2 As String)
+            Public Sub ShowTempText(text1 As String, text2 As String, Optional _TempDisplayMs As Integer = 2000)
+                TempDisplayMs = _TempDisplayMs
                 If Not _IsShowingTemp Then
                     _OriginalText = _ScribbleStripCmd.Text
                     _IsShowingTemp = True
@@ -810,7 +919,11 @@ Namespace Control24
                     RaiseEvent OnOriginaltextBack()
                 End If
             End Sub
-
+            Public Sub ResumeText()
+                If _IsShowingTemp Then
+                    OnTempTimer(Nothing)
+                End If
+            End Sub
             Sub New(Name As String, Track_Nb As Integer)
                 _Name = Name
                 _ScribbleStripCmd = New ScribbleStrip_Cmd(Track_Nb)
@@ -836,16 +949,17 @@ Namespace Control24
             Private _Min_Value As Double = 0
             Private _Max_Value As Double = 1
             Private _Step_Value As Double
-            Private _Value As Double = 0
+            Private _Value As Double? = Nothing
             Private _Velocity_sensible As Boolean = False
             Private _LedMode As LedModeType
-            Private _Value2 As Double = 0
+            Private _Value2 As Double? = Nothing
             Private _VpotMode As VpotModeType = VpotModeType.Value
             Private _Adjust_Value2 As Boolean = False
             Private _Value_TextList As List(Of (item As String, Checked As Boolean))
             Private _SelectedItem_Index As Integer = 0
             Private _TrackNb As Integer? = Nothing
-            Private _Display_Value2 As Boolean = False
+
+            Private ActualLedStatus As BitArray = New BitArray(LedNumber)
 
             ' ── Strips étendus pour l'affichage long (4 + n×4 caractères) ────
             Private _ExtendedScribbles As New List(Of C24_ScribbleStrip)
@@ -859,6 +973,9 @@ Namespace Control24
             Private _FxParam_LargeStepValue As Double? = Nothing
             Private _FxParamValueToDisplay As String
             Private _FxParam_StepValue As Double?
+            Private _DisableVpot As Boolean
+            Private _ChannelScribbleScreen As C24_ScribbleScreen
+
             Private Const RestoreDelayMs As Integer = 2000
 
             Public Event OnVpotValueChange(TrackNb As Integer, Value As Double)
@@ -866,13 +983,25 @@ Namespace Control24
             Public Event OnVpotSelectedItemChange(TrackNb As Integer, SelectedItem_Index As Integer)
             Public Event OnScribbleScriptBackToOriginalText()
 
+
+            Public Property DisableVpot As Boolean
+                Get
+                    Return _DisableVpot
+                End Get
+                Set
+                    _DisableVpot = Value
+                End Set
+            End Property
+
             Public Property FxParamValueToDisplay As String
                 Get
                     Return _FxParamValueToDisplay
                 End Get
                 Set
-                    _FxParamValueToDisplay = Value
-                    RefreshScribbleStrip(Nothing)
+                    If Value <> _FxParamValueToDisplay Then
+                        _FxParamValueToDisplay = Value
+                        RefreshScribbleStrip(Nothing)
+                    End If
                 End Set
             End Property
 
@@ -881,13 +1010,22 @@ Namespace Control24
                     Return _ScribbleScriptsBlinking
                 End Get
                 Set
-                    _ScribbleScriptsBlinking = Value
+                    If Value <> _ScribbleScriptsBlinking Then
+                        _ScribbleScriptsBlinking = Value
 
-                    ScribbleStrip.IsBlinking = Value
-                    For Each es In ExtendedScribbles
-                        es.IsBlinking = Value
-                    Next
-
+                        ScribbleStrip.IsBlinking = Value
+                        For Each es In ExtendedScribbles
+                            es.IsBlinking = Value
+                        Next
+                    End If
+                End Set
+            End Property
+            Public Property ChannelScribbleScreen As C24_ScribbleScreen
+                Get
+                    Return _ChannelScribbleScreen
+                End Get
+                Set
+                    _ChannelScribbleScreen = Value
                 End Set
             End Property
 
@@ -955,24 +1093,20 @@ Namespace Control24
                 VolumeLinear
                 Value
                 TextList
+                TextListWithChannelBar
                 FxParamLinear
             End Enum
 
-            Public Property Display_Value2 As Boolean
-                Get
-                    Return _Display_Value2
-                End Get
-                Set
-                    _Display_Value2 = Value
-                End Set
-            End Property
+
 
             Public Property Adjust_Value2 As Boolean
                 Get
                     Return _Adjust_Value2
                 End Get
                 Set
-                    _Adjust_Value2 = Value
+                    If Value <> _Adjust_Value2 Then
+                        _Adjust_Value2 = Value
+                    End If
                 End Set
             End Property
 
@@ -981,34 +1115,36 @@ Namespace Control24
                     Return _VpotMode
                 End Get
                 Set
-                    _VpotMode = Value
-                    Select Case VpotMode
-                        Case VpotModeType.Pan
-                            LedMode = LedModeType.Central_Dot
-                            _Min_Value = -1
-                            _Max_Value = 1
-                        Case VpotModeType.VolumeLinear
-                            LedMode = LedModeType.Gauge
-                            _Min_Value = 0
-                            _Max_Value = 2
-                        Case VpotModeType.TextList
-                            LedMode = LedModeType.Dot
-                            _Min_Value = 0
-                            If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
-                                _Max_Value = Value_TextList.Count - 1
-                            Else
-                                _Max_Value = 0
-                            End If
-                        Case VpotModeType.FxParamLinear
-                            _Min_Value = 0
-                            _Max_Value = 1
+                    If Value <> _VpotMode Then
+                        _VpotMode = Value
+                        Select Case VpotMode
+                            Case VpotModeType.Pan
+                                LedMode = LedModeType.Central_Dot
+                                _Min_Value = -1
+                                _Max_Value = 1
+                            Case VpotModeType.VolumeLinear
+                                LedMode = LedModeType.Gauge
+                                _Min_Value = 0
+                                _Max_Value = 2
+                            Case VpotModeType.TextList, VpotModeType.TextListWithChannelBar
+                                LedMode = LedModeType.Dot
+                                _Min_Value = 0
+                                If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                                    _Max_Value = Value_TextList.Count - 1
+                                Else
+                                    _Max_Value = 0
+                                End If
+                            Case VpotModeType.FxParamLinear
+                                _Min_Value = 0
+                                _Max_Value = 1
 
-                            LedMode = LedModeType.Gauge
-                        Case Else
-                            LedMode = LedModeType.Dot
-                            _Min_Value = 0
-                            _Max_Value = 1
-                    End Select
+                                LedMode = LedModeType.Gauge
+                            Case Else
+                                LedMode = LedModeType.Dot
+                                _Min_Value = 0
+                                _Max_Value = 1
+                        End Select
+                    End If
                 End Set
             End Property
 
@@ -1017,7 +1153,9 @@ Namespace Control24
                     Return _Min_Value
                 End Get
                 Set
-                    _Min_Value = Value
+                    If Value <> _Min_Value Then
+                        _Min_Value = Value
+                    End If
                 End Set
             End Property
 
@@ -1026,7 +1164,9 @@ Namespace Control24
                     Return _Max_Value
                 End Get
                 Set
-                    _Max_Value = Value
+                    If Value <> _Max_Value Then
+                        _Max_Value = Value
+                    End If
                 End Set
             End Property
             Public Property FxParam_SmallStepValue As Double?
@@ -1034,7 +1174,9 @@ Namespace Control24
                     Return _FxParam_SmallStepValue
                 End Get
                 Set
-                    _FxParam_SmallStepValue = Value
+                    If Value <> _FxParam_SmallStepValue Then
+                        _FxParam_SmallStepValue = Value
+                    End If
                 End Set
             End Property
             Public Property FxParam_LargeStepValue As Double?
@@ -1042,7 +1184,9 @@ Namespace Control24
                     Return _FxParam_LargeStepValue
                 End Get
                 Set
-                    _FxParam_LargeStepValue = Value
+                    If Value <> _FxParam_LargeStepValue Then
+                        _FxParam_LargeStepValue = Value
+                    End If
                 End Set
             End Property
             Public Property FxParam_StepValue As Double?
@@ -1050,7 +1194,9 @@ Namespace Control24
                     Return _FxParam_StepValue
                 End Get
                 Set
-                    _FxParam_StepValue = Value
+                    If Value <> _FxParam_StepValue Then
+                        _FxParam_StepValue = Value
+                    End If
                 End Set
             End Property
 
@@ -1080,26 +1226,36 @@ Namespace Control24
                 End Get
             End Property
 
-            Public Property Value As Double
+            Public Property Value As Double?
                 Get
                     Return _Value
                 End Get
                 Set
-                    _Value = Value
+                    If Value IsNot Nothing AndAlso Not DisableVpot Then
+                        'Console.WriteLine(Value)
+                        Dim newValue = Math.Round(Math.Min(Math.Max(Value.Value, Min_Value), Max_Value), 2)
+                        If _Value Is Nothing OrElse newValue <> _Value.Value Then
+                            _Value = newValue
+                            RefreshLedStatus()
+                        End If
+                    End If
 
-                    _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
-
-                    RefreshLedStatus()
                 End Set
             End Property
 
-            Public Property Value2 As Double
+            Public Property Value2 As Double?
                 Get
                     Return _Value2
                 End Get
                 Set
-                    _Value2 = Math.Min(Math.Max(Value, Min_Value), Max_Value)
-                    RefreshLedStatus()
+                    If Value IsNot Nothing AndAlso Not DisableVpot Then
+                        Dim newValue2 = Math.Round(Math.Min(Math.Max(Value.Value, Min_Value), Max_Value), 2)
+                        If _Value Is Nothing OrElse newValue2 <> _Value.Value Then
+                            _Value2 = newValue2
+                            RefreshLedStatus()
+                        End If
+                    End If
+
                 End Set
             End Property
 
@@ -1108,7 +1264,9 @@ Namespace Control24
                     Return _Velocity_sensible
                 End Get
                 Set
-                    _Velocity_sensible = Value
+                    If Value <> _Velocity_sensible Then
+                        _Velocity_sensible = Value
+                    End If
                 End Set
             End Property
 
@@ -1117,13 +1275,15 @@ Namespace Control24
                     Return _Value_TextList
                 End Get
                 Set
-                    _Value_TextList = Value
+                    If Value IsNot _Value_TextList Then
+                        _Value_TextList = Value
+                    End If
                 End Set
             End Property
 
 
             Public Enum LedModeType
-                off
+
                 Dot
                 Central_Dot
                 Gauge
@@ -1136,7 +1296,9 @@ Namespace Control24
                     Return _LedMode
                 End Get
                 Set
-                    _LedMode = Value
+                    If Value <> _LedMode Then
+                        _LedMode = Value
+                    End If
                 End Set
             End Property
 
@@ -1145,13 +1307,15 @@ Namespace Control24
                     Return _SelectedItem_Index
                 End Get
                 Set
-                    _SelectedItem_Index = Value
-                    RefreshSelectedItem()
-                    If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
-                        _Min_Value = 0
-                        _Max_Value = Value_TextList.Count - 1
-                        _Value = _SelectedItem_Index
-                        RefreshLedStatus()
+                    If Value <> _SelectedItem_Index Then
+                        _SelectedItem_Index = Value
+                        RefreshSelectedItem()
+                        If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                            _Min_Value = 0
+                            _Max_Value = Value_TextList.Count - 1
+                            _Value = _SelectedItem_Index
+                            RefreshLedStatus()
+                        End If
                     End If
                 End Set
             End Property
@@ -1170,6 +1334,7 @@ Namespace Control24
                 For i As Integer = 0 To _ExtendedScribbles.Count - 1
                     _ExtendedScribbles(i).Text = padded.Substring(4 + i * 4, 4)
                 Next
+
             End Sub
             ''' <summary>
             ''' Affiche un texte temporaire sur le strip principal et tous les strips étendus
@@ -1220,6 +1385,11 @@ Namespace Control24
                             SetAllScribbleText(item_text)
                         End If
                     End If
+
+                    If VpotMode = VpotModeType.TextListWithChannelBar AndAlso ChannelScribbleScreen IsNot Nothing Then
+                        ChannelScribbleScreen.ShowTempText(item_text)
+                    End If
+
                 End If
             End Sub
 
@@ -1266,81 +1436,106 @@ Namespace Control24
                 If Value_TextList Is Nothing OrElse Value_TextList.Count = 0 Then
                     Return False
                 End If
+
                 For i = 0 To Value_TextList.Count - 1
                     If Value_TextList(i).item = itemText Then
-                        SelectedItem_Index = i
+                        If i <> _SelectedItem_Index Then
+                            SelectedItem_Index = i
+                        Else
+                            RefreshSelectedItem()
+                        End If
                         Return True
                     End If
                 Next
+
                 Return False
             End Function
 
             Public Sub UpdateValueFromCmd(Optional Manual_Rotate_Velocity As Integer? = Nothing) Handles _VpotCmd.OnCmdChange
-                If Manual_Rotate_Velocity IsNot Nothing Then
-                    Dim Value As Integer = Manual_Rotate_Velocity
+                If DisableVpot = False Then
 
-                    _VpotCmd.Rotate_Velocity = Value
-                End If
-                Select Case VpotMode
-                    Case VpotModeType.Pan
+                    If Manual_Rotate_Velocity IsNot Nothing Then
+                        Dim Value As Integer = Manual_Rotate_Velocity
 
-                        If Adjust_Value2 Then
-                            If Math.Abs(_Value2) <> 0 AndAlso Math.Abs(_Value2) <= 0.05 Then
-                                _Value2 = 0
+                        _VpotCmd.Rotate_Velocity = Value
+                    End If
+                    Select Case VpotMode
+                        Case VpotModeType.Pan
+
+                            If Adjust_Value2 Then
+                                If _Value2 IsNot Nothing Then
+                                    If Math.Abs(_Value2.Value) <> 0 AndAlso Math.Abs(_Value2.Value) <= 0.05 Then
+                                        _Value2 = 0
+                                    Else
+                                        _Value2 += _VpotCmd.Rotate_Velocity * Step_Value
+                                        _Value2 = Math.Round(Math.Min(Math.Max(_Value2.Value, Min_Value), Max_Value), 2)
+                                    End If
+                                    RefreshLedStatus()
+                                    RefreshScribbleStrip(_Value2 * 100)
+                                    RaiseEvent OnVpotValue2Change(_TrackNb, _Value2)
+                                End If
+
                             Else
-                                _Value2 += _VpotCmd.Rotate_Velocity * Step_Value
-                                _Value2 = Math.Round(Math.Min(Math.Max(_Value2, Min_Value), Max_Value), 2)
+                                If _Value IsNot Nothing Then
+
+                                    If Math.Abs(_Value.Value) <> 0 AndAlso Math.Abs(_Value.Value) <= 0.05 Then
+                                        _Value = 0
+                                    Else
+
+                                        _Value += _VpotCmd.Rotate_Velocity * Step_Value
+
+                                        _Value = Math.Round(Math.Min(Math.Max(_Value.Value, Min_Value), Max_Value), 2)
+
+                                    End If
+                                    RefreshLedStatus()
+                                    RefreshScribbleStrip(_Value * 100)
+                                    RaiseEvent OnVpotValueChange(_TrackNb, _Value)
+                                End If
+
+
                             End If
-                            RefreshLedStatus()
-                            RefreshScribbleStrip(_Value2 * 100)
-                            RaiseEvent OnVpotValue2Change(_TrackNb, _Value2)
-                        Else
-                            If Math.Abs(_Value) <> 0 AndAlso Math.Abs(_Value) <= 0.05 Then
-                                _Value = 0
-                            Else
+
+                        Case VpotModeType.VolumeLinear
+                            If _Value IsNot Nothing Then
 
                                 _Value += _VpotCmd.Rotate_Velocity * Step_Value
-
-                                _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
-
-                            End If
-                            RefreshLedStatus()
-                            RefreshScribbleStrip(_Value * 100)
-                            RaiseEvent OnVpotValueChange(_TrackNb, _Value)
-
-                        End If
-
-                    Case VpotModeType.VolumeLinear
-                        _Value += _VpotCmd.Rotate_Velocity * Step_Value
-                        _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 2)
-                        RefreshLedStatus()
-                        RefreshScribbleStrip(Reaper.SLIDER2DB(_Value))
-                        RaiseEvent OnVpotValueChange(_TrackNb, _Value)
-
-                    Case VpotModeType.FxParamLinear
-                        _Value += _VpotCmd.Rotate_Velocity * Step_Value
-                        _Value = Math.Round(Math.Min(Math.Max(_Value, Min_Value), Max_Value), 4)
-                        RefreshLedStatus()
-                        RaiseEvent OnVpotValueChange(_TrackNb, _Value)
-
-
-                    Case VpotModeType.TextList
-                        LedMode = LedModeType.Dot
-                        If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
-                            Min_Value = 0
-                            Max_Value = Value_TextList.Count - 1
-                            Dim [step] As Integer = Math.Sign(_VpotCmd.Rotate_Velocity)
-                            Dim newIdx As Integer = Math.Min(
-                                Math.Max(_SelectedItem_Index + [step], 0),
-                                Value_TextList.Count - 1)
-                            If newIdx <> _SelectedItem_Index Then
-                                SelectedItem_Index = newIdx
-                                _Value = newIdx
+                                _Value = Math.Round(Math.Min(Math.Max(_Value.Value, Min_Value), Max_Value), 2)
                                 RefreshLedStatus()
-                                RaiseEvent OnVpotSelectedItemChange(_TrackNb, SelectedItem_Index)
+                                RefreshScribbleStrip(Reaper.SLIDER2DB(_Value))
+                                RaiseEvent OnVpotValueChange(_TrackNb, _Value)
                             End If
-                        End If
-                End Select
+
+
+                        Case VpotModeType.FxParamLinear
+                            If _Value IsNot Nothing Then
+                                _Value += _VpotCmd.Rotate_Velocity * Step_Value
+                                _Value = Math.Round(Math.Min(Math.Max(_Value.Value, Min_Value), Max_Value), 4)
+                                RefreshLedStatus()
+                                RaiseEvent OnVpotValueChange(_TrackNb, _Value)
+                            End If
+
+
+
+                        Case VpotModeType.TextList, VpotModeType.TextListWithChannelBar
+                            LedMode = LedModeType.Dot
+                            If Value_TextList IsNot Nothing AndAlso Value_TextList.Count > 0 Then
+                                Min_Value = 0
+                                Max_Value = Value_TextList.Count - 1
+                                Dim [step] As Integer = Math.Sign(_VpotCmd.Rotate_Velocity)
+                                Dim newIdx As Integer = Math.Min(
+                                    Math.Max(_SelectedItem_Index + [step], 0),
+                                    Value_TextList.Count - 1)
+                                If newIdx <> _SelectedItem_Index Then
+                                    SelectedItem_Index = newIdx
+                                    _Value = newIdx
+                                    RefreshLedStatus()
+                                    RaiseEvent OnVpotSelectedItemChange(_TrackNb, SelectedItem_Index)
+                                End If
+                            End If
+
+                    End Select
+                End If
+
             End Sub
 
 
@@ -1404,94 +1599,150 @@ Namespace Control24
             Public Sub InitTextList(items As IReadOnlyList(Of String), checkedItems As IReadOnlyList(Of String))
                 Dim list As New List(Of (item As String, Checked As Boolean))
                 For Each txt In items
-                    list.Add((txt, checkedItems.Contains(txt)))
+                    If checkedItems IsNot Nothing AndAlso checkedItems.Count > 0 Then
+                        list.Add((txt, checkedItems.Contains(txt)))
+                    Else
+                        list.Add((txt, False))
+                    End If
+
                 Next
                 Value_TextList = list
             End Sub
 
 #Region "Led"
-            Private Sub RefreshLedStatus()
+            Public Sub RefreshLedStatus()
+                'Console.Write(Me.Name & " [")
+                Dim NewLedStatus As BitArray = New BitArray(LedNumber)
+                If _Value IsNot Nothing Then
+                    'Console.Write("(" & _Value.Value & ")")
+                    NewLedStatus = GetLedsStatus(_Value.Value)
+                    If _Value2 IsNot Nothing Then
+                        Dim Value2LedStatus As BitArray = GetLedsStatus(_Value2)
+                        NewLedStatus = NewLedStatus.Or(Value2LedStatus)
+                    End If
 
-                Dim ValueLedStatus As BitArray = GetLedsStatus(_Value)
-                If Display_Value2 Then
-                    Dim Value2LedStatus As BitArray = GetLedsStatus(_Value2)
-                    ValueLedStatus = ValueLedStatus.Or(Value2LedStatus)
+
+                Else
+                    'Console.Write("(Null)")
+
+
                 End If
-                VpotLedCmd.Leds_Status = ValueLedStatus
 
-                'display led status 
-                'Console.WriteLine(Me.Name & " [")
-                'For Each bit In ValueLedStatus
-                '    Console.Write(If(bit, "1", "0") & ",")
-                'Next
-                'Console.Write("]")
+                Dim BitChanged As Boolean = False
+                For i = 0 To NewLedStatus.Count - 1
+                    If NewLedStatus(i) <> ActualLedStatus(i) Then
+                        BitChanged = True
+                        Exit For
+                    End If
+                Next
+
+                If BitChanged Then
+                    VpotLedCmd.Leds_Status = NewLedStatus
+                    ActualLedStatus = DirectCast(NewLedStatus.Clone(), BitArray)
+
+                    ''display led status 
+                    'Console.Write(" [")
+                    'For Each bit In VpotLedCmd.Leds_Status
+                    '    Console.Write(If(bit, "1", "0") & ",")
+                    'Next
+
+                End If
+
+
+                'Console.Write("]" & vbCrLf)
+
+            End Sub
+            Public Sub SetLedFromNormValue(NormValue As Double)
+                Dim NewLedStatus As BitArray = New BitArray(LedNumber)
+
+                NewLedStatus = GetLedsStatus(NormValue)
+
+
+
+                Dim BitChanged As Boolean = False
+                For i = 0 To NewLedStatus.Count - 1
+                    If NewLedStatus(i) <> ActualLedStatus(i) Then
+                        BitChanged = True
+                        Exit For
+                    End If
+                Next
+
+                If BitChanged Then
+                    VpotLedCmd.Leds_Status = NewLedStatus
+                    ActualLedStatus = DirectCast(NewLedStatus.Clone(), BitArray)
+
+                End If
+
 
             End Sub
 
             Public Sub SetLedsOff()
-                LedMode = LedModeType.off
+
+                _Value = Nothing
+                _Value2 = Nothing
                 RefreshLedStatus()
+
+
             End Sub
 
             Private Function GetLedsStatus(Value As Double) As BitArray
                 Dim LedsStatus As New BitArray(LedNumber)
 
-                If LedMode = LedModeType.off Then
-                    Return LedsStatus
-                ElseIf LedMode = LedModeType.Dot Then
-                    LedsStatus.Item(DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)) = True
+
+                If LedMode = LedModeType.Dot Then
+                    LedsStatus.Item(GetLedIndex(Value, Min_Value, Max_Value, LedNumber)) = True
                 ElseIf LedMode = LedModeType.Gauge Then
-                    Dim LedIndex As Integer = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
+                    Dim LedIndex As Integer = GetLedIndex(Value, Min_Value, Max_Value, LedNumber)
                     For i = 0 To LedIndex
-                        LedsStatus.Item(i) = True
-                    Next
-                ElseIf LedMode = LedModeType.Central_Dot Then
-                    Dim roundedValue As Double = Math.Round(Value, 2)
-                    Dim Middle As Double = Math.Round((Min_Value + Max_Value) / 2.0, 2)
-                    Dim LedIndex As Integer = 0
-
-                    If roundedValue <= Math.Round(Min_Value, 2) Then
-                        LedIndex = 0
-                    ElseIf roundedValue = Middle Then
-                        LedIndex = 7
-                    ElseIf roundedValue >= Math.Round(Max_Value, 2) Then
-                        LedIndex = 14
-                    ElseIf roundedValue < Middle Then
-                        Dim span As Double = Middle - Min_Value
-                        If span = 0.0 Then
-                            LedIndex = 1
-                        Else
-                            Dim norm As Double = (roundedValue - Min_Value) / span
-                            LedIndex = Math.Min(1 + CInt(Math.Floor(norm * 6)), 6)
-                        End If
-                    Else
-                        Dim span As Double = Max_Value - Middle
-                        If span = 0.0 Then
-                            LedIndex = 8
-                        Else
-                            Dim norm As Double = (roundedValue - Middle) / span
-                            LedIndex = Math.Min(8 + CInt(Math.Floor(norm * 6)), 13)
-                        End If
-                    End If
-
-                    LedsStatus.Item(LedIndex) = True
-                ElseIf LedMode = LedModeType.Central_Gauge Then
-                    Dim LedIndex As Integer = 0
-                    Dim Middle = (Min_Value + Max_Value) / 2
-                    If Value <= Middle Then
-                        LedIndex = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Middle, 8)
-                    Else
-                        LedIndex = DriverReaperControl24.Utility.GetLedIndex(Value, Middle, Max_Value, 8)
-                    End If
-                    For i = 0 To LedIndex - 1
-                        If i >= LedIndex AndAlso i <= 7 Then
                             LedsStatus.Item(i) = True
-                        ElseIf i >= 7 AndAlso i <= LedIndex Then
-                            LedsStatus.Item(i) = True
+                        Next
+                    ElseIf LedMode = LedModeType.Central_Dot Then
+                        Dim roundedValue As Double = Math.Round(Value, 2)
+                        Dim Middle As Double = Math.Round((Min_Value + Max_Value) / 2.0, 2)
+                        Dim LedIndex As Integer = 0
+
+                        If roundedValue <= Math.Round(Min_Value, 2) Then
+                            LedIndex = 0
+                        ElseIf roundedValue = Middle Then
+                            LedIndex = 7
+                        ElseIf roundedValue >= Math.Round(Max_Value, 2) Then
+                            LedIndex = 14
+                        ElseIf roundedValue < Middle Then
+                            Dim span As Double = Middle - Min_Value
+                            If span = 0.0 Then
+                                LedIndex = 1
+                            Else
+                                Dim norm As Double = (roundedValue - Min_Value) / span
+                                LedIndex = Math.Min(1 + CInt(Math.Floor(norm * 6)), 6)
+                            End If
+                        Else
+                            Dim span As Double = Max_Value - Middle
+                            If span = 0.0 Then
+                                LedIndex = 8
+                            Else
+                                Dim norm As Double = (roundedValue - Middle) / span
+                                LedIndex = Math.Min(8 + CInt(Math.Floor(norm * 6)), 13)
+                            End If
                         End If
-                    Next
-                ElseIf LedMode = LedModeType.Q Then
-                    Dim LedIndex As Integer = DriverReaperControl24.Utility.GetLedIndex(Value, Min_Value, Max_Value, 8)
+
+                        LedsStatus.Item(LedIndex) = True
+                    ElseIf LedMode = LedModeType.Central_Gauge Then
+                        Dim LedIndex As Integer = 0
+                        Dim Middle = (Min_Value + Max_Value) / 2
+                        If Value <= Middle Then
+                        LedIndex = GetLedIndex(Value, Min_Value, Middle, 8)
+                    Else
+                        LedIndex = GetLedIndex(Value, Middle, Max_Value, 8)
+                    End If
+                        For i = 0 To LedIndex - 1
+                            If i >= LedIndex AndAlso i <= 7 Then
+                                LedsStatus.Item(i) = True
+                            ElseIf i >= 7 AndAlso i <= LedIndex Then
+                                LedsStatus.Item(i) = True
+                            End If
+                        Next
+                    ElseIf LedMode = LedModeType.Q Then
+                    Dim LedIndex As Integer = GetLedIndex(Value, Min_Value, Max_Value, 8)
                     For i = 0 To LedIndex - 1
                         LedsStatus.Item(7 + i) = True
                         LedsStatus.Item(7 - i) = True
@@ -1541,12 +1792,14 @@ Namespace Control24
                     Return _Min_Value
                 End Get
                 Set
-                    _Min_Value = Value
-                    ' ── Réinitialise au min pour éviter des LEDs parasites ─────
-                    _Value_Left = _Min_Value
-                    _Value_Right = _Min_Value
-                    _Hold_Value_Left = _Min_Value
-                    _Hold_Value_Right = _Min_Value
+                    If Value <> _Min_Value Then
+                        _Min_Value = Value
+                        ' ── Réinitialise au min pour éviter des LEDs parasites ─────
+                        _Value_Left = _Min_Value
+                        _Value_Right = _Min_Value
+                        _Hold_Value_Left = _Min_Value
+                        _Hold_Value_Right = _Min_Value
+                    End If
                 End Set
             End Property
 
@@ -1555,7 +1808,9 @@ Namespace Control24
                     Return _Max_Value
                 End Get
                 Set
-                    _Max_Value = Value
+                    If Value <> _Max_Value Then
+                        _Max_Value = Value
+                    End If
                 End Set
             End Property
 
@@ -1564,7 +1819,9 @@ Namespace Control24
                     Return _Reverse
                 End Get
                 Set
-                    _Reverse = Value
+                    If Value <> _Reverse Then
+                        _Reverse = Value
+                    End If
                 End Set
             End Property
 
@@ -1573,8 +1830,10 @@ Namespace Control24
                     Return _Hold_Value_Left
                 End Get
                 Set
-                    _Hold_Value_Left = Value
-                    RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
+                    If Value <> _Hold_Value_Left Then
+                        _Hold_Value_Left = Value
+                        RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
+                    End If
                 End Set
             End Property
 
@@ -1583,8 +1842,10 @@ Namespace Control24
                     Return _Hold_Value_Right
                 End Get
                 Set
-                    _Hold_Value_Right = Value
-                    RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
+                    If Value <> _Hold_Value_Right Then
+                        _Hold_Value_Right = Value
+                        RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
+                    End If
                 End Set
             End Property
 
@@ -1597,11 +1858,13 @@ Namespace Control24
                     Return _Value_Left
                 End Get
                 Set
-                    _Value_Left = Value
-                    If _Value_Left >= Max_Value Then
-                        _Peak_Left = True
+                    If Value <> _Value_Left Then
+                        _Value_Left = Value
+                        If _Value_Left >= Max_Value Then
+                            _Peak_Left = True
+                        End If
+                        RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
                     End If
-                    RefreshLedStatus(_Value_Left, _Hold_Value_Left, StereoChannel.Left)
                 End Set
             End Property
 
@@ -1614,11 +1877,13 @@ Namespace Control24
                     Return _Value_Right
                 End Get
                 Set
-                    _Value_Right = Value
-                    If _Value_Right >= Max_Value Then
-                        _Peak_Right = True
+                    If Value <> _Value_Right Then
+                        _Value_Right = Value
+                        If _Value_Right >= Max_Value Then
+                            _Peak_Right = True
+                        End If
+                        RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
                     End If
-                    RefreshLedStatus(_Value_Right, _Hold_Value_Right, StereoChannel.Right)
                 End Set
             End Property
 
@@ -1627,7 +1892,9 @@ Namespace Control24
                     Return _Peak_Left
                 End Get
                 Set
-                    _Peak_Left = Value
+                    If Value <> _Peak_Left Then
+                        _Peak_Left = Value
+                    End If
                 End Set
             End Property
 
@@ -1636,7 +1903,9 @@ Namespace Control24
                     Return _Peak_Right
                 End Get
                 Set
-                    _Peak_Right = Value
+                    If Value <> _Peak_Right Then
+                        _Peak_Right = Value
+                    End If
                 End Set
             End Property
 
@@ -1671,7 +1940,7 @@ Namespace Control24
                 Dim ledsStatus = GetLedsStatus(value, holdValue)
 
                 If _Reverse Then
-                    ledsStatus = DriverReaperControl24.Utility.Bit.ReverseBitArray(ledsStatus)
+                    ledsStatus = Bit.ReverseBitArray(ledsStatus)
                 End If
 
                 ' ── LED de clip (dernière) ─────────────────────────────────────
@@ -1789,8 +2058,13 @@ Namespace Control24
             ' ── Réception hardware ────────────────────────────────────────────
 
             ''' <summary>Appelé à chaque mouvement de la molette reçu depuis le C24.</summary>
-            Private Sub OnJogWheelCmdChange() Handles _JogWheelCmd.OnCmdChange
-                RaiseEvent OnJogWheelChange(_JogWheelCmd.Rotate_Direction, _JogWheelCmd.Rotate_Velocity)
+            Public Sub OnJogWheelCmdChange(Optional Manual_Rotate_Velocity As Integer? = Nothing) Handles _JogWheelCmd.OnCmdChange
+                If Manual_Rotate_Velocity IsNot Nothing Then
+                    Dim Value As Integer = Manual_Rotate_Velocity
+
+                    _JogWheelCmd.Rotate_Velocity = Value
+                End If
+                RaiseEvent OnJogWheelChange(_JogWheelCmd.Rotate_Direction, Math.Abs(_JogWheelCmd.Rotate_Velocity))
             End Sub
 
         End Class
@@ -1802,6 +2076,10 @@ Namespace Control24
         Public Class C24_ScribbleScreen
 
             Private ReadOnly _Strips As List(Of C24_ScribbleStrip)
+            Private _OriginalTextBack As Boolean = True
+            Public Event OnScribblescreenTextDisplay(Text As String)
+            Public Event OnOriginaltextBack()
+            Private _StripNbOriginaltextBack As Integer = 0
 
             ' ── Propriétés ────────────────────────────────────────────────────
 
@@ -1825,6 +2103,11 @@ Namespace Control24
                     Return _Strips(index)
                 End Get
             End Property
+            Public ReadOnly Property OriginalTextBack As Boolean
+                Get
+                    Return _OriginalTextBack
+                End Get
+            End Property
 
             ' ── Constructeur ──────────────────────────────────────────────────
 
@@ -1835,6 +2118,24 @@ Namespace Control24
             ''' <param name="strips">Liste ordonnée de <see cref="C24_ScribbleStrip"/> composant l'écran.</param>
             Public Sub New(strips As List(Of C24_ScribbleStrip))
                 _Strips = strips
+                If strips.Count > 0 Then
+                    Dim StripNbOriginaltextBack As Integer = 0
+                    Dim OnOriginaltextBackH = Sub()
+                                                  Dim nb As Integer = System.Threading.Interlocked.Increment(_StripNbOriginaltextBack)
+
+                                                  If nb >= _Strips.Count Then
+
+                                                      System.Threading.Interlocked.Exchange(_StripNbOriginaltextBack, 0)
+                                                      _OriginalTextBack = True
+                                                      RaiseEvent OnOriginaltextBack()
+                                                  End If
+                                              End Sub
+                    For Each strip In _Strips
+                        AddHandler strip.OnOriginaltextBack, OnOriginaltextBackH
+                    Next
+
+                End If
+
             End Sub
 
             ' ── API publique ──────────────────────────────────────────────────
@@ -1851,6 +2152,7 @@ Namespace Control24
                 For i = 0 To _Strips.Count - 1
                     _Strips(i).Text = padded.Substring(i * 4, 4)
                 Next
+                RaiseEvent OnScribblescreenTextDisplay(text)
             End Sub
             ''' <summary>
             ''' Affiche un texte temporaire sur l'ensemble des strips pendant la durée
@@ -1859,13 +2161,22 @@ Namespace Control24
             ''' Le texte est découpé en tranches de 4 caractères, une par strip.
             ''' </summary>
             ''' <param name="tempText">Texte temporaire à afficher (jusqu'à <see cref="Capacity"/> caractères).</param>
-            Public Sub ShowTempText(tempText As String)
+            Public Sub ShowTempText(tempText As String, Optional TempTime As Integer = 2000)
                 Dim padded As String = tempText.PadRight(Capacity).Substring(0, Capacity)
+                System.Threading.Interlocked.Exchange(_StripNbOriginaltextBack, 0)
+                _OriginalTextBack = False
                 For i = 0 To _Strips.Count - 1
-                    _Strips(i).ShowTempText(padded.Substring(i * 4, 4))
+
+                    _Strips(i).ShowTempText(padded.Substring(i * 4, 4), TempTime)
+                Next
+
+                RaiseEvent OnScribblescreenTextDisplay(tempText)
+            End Sub
+            Public Sub ResumeText()
+                For i = 0 To _Strips.Count - 1
+                    _Strips(i).ResumeText()
                 Next
             End Sub
-
             ''' <summary>
             ''' Efface tous les strips (remplit d'espaces).
             ''' </summary>
@@ -1928,7 +2239,9 @@ Namespace Control24
                     Return _ExclusiveMode
                 End Get
                 Set
-                    _ExclusiveMode = Value
+                    If Value <> _ExclusiveMode Then
+                        _ExclusiveMode = Value
+                    End If
                 End Set
             End Property
 
@@ -2118,10 +2431,10 @@ Namespace Control24
             Private _Write_Auto_To_All As C24_LedButton
 
             ' ── Modifiers ─────────────────────────────────────────────────────
-            Private _Shift As C24_LedButton
-            Private _Opt As C24_LedButton
-            Private _Ctl_Clutch As C24_LedButton
-            Private _Ctrl As C24_LedButton
+            Private _Shift As C24_Button
+            Private _Opt As C24_Button
+            Private _Ctl_Clutch As C24_Button
+            Private _Ctrl As C24_Button
 
             ' ── Monitor Section ───────────────────────────────────────────────
             Private _Ms_Input As C24_LedButton
@@ -2191,14 +2504,14 @@ Namespace Control24
             Private _Delete As C24_LedButton
             Private _Suspend As C24_LedButton
             ' ── Edit ─────────────────────────────────────────────────────────
-            Private _Cut As C24_LedButton
-            Private _Copy As C24_LedButton
-            Private _Paste As C24_LedButton
-            Private _Edit_Delete As C24_LedButton
-            Private _Separate As C24_LedButton
-            Private _Capture As C24_LedButton
-            Private _Duplicate As C24_LedButton
-            Private _Repeat As C24_LedButton
+            Private _Cut As C24_Button
+            Private _Copy As C24_Button
+            Private _Paste As C24_Button
+            Private _Edit_Delete As C24_Button
+            Private _Separate As C24_Button
+            Private _Capture As C24_Button
+            Private _Duplicate As C24_Button
+            Private _Repeat As C24_Button
             ' ── ZoomPreset ───────────────────────────────────────────────────
             Private _Preset_1 As C24_LedButton
             Private _Preset_2 As C24_LedButton
@@ -2232,10 +2545,10 @@ Namespace Control24
             ' ── Navigation ───────────────────────────────────────────────────
             Private _Zoom As C24_LedButton
             Private _Sel_Adj As C24_LedButton
-            Private _Up As C24_LedButton
-            Private _Next As C24_LedButton
-            Private _Down As C24_LedButton
-            Private _Previous As C24_LedButton
+            Private _Up As C24_Button
+            Private _Next As C24_Button
+            Private _Down As C24_Button
+            Private _Previous As C24_Button
             Private _Nav As C24_LedButton
             ' ── Transport ────────────────────────────────────────────────────
             Private _Loop_Play As C24_LedButton
@@ -2329,10 +2642,10 @@ Namespace Control24
                 End Get
             End Property
 
-            ' ── ScribbleScreen ───────────────────────────────────────────────
+            ' ── ScreenChannelBarScroll ───────────────────────────────────────────────
             ''' <summary>
-            ''' Écran virtuel composé des 24 ScribbleStrips des channel strips dans l'ordre.
-            ''' Capacité totale : 96 caractères (24 × 4).
+            ''' Écran virtuel composé des 2 ScribbleStrips.
+            ''' Capacité totale : 8 caractères (2 × 4).
             ''' </summary>
             Public ReadOnly Property ScreenChannelBarScroll As C24_ScribbleScreen
                 Get
@@ -2340,7 +2653,7 @@ Namespace Control24
                 End Get
             End Property
 
-            ' ── ScribbleScreen ───────────────────────────────────────────────
+            ' ── ScreenLine ───────────────────────────────────────────────
             ''' <summary>
             ''' Écran virtuel composé des 24 ScribbleStrips des channel strips dans l'ordre.
             ''' Capacité totale : 96 caractères (24 × 4).
@@ -2700,28 +3013,28 @@ Namespace Control24
             End Property
 
             ''' <summary>Bouton Up.</summary>
-            Public ReadOnly Property Up As C24_LedButton
+            Public ReadOnly Property Up As C24_Button
                 Get
                     Return _Up
                 End Get
             End Property
 
             ''' <summary>Bouton Next.</summary>
-            Public ReadOnly Property [Next] As C24_LedButton
+            Public ReadOnly Property [Next] As C24_Button
                 Get
                     Return _Next
                 End Get
             End Property
 
             ''' <summary>Bouton Down.</summary>
-            Public ReadOnly Property Down As C24_LedButton
+            Public ReadOnly Property Down As C24_Button
                 Get
                     Return _Down
                 End Get
             End Property
 
             ''' <summary>Bouton Previous.</summary>
-            Public ReadOnly Property Previous As C24_LedButton
+            Public ReadOnly Property Previous As C24_Button
                 Get
                     Return _Previous
                 End Get
@@ -2917,56 +3230,56 @@ Namespace Control24
             End Property
             ' ── Edit ─────────────────────────────────────────────────────────
             ''' <summary>Bouton Cut.</summary>
-            Public ReadOnly Property Cut As C24_LedButton
+            Public ReadOnly Property Cut As C24_Button
                 Get
                     Return _Cut
                 End Get
             End Property
 
             ''' <summary>Bouton Copy.</summary>
-            Public ReadOnly Property [Copy] As C24_LedButton
+            Public ReadOnly Property [Copy] As C24_Button
                 Get
                     Return _Copy
                 End Get
             End Property
 
             ''' <summary>Bouton Paste.</summary>
-            Public ReadOnly Property Paste As C24_LedButton
+            Public ReadOnly Property Paste As C24_Button
                 Get
                     Return _Paste
                 End Get
             End Property
 
             ''' <summary>Bouton Delete (Edit).</summary>
-            Public ReadOnly Property Edit_Delete As C24_LedButton
+            Public ReadOnly Property Edit_Delete As C24_Button
                 Get
                     Return _Edit_Delete
                 End Get
             End Property
 
             ''' <summary>Bouton Separate.</summary>
-            Public ReadOnly Property Separate As C24_LedButton
+            Public ReadOnly Property Separate As C24_Button
                 Get
                     Return _Separate
                 End Get
             End Property
 
             ''' <summary>Bouton Capture.</summary>
-            Public ReadOnly Property Capture As C24_LedButton
+            Public ReadOnly Property Capture As C24_Button
                 Get
                     Return _Capture
                 End Get
             End Property
 
             ''' <summary>Bouton Duplicate.</summary>
-            Public ReadOnly Property Duplicate As C24_LedButton
+            Public ReadOnly Property Duplicate As C24_Button
                 Get
                     Return _Duplicate
                 End Get
             End Property
 
             ''' <summary>Bouton Repeat.</summary>
-            Public ReadOnly Property Repeat As C24_LedButton
+            Public ReadOnly Property Repeat As C24_Button
                 Get
                     Return _Repeat
                 End Get
@@ -3527,28 +3840,28 @@ Namespace Control24
 
             ' ── Modifiers ─────────────────────────────────────────────────────
             ''' <summary>Bouton Shift.</summary>
-            Public ReadOnly Property Shift As C24_LedButton
+            Public ReadOnly Property Shift As C24_Button
                 Get
                     Return _Shift
                 End Get
             End Property
 
             ''' <summary>Bouton Opt.</summary>
-            Public ReadOnly Property Opt As C24_LedButton
+            Public ReadOnly Property Opt As C24_Button
                 Get
                     Return _Opt
                 End Get
             End Property
 
             ''' <summary>Bouton Ctl Clutch.</summary>
-            Public ReadOnly Property Ctl_Clutch As C24_LedButton
+            Public ReadOnly Property Ctl_Clutch As C24_Button
                 Get
                     Return _Ctl_Clutch
                 End Get
             End Property
 
             ''' <summary>Bouton Ctrl.</summary>
-            Public ReadOnly Property Ctrl As C24_LedButton
+            Public ReadOnly Property Ctrl As C24_Button
                 Get
                     Return _Ctrl
                 End Get
@@ -3614,13 +3927,16 @@ Namespace Control24
 
 
             ''' <summary>Intervalle de clignotement en ms (défaut : 500ms).</summary>
+            ''' <summary>Intervalle de clignotement en ms (défaut : 500ms).</summary>
             Public Property BlinkInterval As Integer
                 Get
                     Return _BlinkInterval
                 End Get
                 Set
-                    _BlinkInterval = Value
-                    _BlinkTimer?.Change(0, _BlinkInterval)   ' ✅ appliqué à chaud
+                    If Value <> _BlinkInterval Then
+                        _BlinkInterval = Value
+                        _BlinkTimer?.Change(0, _BlinkInterval)   ' ✅ appliqué à chaud
+                    End If
                 End Set
             End Property
 
@@ -3663,7 +3979,9 @@ Namespace Control24
                     Return _TimingQueueTimeout
                 End Get
                 Set
-                    _TimingQueueTimeout = Value
+                    If Value <> _TimingQueueTimeout Then
+                        _TimingQueueTimeout = Value
+                    End If
                 End Set
             End Property
 
@@ -3672,7 +3990,9 @@ Namespace Control24
                     Return _InstantQueueTimeout
                 End Get
                 Set
-                    _InstantQueueTimeout = Value
+                    If Value <> _InstantQueueTimeout Then
+                        _InstantQueueTimeout = Value
+                    End If
                 End Set
             End Property
 
@@ -3805,13 +4125,13 @@ Namespace Control24
                 '*      init Modifiers              *
                 '*----------------------------------*
 
-                _Shift = New C24_LedButton("Shift", Btn_Region.Left_Strip, &H23)
+                _Shift = New C24_Button("Shift", Btn_Region.Left_Strip, &H23)
                 Me.Add_C24_Component(_Shift, "Modifiers")
-                _Opt = New C24_LedButton("Opt", Btn_Region.Left_Strip, &H24)
+                _Opt = New C24_Button("Opt", Btn_Region.Left_Strip, &H24)
                 Me.Add_C24_Component(_Opt, "Modifiers")
-                _Ctl_Clutch = New C24_LedButton("Ctl_Clutch", Btn_Region.Left_Strip, &H25)
+                _Ctl_Clutch = New C24_Button("Ctl_Clutch", Btn_Region.Left_Strip, &H25)
                 Me.Add_C24_Component(_Ctl_Clutch, "Modifiers")
-                _Ctrl = New C24_LedButton("Ctrl", Btn_Region.Left_Strip, &H26)
+                _Ctrl = New C24_Button("Ctrl", Btn_Region.Left_Strip, &H26)
                 Me.Add_C24_Component(_Ctrl, "Modifiers")
 
                 '*----------------------------------*
@@ -3910,11 +4230,11 @@ Namespace Control24
 
                 _Assign = New C24_LedButton("Assign", Btn_Region.Middle_Strip, &H7)
                 Me.Add_C24_Component(_Assign, "Assignment")
-                _Input = New C24_LedButton("Input", Btn_Region.Middle_Strip, &H6)
+                _Input = New C24_LedButton("Input", Btn_Region.Middle_Strip, &H5)
                 Me.Add_C24_Component(_Input, "Assignment")
                 _Esc_Cancel = New C24_LedButton("Esc_Cancel", Btn_Region.Middle_Strip, &H8)
                 Me.Add_C24_Component(_Esc_Cancel, "Assignment")
-                _Output = New C24_LedButton("Output", Btn_Region.Middle_Strip, &H5)
+                _Output = New C24_LedButton("Output", Btn_Region.Middle_Strip, &H6)
                 Me.Add_C24_Component(_Output, "Assignment")
 
                 '*----------------------------------*
@@ -3987,21 +4307,21 @@ Namespace Control24
                 '*----------------------------------*
                 ' ⚠️ Valeurs &Hxx à vérifier sur dump hardware
 
-                _Cut = New C24_LedButton("Cut", Btn_Region.Edit, &H4)
+                _Cut = New C24_Button("Cut", Btn_Region.Edit, &H4)
                 Me.Add_C24_Component(_Cut, "EditFonction")
-                _Copy = New C24_LedButton("Copy", Btn_Region.Edit, &H5)
+                _Copy = New C24_Button("Copy", Btn_Region.Edit, &H5)
                 Me.Add_C24_Component(_Copy, "EditFonction")
-                _Paste = New C24_LedButton("Paste", Btn_Region.Edit, &H6)
+                _Paste = New C24_Button("Paste", Btn_Region.Edit, &H6)
                 Me.Add_C24_Component(_Paste, "EditFonction")
-                _Edit_Delete = New C24_LedButton("Edit_Delete", Btn_Region.Edit, &H7)
+                _Edit_Delete = New C24_Button("Edit_Delete", Btn_Region.Edit, &H7)
                 Me.Add_C24_Component(_Edit_Delete, "EditFonction")
-                _Separate = New C24_LedButton("Separate", Btn_Region.Edit, &H8)
+                _Separate = New C24_Button("Separate", Btn_Region.Edit, &H8)
                 Me.Add_C24_Component(_Separate, "EditFonction")
-                _Capture = New C24_LedButton("Capture", Btn_Region.Edit, &H9)
+                _Capture = New C24_Button("Capture", Btn_Region.Edit, &H9)
                 Me.Add_C24_Component(_Capture, "EditFonction")
-                _Duplicate = New C24_LedButton("Duplicate", Btn_Region.Edit, &H1C)
+                _Duplicate = New C24_Button("Duplicate", Btn_Region.Edit, &H1C)
                 Me.Add_C24_Component(_Duplicate, "EditFonction")
-                _Repeat = New C24_LedButton("Repeat", Btn_Region.Edit, &H1D)
+                _Repeat = New C24_Button("Repeat", Btn_Region.Edit, &H1D)
                 Me.Add_C24_Component(_Repeat, "EditFonction")
 
                 '*----------------------------------*
@@ -4096,13 +4416,13 @@ Namespace Control24
                 _Sel_Adj = New C24_LedButton("Sel_Adj", Btn_Region.Navigation, &HE)
                 Me.Add_C24_Component(_Sel_Adj, "Navigation")
 
-                _Up = New C24_LedButton("Up", Btn_Region.Navigation, &HF)
+                _Up = New C24_Button("Up", Btn_Region.Navigation, &HF)
                 Me.Add_C24_Component(_Up, "Navigation")
-                _Previous = New C24_LedButton("Previous", Btn_Region.Navigation, &H10)
+                _Previous = New C24_Button("Previous", Btn_Region.Navigation, &H10)
                 Me.Add_C24_Component(_Previous, "Navigation")
-                _Next = New C24_LedButton("Next", Btn_Region.Navigation, &H11)
+                _Next = New C24_Button("Next", Btn_Region.Navigation, &H11)
                 Me.Add_C24_Component(_Next, "Navigation")
-                _Down = New C24_LedButton("Down", Btn_Region.Navigation, &H12)
+                _Down = New C24_Button("Down", Btn_Region.Navigation, &H12)
                 Me.Add_C24_Component(_Down, "Navigation")
 
 
@@ -4159,9 +4479,9 @@ Namespace Control24
                 '*----------------------------------*
 
 
-                _Save = New C24_LedButton("Save", Btn_Region.Edit, &H14)
+                _Save = New C24_LedButton("Save", Btn_Region.Edit, &H15)
                 Me.Add_C24_Component(_Save, "Save")
-                _Undo = New C24_LedButton("Undo", Btn_Region.Edit, &H15)
+                _Undo = New C24_LedButton("Undo", Btn_Region.Edit, &H14)
                 Me.Add_C24_Component(_Undo, "Save")
 
                 '*----------------------------------*
@@ -4292,6 +4612,10 @@ Namespace Control24
 
                 _VueMeterMaster1 = New C24_VueMeter("VueMeterMaster1", 25)
                 Me.Add_AutoRefresh_C24_Component(VueMeterMaster1, "VueMeterMasters")
+                _VueMeterMaster2 = New C24_VueMeter("VueMeterMaster2", 26)
+                Me.Add_AutoRefresh_C24_Component(VueMeterMaster2, "VueMeterMasters")
+                _VueMeterMaster3 = New C24_VueMeter("VueMeterMaster3", 27)
+                Me.Add_AutoRefresh_C24_Component(VueMeterMaster3, "VueMeterMasters")
                 'init other VueMaster2/3 on demand
 
 
@@ -4632,418 +4956,418 @@ Namespace Control24
         ''' Intègre un <see cref="FaderTouch"/>, un <see cref="ScribbleStrip"/> et
         ''' l'affichage temporaire du volume en dB (restauration automatique après 2 s).
         ''' </summary>
-        Public Class OldC24_Fader
-            Inherits C24_Component
-
-            Private WithEvents _FaderCmd As Commands.Fader_Cmd
-            Private ReadOnly _FaderTouch As C24_Button
-            Private ReadOnly _ScribbleStrip As C24_ScribbleStrip
-            Private _NormValue As Double
-            Private _NormFormatedValues As Tuple(Of Double, String)
-
-            Private _DbVolume As Double = 0
-
-            ' ── Restauration ScribbleStrip ─────────────────────────────────────
-            Private _OriginalScribbleText As String = ""
-            Private _IsShowingValue As Boolean = False
-            Private _RestoreTimer As System.Threading.Timer
-            Private Const RestoreDelayMs As Integer = 2000
-
-            ' ── Vérification de position fader ────────────────────────────────
-            Private _TargetFaderValue As Integer = 0
-            Private _VerifyRetryCount As Integer = 0
-            Private _VerifyTimer As System.Threading.Timer
-            Private _Fader_Mode As Mode = Mode.Fader
-            Private _PanValue As Double
-            Private _PanValueText As String
-            Private Const VerifyDelayMs As Integer = 150
-            Private Const MaxVerifyRetry As Integer = 5
-
-            ' ── Constantes ────────────────────────────────────────────────────
-            Private Const FaderMin As Integer = 0
-            Private Const FaderMax As Integer = 1023
-            Private Const BtnFaderTouch As Byte = &H9
-
-            ' ── Événements ────────────────────────────────────────────────────
-
-            ''' <summary>Déclenché quand un humain pose la main sur le fader.</summary>
-            Public Event On_FaderTouched(Component_Id As String)
-
-            ''' <summary>Déclenché quand la main quitte le fader.</summary>
-            Public Event On_FaderReleased(Component_Id As String)
-
-            ''' <summary>
-            ''' Déclenché quand le hardware envoie une nouvelle position de fader
-            ''' pendant que le fader est touché par un humain.
-            ''' </summary>
-            Public Event On_FaderHumanChangeDbValue(TrackNb As Integer, DbValue As Double)
-            Public Event On_FaderHumanChangeNormValue(TrackNb As Integer, _NormFormatedValues As Tuple(Of Double, String))
-            Public Event On_FaderHumanChangePanValue(TrackNb As Integer, _PanValue As Double)
-
-            Enum Mode
-                Fader
-                NormValue
-                Pan
-            End Enum
-            ' ── Propriétés ────────────────────────────────────────────────────
-            Public Property Fader_Mode As Mode
-                Get
-                    Return _Fader_Mode
-                End Get
-                Set
-                    _Fader_Mode = Value
-                End Set
-            End Property
-
-
-
-            ''' <summary>Commande fader sous-jacente (accès direct aux bytes).</summary>
-            Public ReadOnly Property FaderCmd As Commands.Fader_Cmd
-                Get
-                    Return _FaderCmd
-                End Get
-            End Property
-
-            ''' <summary>Bouton de détection de contact humain sur le fader.</summary>
-            Public ReadOnly Property FaderTouch As C24_Button
-                Get
-                    Return _FaderTouch
-                End Get
-            End Property
-
-            ''' <summary>ScribbleStrip associé à ce fader.</summary>
-            Public ReadOnly Property ScribbleStrip As C24_ScribbleStrip
-                Get
-                    Return _ScribbleStrip
-                End Get
-            End Property
-
-            ''' <summary>True si un humain touche actuellement le fader.</summary>
-            Public ReadOnly Property IsTouched As Boolean
-                Get
-                    Return _FaderTouch.IsPressed
-                End Get
-            End Property
-
-            ''' <summary>Valeur brute du fader de 0 à 1023.</summary>
-            Public Property FaderValue As Integer
-                Get
-                    Return _FaderCmd.FaderValue
-                End Get
-                Set
-                    _FaderCmd.FaderValue = Math.Min(Math.Max(Value, FaderMin), FaderMax)
-                End Set
-            End Property
-            ''' <summary>
-            ''' Valeur normalisée du fader entre 0.0 et 1.0.
-            ''' Convertit automatiquement vers/depuis la valeur brute [0..1023].
-            ''' </summary>
-            Public Property NormFormatedValues As Tuple(Of Double, String)
-                Get
-                    Return _NormFormatedValues
-                End Get
-                Set
+        'Public Class OldC24_Fader
+        '    Inherits C24_Component
+
+        '    Private WithEvents _FaderCmd As Commands.Fader_Cmd
+        '    Private ReadOnly _FaderTouch As C24_Button
+        '    Private ReadOnly _ScribbleStrip As C24_ScribbleStrip
+        '    Private _NormValue As Double
+        '    Private _NormFormatedValues As Tuple(Of Double, String)
+
+        '    Private _DbVolume As Double = 0
+
+        '    ' ── Restauration ScribbleStrip ─────────────────────────────────────
+        '    Private _OriginalScribbleText As String = ""
+        '    Private _IsShowingValue As Boolean = False
+        '    Private _RestoreTimer As System.Threading.Timer
+        '    Private Const RestoreDelayMs As Integer = 2000
+
+        '    ' ── Vérification de position fader ────────────────────────────────
+        '    Private _TargetFaderValue As Integer = 0
+        '    Private _VerifyRetryCount As Integer = 0
+        '    Private _VerifyTimer As System.Threading.Timer
+        '    Private _Fader_Mode As Mode = Mode.Fader
+        '    Private _PanValue As Double
+        '    Private _PanValueText As String
+        '    Private Const VerifyDelayMs As Integer = 150
+        '    Private Const MaxVerifyRetry As Integer = 5
+
+        '    ' ── Constantes ────────────────────────────────────────────────────
+        '    Private Const FaderMin As Integer = 0
+        '    Private Const FaderMax As Integer = 1023
+        '    Private Const BtnFaderTouch As Byte = &H9
+
+        '    ' ── Événements ────────────────────────────────────────────────────
+
+        '    ''' <summary>Déclenché quand un humain pose la main sur le fader.</summary>
+        '    Public Event On_FaderTouched(Component_Id As String)
+
+        '    ''' <summary>Déclenché quand la main quitte le fader.</summary>
+        '    Public Event On_FaderReleased(Component_Id As String)
+
+        '    ''' <summary>
+        '    ''' Déclenché quand le hardware envoie une nouvelle position de fader
+        '    ''' pendant que le fader est touché par un humain.
+        '    ''' </summary>
+        '    Public Event On_FaderHumanChangeDbValue(TrackNb As Integer, DbValue As Double)
+        '    Public Event On_FaderHumanChangeNormValue(TrackNb As Integer, _NormFormatedValues As Tuple(Of Double, String))
+        '    Public Event On_FaderHumanChangePanValue(TrackNb As Integer, _PanValue As Double)
+
+        '    Enum Mode
+        '        Fader
+        '        NormValue
+        '        Pan
+        '    End Enum
+        '    ' ── Propriétés ────────────────────────────────────────────────────
+        '    Public Property Fader_Mode As Mode
+        '        Get
+        '            Return _Fader_Mode
+        '        End Get
+        '        Set
+        '            _Fader_Mode = Value
+        '        End Set
+        '    End Property
+
+
+
+        '    ''' <summary>Commande fader sous-jacente (accès direct aux bytes).</summary>
+        '    Public ReadOnly Property FaderCmd As Commands.Fader_Cmd
+        '        Get
+        '            Return _FaderCmd
+        '        End Get
+        '    End Property
+
+        '    ''' <summary>Bouton de détection de contact humain sur le fader.</summary>
+        '    Public ReadOnly Property FaderTouch As C24_Button
+        '        Get
+        '            Return _FaderTouch
+        '        End Get
+        '    End Property
+
+        '    ''' <summary>ScribbleStrip associé à ce fader.</summary>
+        '    Public ReadOnly Property ScribbleStrip As C24_ScribbleStrip
+        '        Get
+        '            Return _ScribbleStrip
+        '        End Get
+        '    End Property
+
+        '    ''' <summary>True si un humain touche actuellement le fader.</summary>
+        '    Public ReadOnly Property IsTouched As Boolean
+        '        Get
+        '            Return _FaderTouch.IsPressed
+        '        End Get
+        '    End Property
+
+        '    ''' <summary>Valeur brute du fader de 0 à 1023.</summary>
+        '    Public Property FaderValue As Integer
+        '        Get
+        '            Return _FaderCmd.FaderValue
+        '        End Get
+        '        Set
+        '            _FaderCmd.FaderValue = Math.Min(Math.Max(Value, FaderMin), FaderMax)
+        '        End Set
+        '    End Property
+        '    ''' <summary>
+        '    ''' Valeur normalisée du fader entre 0.0 et 1.0.
+        '    ''' Convertit automatiquement vers/depuis la valeur brute [0..1023].
+        '    ''' </summary>
+        '    Public Property NormFormatedValues As Tuple(Of Double, String)
+        '        Get
+        '            Return _NormFormatedValues
+        '        End Get
+        '        Set
 
-                    _NormValue = Value.Item1
-                    _NormFormatedValues = Value
+        '            _NormValue = Value.Item1
+        '            _NormFormatedValues = Value
 
-                    If _IsShowingValue = False Then
-                        _OriginalScribbleText = _ScribbleStrip.Text
-                        _IsShowingValue = True
-                    End If
+        '            If _IsShowingValue = False Then
+        '                _OriginalScribbleText = _ScribbleStrip.Text
+        '                _IsShowingValue = True
+        '            End If
 
-                    Dim DblValue As Double = 0
-                    If Double.TryParse(Value.Item2, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, DblValue) Then
-                        _ScribbleStrip.Value = DblValue
-                    ElseIf Value.Item2 IsNot Nothing AndAlso Value.Item2 <> "" Then
-                        _ScribbleStrip.Text = Value.Item2
-                    Else
-                        _ScribbleStrip.Value = Value.Item1
-                    End If
+        '            Dim DblValue As Double = 0
+        '            If Double.TryParse(Value.Item2, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, DblValue) Then
+        '                _ScribbleStrip.Value = DblValue
+        '            ElseIf Value.Item2 IsNot Nothing AndAlso Value.Item2 <> "" Then
+        '                _ScribbleStrip.Text = Value.Item2
+        '            Else
+        '                _ScribbleStrip.Value = Value.Item1
+        '            End If
 
-
-
-                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+
+
+        '            _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
 
-
-
-
-
-                End Set
-            End Property
-
-
-            Public Property PanValue As Double
-                Get
-                    Return _PanValue
-                End Get
-                Set
-                    _PanValue = Value
-
-
-                    Dim Value_int As Integer = CInt(_PanValue)
-                    If Value_int = 0 Then
-                        _PanValueText = "<0>"
-                    ElseIf Value_int > 0 Then
-                        _PanValueText = Value_int & ">"
-                    ElseIf Value_int < 0 Then
-                        _PanValueText = "<" & Math.Abs(Value_int)
-                    End If
-
-
-
-                    If _IsShowingValue = False Then
-                        _OriginalScribbleText = _ScribbleStrip.Text
-                        _IsShowingValue = True
-                    End If
-
-
-                    _ScribbleStrip.Text = _PanValueText
-
-
-                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
-
-                End Set
-            End Property
-            Public Property PanValueText As String
-                Get
-                    Return _PanValueText
-                End Get
-                Set
-                    _PanValueText = Value
-                End Set
-            End Property
-
-            ''' <summary>
-            ''' Volume en dB.
-            ''' Affiche la valeur sur le <see cref="ScribbleStrip"/> uniquement si elle change.
-            ''' Le texte original est restauré automatiquement <see cref="RestoreDelayMs"/> ms
-            ''' après la dernière modification.
-            ''' </summary>
-            Public Property DbVolume As Double
-                Get
-                    Return _DbVolume
-                End Get
-                Set
-                    If _DbVolume = Value Then
-                        Return
-                    End If
-
-                    _DbVolume = Value
-
-                    If _IsShowingValue = False Then
-                        _OriginalScribbleText = _ScribbleStrip.Text
-                        _IsShowingValue = True
-                    End If
-
-                    _ScribbleStrip.Value = _DbVolume
-
-
-                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
-                End Set
-            End Property
-
-            ' ── Restauration ScribbleStrip ─────────────────────────────────────
-
-            ''' <summary>Restaure le texte original du ScribbleStrip après 2 s d'inactivité.</summary>
-            Private Sub OnRestoreTimer(state As Object)
-                _IsShowingValue = False
-                _ScribbleStrip.Text = _OriginalScribbleText
-            End Sub
-
-            ''' <summary>
-            ''' Envoie la commande fader vers <paramref name="rawValue"/>
-            ''' et arme le timer de vérification.
-            ''' Une nouvelle valeur demandée remplace automatiquement la cible
-            ''' et redémarre le cycle de vérification.
-            ''' </summary>
-            ''' <param name="rawValue">Valeur brute cible [0..1023].</param>
-            Private Sub SendAndArmVerify(rawValue As Integer)
-                _TargetFaderValue = Math.Min(Math.Max(rawValue, FaderMin), FaderMax)
-                FaderValue = _TargetFaderValue
-                _VerifyTimer.Change(VerifyDelayMs, System.Threading.Timeout.Infinite)
-            End Sub
-
-            ''' <summary>
-            ''' Vérifie que le fader a atteint la position cible.
-            ''' Si la cible n'est pas atteinte et que le fader n'est pas touché,
-            ''' renvoie la commande et se réarme indéfiniment jusqu'à succès
-            ''' ou jusqu'à ce qu'une nouvelle valeur soit demandée via
-            ''' <see cref="SendAndArmVerify"/>.
-            ''' </summary>
-            Private Sub OnVerifyTimer(state As Object)
-                If IsTouched Then
-                    Return
-                End If
-
-                If _FaderCmd.FaderValue = _TargetFaderValue Then
-                    Return
-                End If
-
-                FaderValue = _TargetFaderValue
-                _VerifyTimer.Change(VerifyDelayMs, System.Threading.Timeout.Infinite)
-            End Sub
-
-            ' ── API publique ──────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Pilote le fader depuis Reaper.
-            ''' 
-            ''' Lance la vérification automatique de position.
-            ''' </summary>
-            ''' <param name="Db_Volume">Volume cible en dB.</param>
-            Public Sub SetFaderDbVolume(Db_Volume As Double)
-
-                DbVolume = Db_Volume
-                SendAndArmVerify(DbToRawFaderCmdValue(Db_Volume))
-            End Sub
-            Public Sub SetFaderNormValue(_NormFormatedValues As Tuple(Of Double, String))
-
-                NormFormatedValues = _NormFormatedValues
-                SendAndArmVerify(NormValueToRawFaderCmdValue(_NormFormatedValues.Item1))
-            End Sub
-            Public Sub SetFaderPanValue(_PanValue As Double)
-
-                PanValue = _PanValue
-                SendAndArmVerify(NormValueToRawFaderCmdValue((_PanValue + 1) / 2))
-            End Sub
-            ''' <summary>
-            ''' Initialise la position du fader sans vérification d'affichage.
-            ''' Lance quand même la vérification de position hardware.
-            ''' </summary>
-            ''' <param name="Db_Volume">Volume initial en dB.</param>
-            Public Sub SetInitFaderDbVolume(Db_Volume As Double)
-                _DbVolume = Db_Volume
-                SendAndArmVerify(DbToRawFaderCmdValue(Db_Volume))
-            End Sub
-
-            ' ── Synchronisation depuis le hardware ────────────────────────────
-
-            ''' <summary>
-            ''' Appelé quand le hardware envoie un mouvement fader (fader touché uniquement).
-            ''' </summary>
-            Private Sub OnFaderCmdChange() Handles _FaderCmd.OnCmdChange
-                If IsTouched Then
-                    Select Case Fader_Mode
-                        Case Mode.Fader
-                            DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
-                            RaiseEvent On_FaderHumanChangeDbValue(FaderCmd.Track_Number, DbVolume)
-                        Case Mode.NormValue
-                            _NormValue = RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)
-                            _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
-                            RaiseEvent On_FaderHumanChangeNormValue(FaderCmd.Track_Number, _NormFormatedValues)
-                        Case Mode.Pan
-                            _PanValue = (2 * RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)) - 1
-                            RaiseEvent On_FaderHumanChangePanValue(FaderCmd.Track_Number, _PanValue)
-                    End Select
-
-
-                End If
-            End Sub
-            Public Sub OnFaderManualChange(Track_Number As Integer, Optional DbVol As Double? = Nothing, Optional NormValue As Double? = Nothing)
-
-                Select Case Fader_Mode
-                    Case Mode.Fader
-                        If DbVol IsNot Nothing Then
-                            DbVolume = DbVol
-                        End If
-                        RaiseEvent On_FaderHumanChangeDbValue(Track_Number, DbVolume)
-                    Case Mode.NormValue
-                        If NormValue IsNot Nothing Then
-                            _NormValue = NormValue
-                            _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
-                            RaiseEvent On_FaderHumanChangeNormValue(Track_Number, _NormFormatedValues)
-                        End If
-
-
-                End Select
-
-
-
-            End Sub
-
-            Private Sub OnFaderTouchPressed(componentId As String)
-                _VerifyTimer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite)
-                RaiseEvent On_FaderTouched(_Component_Id)
-            End Sub
-
-            Private Sub OnFaderTouchReleased(componentId As String)
-                RaiseEvent On_FaderReleased(_Component_Id)
-            End Sub
-
-            ' ── Constructeur ──────────────────────────────────────────────────
-
-            ''' <summary>
-            ''' Crée un fader motorisé avec détection de contact et affichage dB
-            ''' pour la piste <paramref name="trackNumber"/>.
-            ''' </summary>
-            ''' <param name="name">Nom unique du composant.</param>
-            ''' <param name="trackNumber">Numéro de piste 1-based.</param>
-            ''' <param name="scribbleStrip">ScribbleStrip pour l'affichage du volume en dB.</param>
-            Public Sub New(name As String, trackNumber As Integer, scribbleStrip As C24_ScribbleStrip)
-                _Name = name
-                _FaderCmd = New Commands.Fader_Cmd(trackNumber)
-                _C24_ReceivingCommand = _FaderCmd
-                C24_SendingCommands.Add(_FaderCmd)
-                _Component_Id = _FaderCmd.Cmd_Id
-                _ScribbleStrip = scribbleStrip
-
-                _FaderTouch = New C24_Button($"FaderTouch_{trackNumber}", BtnFaderTouch, trackNumber)
-                AddHandler _FaderTouch.OnButtonPressed, AddressOf OnFaderTouchPressed
-                AddHandler _FaderTouch.OnButtonReleased, AddressOf OnFaderTouchReleased
-
-                _RestoreTimer = New System.Threading.Timer(
-                    AddressOf OnRestoreTimer,
-                    Nothing,
-                    System.Threading.Timeout.Infinite,
-                    System.Threading.Timeout.Infinite)
-
-                _VerifyTimer = New System.Threading.Timer(
-                    AddressOf OnVerifyTimer,
-                    Nothing,
-                    System.Threading.Timeout.Infinite,
-                    System.Threading.Timeout.Infinite)
-            End Sub
-
-            ' ── Conversion dB ↔ raw ───────────────────────────────────────────
-
-            Private Function DbToRawFaderCmdValue(Db As Double) As Integer
-                If Db <= -150 Then
-                    Return 0
-                ElseIf Db > -150 AndAlso Db <= -90 Then
-                    Return CInt(Math.Round((1.1811 * Db) - 43.701, 0))
-                ElseIf Db > -90 AndAlso Db <= -20 Then
-                    Return CInt(Math.Round((563.83 * Math.Exp(0.0298 * Db))))
-                ElseIf Db > -20 AndAlso Db < 6 Then
-                    Return CInt(Math.Round((27.308 * Db) + 861.66))
-                ElseIf Db >= 6 Then
-                    Return 1023
-                End If
-                Return 0
-            End Function
-            Private Function RawFaderCmdValueToNormValue(raw As Integer) As Double
-                Return Math.Round(_FaderCmd.FaderValue / CDbl(FaderMax), 4)
-            End Function
-            Private Function NormValueToRawFaderCmdValue(NormValue As Double) As Integer
-                Return CInt(Math.Round(Math.Min(Math.Max(NormValue, 0.0), 1.0) * FaderMax))
-            End Function
-            ''' <summary>
-            ''' Convertit une valeur brute de commande fader (0–1023) en volume en dB.
-            ''' Fonction inverse de <see cref="DbToRawFaderCmdValue"/>.
-            ''' </summary>
-            Private Function RawFaderCmdValueToDb(raw As Integer) As Double
-                If raw <= 0 Then
-                    Return -150.0
-                ElseIf raw >= 1023 Then
-                    Return 6.0
-                ElseIf raw <= 313 Then
-                    Return Math.Log(raw / 563.83) / 0.0298
-                Else
-                    Return (raw - 861.66) / 27.308
-                End If
-            End Function
-
-        End Class
+
+
+
+
+        '        End Set
+        '    End Property
+
+
+        '    Public Property PanValue As Double
+        '        Get
+        '            Return _PanValue
+        '        End Get
+        '        Set
+        '            _PanValue = Value
+
+
+        '            Dim Value_int As Integer = CInt(_PanValue)
+        '            If Value_int = 0 Then
+        '                _PanValueText = "<0>"
+        '            ElseIf Value_int > 0 Then
+        '                _PanValueText = Value_int & ">"
+        '            ElseIf Value_int < 0 Then
+        '                _PanValueText = "<" & Math.Abs(Value_int)
+        '            End If
+
+
+
+        '            If _IsShowingValue = False Then
+        '                _OriginalScribbleText = _ScribbleStrip.Text
+        '                _IsShowingValue = True
+        '            End If
+
+
+        '            _ScribbleStrip.Text = _PanValueText
+
+
+        '            _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+
+        '        End Set
+        '    End Property
+        '    Public Property PanValueText As String
+        '        Get
+        '            Return _PanValueText
+        '        End Get
+        '        Set
+        '            _PanValueText = Value
+        '        End Set
+        '    End Property
+
+        '    ''' <summary>
+        '    ''' Volume en dB.
+        '    ''' Affiche la valeur sur le <see cref="ScribbleStrip"/> uniquement si elle change.
+        '    ''' Le texte original est restauré automatiquement <see cref="RestoreDelayMs"/> ms
+        '    ''' après la dernière modification.
+        '    ''' </summary>
+        '    Public Property DbVolume As Double
+        '        Get
+        '            Return _DbVolume
+        '        End Get
+        '        Set
+        '            If _DbVolume = Value Then
+        '                Return
+        '            End If
+
+        '            _DbVolume = Value
+
+        '            If _IsShowingValue = False Then
+        '                _OriginalScribbleText = _ScribbleStrip.Text
+        '                _IsShowingValue = True
+        '            End If
+
+        '            _ScribbleStrip.Value = _DbVolume
+
+
+        '            _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+        '        End Set
+        '    End Property
+
+        '    ' ── Restauration ScribbleStrip ─────────────────────────────────────
+
+        '    ''' <summary>Restaure le texte original du ScribbleStrip après 2 s d'inactivité.</summary>
+        '    Private Sub OnRestoreTimer(state As Object)
+        '        _IsShowingValue = False
+        '        _ScribbleStrip.Text = _OriginalScribbleText
+        '    End Sub
+
+        '    ''' <summary>
+        '    ''' Envoie la commande fader vers <paramref name="rawValue"/>
+        '    ''' et arme le timer de vérification.
+        '    ''' Une nouvelle valeur demandée remplace automatiquement la cible
+        '    ''' et redémarre le cycle de vérification.
+        '    ''' </summary>
+        '    ''' <param name="rawValue">Valeur brute cible [0..1023].</param>
+        '    Private Sub SendAndArmVerify(rawValue As Integer)
+        '        _TargetFaderValue = Math.Min(Math.Max(rawValue, FaderMin), FaderMax)
+        '        FaderValue = _TargetFaderValue
+        '        _VerifyTimer.Change(VerifyDelayMs, System.Threading.Timeout.Infinite)
+        '    End Sub
+
+        '    ''' <summary>
+        '    ''' Vérifie que le fader a atteint la position cible.
+        '    ''' Si la cible n'est pas atteinte et que le fader n'est pas touché,
+        '    ''' renvoie la commande et se réarme indéfiniment jusqu'à succès
+        '    ''' ou jusqu'à ce qu'une nouvelle valeur soit demandée via
+        '    ''' <see cref="SendAndArmVerify"/>.
+        '    ''' </summary>
+        '    Private Sub OnVerifyTimer(state As Object)
+        '        If IsTouched Then
+        '            Return
+        '        End If
+
+        '        If _FaderCmd.FaderValue = _TargetFaderValue Then
+        '            Return
+        '        End If
+
+        '        FaderValue = _TargetFaderValue
+        '        _VerifyTimer.Change(VerifyDelayMs, System.Threading.Timeout.Infinite)
+        '    End Sub
+
+        '    ' ── API publique ──────────────────────────────────────────────────
+
+        '    ''' <summary>
+        '    ''' Pilote le fader depuis Reaper.
+        '    ''' 
+        '    ''' Lance la vérification automatique de position.
+        '    ''' </summary>
+        '    ''' <param name="Db_Volume">Volume cible en dB.</param>
+        '    Public Sub SetFaderDbVolume(Db_Volume As Double)
+
+        '        DbVolume = Db_Volume
+        '        SendAndArmVerify(DbToRawFaderCmdValue(Db_Volume))
+        '    End Sub
+        '    Public Sub SetFaderNormValue(_NormFormatedValues As Tuple(Of Double, String))
+
+        '        NormFormatedValues = _NormFormatedValues
+        '        SendAndArmVerify(NormValueToRawFaderCmdValue(_NormFormatedValues.Item1))
+        '    End Sub
+        '    Public Sub SetFaderPanValue(_PanValue As Double)
+
+        '        PanValue = _PanValue
+        '        SendAndArmVerify(NormValueToRawFaderCmdValue((_PanValue + 1) / 2))
+        '    End Sub
+        '    ''' <summary>
+        '    ''' Initialise la position du fader sans vérification d'affichage.
+        '    ''' Lance quand même la vérification de position hardware.
+        '    ''' </summary>
+        '    ''' <param name="Db_Volume">Volume initial en dB.</param>
+        '    Public Sub SetInitFaderDbVolume(Db_Volume As Double)
+        '        _DbVolume = Db_Volume
+        '        SendAndArmVerify(DbToRawFaderCmdValue(Db_Volume))
+        '    End Sub
+
+        '    ' ── Synchronisation depuis le hardware ────────────────────────────
+
+        '    ''' <summary>
+        '    ''' Appelé quand le hardware envoie un mouvement fader (fader touché uniquement).
+        '    ''' </summary>
+        '    Private Sub OnFaderCmdChange() Handles _FaderCmd.OnCmdChange
+        '        If IsTouched Then
+        '            Select Case Fader_Mode
+        '                Case Mode.Fader
+        '                    DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
+        '                    RaiseEvent On_FaderHumanChangeDbValue(FaderCmd.Track_Number, DbVolume)
+        '                Case Mode.NormValue
+        '                    _NormValue = RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)
+        '                    _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
+        '                    RaiseEvent On_FaderHumanChangeNormValue(FaderCmd.Track_Number, _NormFormatedValues)
+        '                Case Mode.Pan
+        '                    _PanValue = (2 * RawFaderCmdValueToNormValue(_FaderCmd.FaderValue)) - 1
+        '                    RaiseEvent On_FaderHumanChangePanValue(FaderCmd.Track_Number, _PanValue)
+        '            End Select
+
+
+        '        End If
+        '    End Sub
+        '    Public Sub OnFaderManualChange(Track_Number As Integer, Optional DbVol As Double? = Nothing, Optional NormValue As Double? = Nothing)
+
+        '        Select Case Fader_Mode
+        '            Case Mode.Fader
+        '                If DbVol IsNot Nothing Then
+        '                    DbVolume = DbVol
+        '                End If
+        '                RaiseEvent On_FaderHumanChangeDbValue(Track_Number, DbVolume)
+        '            Case Mode.NormValue
+        '                If NormValue IsNot Nothing Then
+        '                    _NormValue = NormValue
+        '                    _NormFormatedValues = New Tuple(Of Double, String)(_NormValue, Nothing)
+        '                    RaiseEvent On_FaderHumanChangeNormValue(Track_Number, _NormFormatedValues)
+        '                End If
+
+
+        '        End Select
+
+
+
+        '    End Sub
+
+        '    Private Sub OnFaderTouchPressed(componentId As String)
+        '        _VerifyTimer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite)
+        '        RaiseEvent On_FaderTouched(_Component_Id)
+        '    End Sub
+
+        '    Private Sub OnFaderTouchReleased(componentId As String)
+        '        RaiseEvent On_FaderReleased(_Component_Id)
+        '    End Sub
+
+        '    ' ── Constructeur ──────────────────────────────────────────────────
+
+        '    ''' <summary>
+        '    ''' Crée un fader motorisé avec détection de contact et affichage dB
+        '    ''' pour la piste <paramref name="trackNumber"/>.
+        '    ''' </summary>
+        '    ''' <param name="name">Nom unique du composant.</param>
+        '    ''' <param name="trackNumber">Numéro de piste 1-based.</param>
+        '    ''' <param name="scribbleStrip">ScribbleStrip pour l'affichage du volume en dB.</param>
+        '    Public Sub New(name As String, trackNumber As Integer, scribbleStrip As C24_ScribbleStrip)
+        '        _Name = name
+        '        _FaderCmd = New Commands.Fader_Cmd(trackNumber)
+        '        _C24_ReceivingCommand = _FaderCmd
+        '        C24_SendingCommands.Add(_FaderCmd)
+        '        _Component_Id = _FaderCmd.Cmd_Id
+        '        _ScribbleStrip = scribbleStrip
+
+        '        _FaderTouch = New C24_Button($"FaderTouch_{trackNumber}", BtnFaderTouch, trackNumber)
+        '        AddHandler _FaderTouch.OnButtonPressed, AddressOf OnFaderTouchPressed
+        '        AddHandler _FaderTouch.OnButtonReleased, AddressOf OnFaderTouchReleased
+
+        '        _RestoreTimer = New System.Threading.Timer(
+        '            AddressOf OnRestoreTimer,
+        '            Nothing,
+        '            System.Threading.Timeout.Infinite,
+        '            System.Threading.Timeout.Infinite)
+
+        '        _VerifyTimer = New System.Threading.Timer(
+        '            AddressOf OnVerifyTimer,
+        '            Nothing,
+        '            System.Threading.Timeout.Infinite,
+        '            System.Threading.Timeout.Infinite)
+        '    End Sub
+
+        '    ' ── Conversion dB ↔ raw ───────────────────────────────────────────
+
+        '    Private Function DbToRawFaderCmdValue(Db As Double) As Integer
+        '        If Db <= -150 Then
+        '            Return 0
+        '        ElseIf Db > -150 AndAlso Db <= -90 Then
+        '            Return CInt(Math.Round((1.1811 * Db) - 43.701, 0))
+        '        ElseIf Db > -90 AndAlso Db <= -20 Then
+        '            Return CInt(Math.Round((563.83 * Math.Exp(0.0298 * Db))))
+        '        ElseIf Db > -20 AndAlso Db < 6 Then
+        '            Return CInt(Math.Round((27.308 * Db) + 861.66))
+        '        ElseIf Db >= 6 Then
+        '            Return 1023
+        '        End If
+        '        Return 0
+        '    End Function
+        '    Private Function RawFaderCmdValueToNormValue(raw As Integer) As Double
+        '        Return Math.Round(_FaderCmd.FaderValue / CDbl(FaderMax), 4)
+        '    End Function
+        '    Private Function NormValueToRawFaderCmdValue(NormValue As Double) As Integer
+        '        Return CInt(Math.Round(Math.Min(Math.Max(NormValue, 0.0), 1.0) * FaderMax))
+        '    End Function
+        '    ''' <summary>
+        '    ''' Convertit une valeur brute de commande fader (0–1023) en volume en dB.
+        '    ''' Fonction inverse de <see cref="DbToRawFaderCmdValue"/>.
+        '    ''' </summary>
+        '    Private Function RawFaderCmdValueToDb(raw As Integer) As Double
+        '        If raw <= 0 Then
+        '            Return -150.0
+        '        ElseIf raw >= 1023 Then
+        '            Return 6.0
+        '        ElseIf raw <= 313 Then
+        '            Return Math.Log(raw / 563.83) / 0.0298
+        '        Else
+        '            Return (raw - 861.66) / 27.308
+        '        End If
+        '    End Function
+
+        'End Class
 
         ''' <summary>
         ''' Représente un fader motorisé du Control24.
@@ -5060,6 +5384,7 @@ Namespace Control24
             Private _NormValue As Double
             Private _NormFormatedValues As Tuple(Of Double, String)
             Private _DbVolume As Double = 0
+            Private _LastFaderValue As Integer = 0
 
             ' ── Restauration ScribbleStrip ─────────────────────────────────────
             Private _OriginalScribbleText As String = ""
@@ -5072,6 +5397,7 @@ Namespace Control24
             Private _Fader_Mode As Mode = Mode.Db
             Private _PanValue As Double
             Private _PanValueText As String
+            Private _FormatedValue As String
 
             ' ── Constantes ────────────────────────────────────────────────────
             Private Const FaderMin As Integer = 0
@@ -5101,7 +5427,9 @@ Namespace Control24
                     Return _Fader_Mode
                 End Get
                 Set
-                    _Fader_Mode = Value
+                    If Value <> _Fader_Mode Then
+                        _Fader_Mode = Value
+                    End If
                 End Set
             End Property
 
@@ -5139,7 +5467,34 @@ Namespace Control24
                     Return _FaderCmd.FaderValue
                 End Get
                 Set
-                    _FaderCmd.FaderValue = Math.Min(Math.Max(Value, FaderMin), FaderMax)
+                    Dim newValue = Math.Min(Math.Max(Value, FaderMin), FaderMax)
+                    'Console.WriteLine("NewValue:" & newValue)
+                    'Console.WriteLine("FaderCmd:" & _FaderCmd.FaderValue)
+
+                    If newValue <> _LastFaderValue Then
+                        'Console.WriteLine("Send:" & newValue)
+                        _LastFaderValue = newValue
+                        _FaderCmd.FaderValue = newValue
+                    End If
+                End Set
+            End Property
+            Public Property FormatedValue As String
+                Get
+                    Return _FormatedValue
+                End Get
+                Set
+                    If Value <> _FormatedValue Then
+                        _FormatedValue = Value
+
+                        If _IsShowingValue = False Then
+                            _OriginalScribbleText = _ScribbleStrip.Text
+                            _IsShowingValue = True
+                        End If
+
+                        _ScribbleStrip.Text = _FormatedValue
+                        _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
+                    End If
+
                 End Set
             End Property
 
@@ -5149,24 +5504,26 @@ Namespace Control24
                     Return _NormFormatedValues
                 End Get
                 Set
-                    _NormValue = Value.Item1
-                    _NormFormatedValues = Value
+                    If Value IsNot _NormFormatedValues Then
+                        _NormValue = Value.Item1
+                        _NormFormatedValues = Value
 
-                    If _IsShowingValue = False Then
-                        _OriginalScribbleText = _ScribbleStrip.Text
-                        _IsShowingValue = True
+                        If _IsShowingValue = False Then
+                            _OriginalScribbleText = _ScribbleStrip.Text
+                            _IsShowingValue = True
+                        End If
+
+                        Dim DblValue As Double = 0
+                        If Double.TryParse(Value.Item2, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, DblValue) Then
+                            _ScribbleStrip.Value = DblValue
+                        ElseIf Value.Item2 IsNot Nothing AndAlso Value.Item2 <> "" Then
+                            _ScribbleStrip.Text = Value.Item2
+                        Else
+                            _ScribbleStrip.Value = Value.Item1
+                        End If
+
+                        _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
                     End If
-
-                    Dim DblValue As Double = 0
-                    If Double.TryParse(Value.Item2, Globalization.NumberStyles.Any, CultureInfo.InvariantCulture, DblValue) Then
-                        _ScribbleStrip.Value = DblValue
-                    ElseIf Value.Item2 IsNot Nothing AndAlso Value.Item2 <> "" Then
-                        _ScribbleStrip.Text = Value.Item2
-                    Else
-                        _ScribbleStrip.Value = Value.Item1
-                    End If
-
-                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
                 End Set
             End Property
 
@@ -5176,24 +5533,26 @@ Namespace Control24
                     Return _PanValue
                 End Get
                 Set
-                    _PanValue = Value
+                    If Value <> _PanValue Then
+                        _PanValue = Value
 
-                    Dim Value_int As Integer = CInt(_PanValue)
-                    If Value_int = 0 Then
-                        _PanValueText = "<0>"
-                    ElseIf Value_int > 0 Then
-                        _PanValueText = Value_int & ">"
-                    ElseIf Value_int < 0 Then
-                        _PanValueText = "<" & Math.Abs(Value_int)
+                        Dim Value_int As Integer = CInt(_PanValue)
+                        If Value_int = 0 Then
+                            _PanValueText = "<0>"
+                        ElseIf Value_int > 0 Then
+                            _PanValueText = Value_int & ">"
+                        ElseIf Value_int < 0 Then
+                            _PanValueText = "<" & Math.Abs(Value_int)
+                        End If
+
+                        If _IsShowingValue = False Then
+                            _OriginalScribbleText = _ScribbleStrip.Text
+                            _IsShowingValue = True
+                        End If
+
+                        _ScribbleStrip.Text = _PanValueText
+                        _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
                     End If
-
-                    If _IsShowingValue = False Then
-                        _OriginalScribbleText = _ScribbleStrip.Text
-                        _IsShowingValue = True
-                    End If
-
-                    _ScribbleStrip.Text = _PanValueText
-                    _RestoreTimer.Change(RestoreDelayMs, System.Threading.Timeout.Infinite)
                 End Set
             End Property
 
@@ -5203,7 +5562,9 @@ Namespace Control24
                     Return _PanValueText
                 End Get
                 Set
-                    _PanValueText = Value
+                    If Value <> _PanValueText Then
+                        _PanValueText = Value
+                    End If
                 End Set
             End Property
 
@@ -5224,6 +5585,7 @@ Namespace Control24
 
                     If _IsShowingValue = False Then
                         _OriginalScribbleText = _ScribbleStrip.Text
+                        'Console.WriteLine("org txt:" & _OriginalScribbleText)
                         _IsShowingValue = True
                     End If
 
@@ -5235,6 +5597,7 @@ Namespace Control24
             ' ── Restauration ScribbleStrip ─────────────────────────────────────
             Private Sub OnRestoreTimer(state As Object)
                 _IsShowingValue = False
+                'Console.WriteLine("restore txt:" & _OriginalScribbleText)
                 _ScribbleStrip.Text = _OriginalScribbleText
             End Sub
 
@@ -5247,6 +5610,7 @@ Namespace Control24
             ''' </summary>
             Private Sub SendMotorIfNotTouched(rawValue As Integer)
                 _TargetFaderValue = Math.Min(Math.Max(rawValue, FaderMin), FaderMax)
+                ' Console.WriteLine("target:" & _TargetFaderValue)
                 If Not IsTouched Then
                     FaderValue = _TargetFaderValue
                 End If
@@ -5260,9 +5624,8 @@ Namespace Control24
             End Sub
 
             ''' <summary>Pilote le fader depuis Reaper (valeur normalisée).</summary>
-            Public Sub SetFaderNormValue(_NormFormatedValues As Tuple(Of Double, String))
-                NormFormatedValues = _NormFormatedValues
-                SendMotorIfNotTouched(NormValueToRawFaderCmdValue(_NormFormatedValues.Item1))
+            Public Sub SetFaderNormValue(NormValue As Double)
+                SendMotorIfNotTouched(NormValueToRawFaderCmdValue(NormValue))
             End Sub
 
             ''' <summary>Pilote le fader depuis Reaper (pan).</summary>
@@ -5284,6 +5647,8 @@ Namespace Control24
             ''' </summary>
             Private Sub OnFaderCmdChange() Handles _FaderCmd.OnCmdChange
                 If IsTouched Then
+                    _TargetFaderValue = _FaderCmd.FaderValue
+                    'Console.WriteLine("SetTarget:" & _TargetFaderValue)
                     Select Case Fader_Mode
                         Case Mode.Db
                             DbVolume = RawFaderCmdValueToDb(_FaderCmd.FaderValue)
@@ -5328,7 +5693,9 @@ Namespace Control24
             ''' Garantit que le fader rejoint la position correcte après manipulation humaine.
             ''' </summary>
             Private Sub OnFaderTouchReleased(componentId As String)
+
                 FaderValue = _TargetFaderValue
+                'Console.WriteLine("On release:" & FaderValue)
                 RaiseEvent On_FaderReleased(_Component_Id)
             End Sub
 
@@ -5419,6 +5786,7 @@ Namespace Control24
 
 
 
+
             ' ── Byte IDs boutons Control24 standard par piste ─────────────────
             Private Const BtnRecArm As Byte = &H0
             Private Const BtnSolo As Byte = &H7
@@ -5433,6 +5801,8 @@ Namespace Control24
             Private Const BtnInsertMode As Byte = &HA
 
             ' ── Propriétés ────────────────────────────────────────────────────
+
+
 
             ''' <summary>Numéro de piste 1-based de ce channel strip.</summary>
             Public ReadOnly Property TrackNumber As Integer
@@ -6512,6 +6882,7 @@ Namespace Control24
                     Return _Leds_Status
                 End Get
                 Set
+
                     _Leds_Status = Value
                     SetLeds_Status()
                 End Set
@@ -6688,6 +7059,7 @@ Namespace Control24
             Trim = &H8
             Read = &H4
             None = &H0
+            All = &H7C
         End Enum
         Public Class AutoModeLed_Cmd
             Inherits Track_Display_Cmd
@@ -6967,12 +7339,20 @@ Namespace Control24
             Private _Text As String
             Shared _Mask_Id As Byte() = {&HFF, &HFF, &HFF, &HFF, &HFF, &HFF, &H0, &H0, &H0, &H0, &HFF}
             Private _Value As Double
+            Private _LastText As String
+            Private _LastTextDoubleValue As String
 
             Shared ReadOnly Property Mask_Id As Byte()
                 Get
                     Return _Mask_Id
                 End Get
             End Property
+            Public ReadOnly Property LastTextDoubleValue As String
+                Get
+                    Return _LastTextDoubleValue
+                End Get
+            End Property
+
             Sub New(Track_Nb As Integer)
 
                 'set defaut cmd
@@ -6992,6 +7372,7 @@ Namespace Control24
                 End Get
                 Set
                     _Text = Value
+                    _LastText = Value
                     SetTextValue()
                 End Set
             End Property
@@ -7001,7 +7382,8 @@ Namespace Control24
                 End Get
                 Set
                     _Value = Value
-                    SetDoubleValue()
+                    Text = Hardware.Utility.GetScribbleTextfromDouble(Value)
+                    _LastTextDoubleValue = Text
                 End Set
             End Property
 
@@ -7019,54 +7401,7 @@ Namespace Control24
                 Cmd(9) = _Scribble_Bytes(3)
                 SendCmd()
             End Sub
-            Private Sub SetDoubleValue()
-                Dim ic = CultureInfo.InvariantCulture
-                Dim ValueAbs = Math.Abs(Value)
 
-                ' ── [1 000 000 000+] → ±inf ───────────────────────────────────
-                If ValueAbs >= 1000000000 Then
-                    If Value < 0 Then
-                        Text = "-inf"
-                    Else
-                        Text = "+inf"
-                    End If
-
-                    ' ── [1 000 000 .. 999 999 999] → ex : "12m3" ──────────────────
-                ElseIf ValueAbs >= 1000000 Then
-                    Dim newVal As Double = Math.Round(Value / 1000000.0, 1)
-                    Text = newVal.ToString("F0", ic) & "m" & GetCombineGlyph(newVal)
-
-                    ' ── [1 000 .. 999 999] → ex : "1k5" ──────────────────────────
-                ElseIf ValueAbs >= 1000 Then
-                    Dim newVal As Double = Math.Round(Value / 1000.0, 1)
-                    Text = newVal.ToString("F0", ic) & "k" & GetCombineGlyph(newVal)
-
-                    ' ── [100 .. 999] → entier sans décimale ───────────────────────
-                ElseIf ValueAbs >= 100 Then
-                    Text = Value.ToString("F0", ic)
-
-                    ' ── [0 .. 99] → entier + décimale combinée ────────────────────
-                Else
-                    Text = Value.ToString("F0", ic) & GetCombineGlyph(Value)
-                End If
-            End Sub
-
-
-            Private Function GetCombineGlyph(Number As Double) As String
-                Dim parts = Number.ToString("G", CultureInfo.InvariantCulture).Split("."c)
-
-                If parts.Length < 2 OrElse parts(1).Length = 0 Then
-                    Return "."
-                End If
-
-                Dim nco As Integer = AscW(parts(1)(0))
-
-                If nco <> 48 Then
-                    Return ChrW(nco - 26).ToString()
-                End If
-
-                Return "."
-            End Function
         End Class
         Public MustInherit Class Track_VariableActuator_Cmd
             Inherits Cmd
@@ -7099,8 +7434,8 @@ Namespace Control24
             End Sub
         End Class
         Public Enum Direction
-            Right = &H0
-            Left = &H1
+            Right = &H40
+            Left = &H0
         End Enum
         Public MustInherit Class Track_Rotary_Cmd
             Inherits Track_VariableActuator_Cmd
@@ -7119,6 +7454,7 @@ Namespace Control24
             End Property
             Private Sub ReadRotateDirection() Handles MyBase.OnCmdChange
                 _Rotate_Direction = Cmd(2) And &HC0
+
             End Sub
             Private Sub SetRotateDirection()
                 Cmd(2) = CByte((Cmd(2) And Not CByte(&HC0)) Or (_Rotate_Direction And &HC0))   ' ✅
@@ -7231,11 +7567,13 @@ Namespace Control24
                 Set
                     _FaderValue = Value
                     SetFaderValue()
+                    'Console.WriteLine("Set:" & Value)
                 End Set
             End Property
 
             Private Sub ReadFaderValue() Handles MyBase.OnCmdChange
                 _FaderValue = (CInt(Cmd(2)) << 3) Or (CInt(Cmd(4)) >> 4)
+                ' Console.WriteLine("Get:" & _FaderValue)
             End Sub
             Private Sub SetFaderValue()
                 Cmd(2) = _FaderValue >> 3

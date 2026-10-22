@@ -171,6 +171,71 @@ Public Class Main
                             Console.WriteLine("?" & "|" & "?")
                         End If
                     End If
+                Case "C24desk_OnButtonPressed"
+                    If parts.Count < 3 Then
+                        Console.WriteLine("Usage : C24desk_OnButtonPressed <Group> <Name>")
+                        Console.WriteLine("Exemple : C24desk_OnButtonPressed ChannelStrip_1 Solo_1")
+                    Else
+                        Dim group = _desk.GroupComponents(parts(1))
+                        If group IsNot Nothing Then
+                            For Each cpn In group
+                                Dim C24_btn = TryCast(cpn, Control24.Hardware.C24_Button)
+                                If C24_btn IsNot Nothing AndAlso C24_btn.Name = parts(2) Then
+                                    C24_btn.ButtonCmd_OnButtonStatusChange(True)
+                                    Console.WriteLine(parts(1) & "|" & parts(2) & "=OK")
+                                    Exit Select
+                                End If
+                            Next
+                            Console.WriteLine(parts(1) & "|" & "?")
+                        Else
+                            Console.WriteLine("?" & "|" & "?")
+                        End If
+                    End If
+                Case "C24desk_GetButtonStatus"
+                    Select Case parts.Count
+                        Case 2
+                            Dim group = _desk.GroupComponents(parts(1))
+                            If group IsNot Nothing Then
+                                For Each cpn In group
+                                    Dim C24_btn = TryCast(cpn, Control24.Hardware.C24_LedButton)
+
+                                    If C24_btn IsNot Nothing Then
+
+                                        Console.WriteLine(C24_btn.Name & "(Led:" & If(C24_btn.Led, "On", "Off") & ";" & "IsBlinking:" & If(C24_btn.IsBlinking, "On", "Off") & ")")
+
+                                    Else
+
+                                        Console.WriteLine(cpn.Name & "(No Led)")
+                                    End If
+                                Next
+
+                            Else
+                                Console.WriteLine(parts(1) & " is not a group")
+                            End If
+                        Case 3
+                            Dim group = _desk.GroupComponents(parts(1))
+                            If group IsNot Nothing Then
+                                For Each cpn In group
+                                    Dim C24_btn = TryCast(cpn, Control24.Hardware.C24_LedButton)
+
+                                    If C24_btn IsNot Nothing AndAlso C24_btn.Name = parts(2) Then
+
+                                        Console.WriteLine("Led=" & If(C24_btn.Led, "On", "Off") & "|" & "IsBlinking=" & If(C24_btn.IsBlinking, "On", "Off"))
+                                        Exit Select
+
+                                    End If
+                                Next
+                                Console.WriteLine(parts(1) & "|" & "?")
+                            Else
+                                Console.WriteLine("?" & "|" & "?")
+                            End If
+                        Case Else
+                            Console.WriteLine("Usage : C24desk_GetButtonStatus <Group> <Name>")
+                            Console.WriteLine("Exemple : C24desk_GetButtonStatus ChannelStrip_1 Solo_1")
+                            Console.WriteLine("Usage : C24desk_GetButtonStatus <Group> ")
+                            Console.WriteLine("Exemple : C24desk_GetButtonStatus ChannelStrip_1 ")
+                    End Select
+
                 Case "C24desk_OnVpotRotate"
                     If parts.Count < 4 Then
                         Console.WriteLine("Usage : C24desk_OnVpotRotate <Group> <Name> <Value>")
@@ -180,6 +245,10 @@ Public Class Main
                         If group IsNot Nothing Then
                             For Each cpn In group
                                 Dim C24_Vpot = TryCast(cpn, Control24.Hardware.C24_Vpot)
+                                Dim C24_JogWheel As Control24.Hardware.C24_JogWheel = Nothing
+                                If C24_Vpot Is Nothing Then
+                                    C24_JogWheel = TryCast(cpn, Control24.Hardware.C24_JogWheel)
+                                End If
                                 If C24_Vpot IsNot Nothing AndAlso C24_Vpot.Name = parts(2) Then
                                     Dim value As Integer = 0
 
@@ -191,6 +260,40 @@ Public Class Main
                                     Else
                                         Console.WriteLine("Value " & parts(3) & "is not correct value ! (ex of correct values : -2/-1/1/2 etc...")
                                     End If
+                                ElseIf C24_JogWheel IsNot Nothing AndAlso C24_JogWheel.Name = parts(2) Then
+                                    Dim value As Integer = 0
+
+                                    If Integer.TryParse(parts(3), value) Then
+
+                                        C24_JogWheel.OnJogWheelCmdChange(value)
+                                        Console.WriteLine(parts(1) & "|" & parts(2) & "=OK|Value=" & value)
+                                        Exit Select
+                                    Else
+                                        Console.WriteLine("Value " & parts(3) & "is not correct value ! (ex of correct values : -2/-1/1/2 etc...")
+                                    End If
+
+                                End If
+                            Next
+                            Console.WriteLine(parts(1) & "|" & "?")
+                        Else
+                            Console.WriteLine("?" & "|" & "?")
+                        End If
+                    End If
+                Case "C24desk_GetFaderValue"
+                    If parts.Count < 3 Then
+                        Console.WriteLine("Usage : C24desk_GetFaderValue <Group> <Name> ")
+                        Console.WriteLine("Exemple : C24desk_GetFaderValue ChannelStrip_1 Fader_1 ")
+                    Else
+                        Dim group = _desk.GroupComponents(parts(1))
+                        If group IsNot Nothing Then
+                            For Each cpn In group
+                                Dim C24_Fader = TryCast(cpn, Control24.Hardware.C24_Fader)
+                                If C24_Fader IsNot Nothing AndAlso C24_Fader.Name = parts(2) Then
+
+
+
+                                    Console.WriteLine(C24_Fader.FaderValue)
+                                    Exit Select
 
                                 End If
                             Next
@@ -274,7 +377,156 @@ Public Class Main
                             End Try
                         End If
                     End If
+                Case "Print", "print", "prt"
+                    Console.Write(vbCrLf)
+                    If parts.Count = 2 AndAlso parts(1) = "ch" Then
+                        'print channel bar
+                        Console.Write("|")
+                        For i = 0 To _desk.ScreenChannelBarScroll.Count - 1
+                            Dim txt As String = String.Format("{0}|", _desk.ScreenChannelBarScroll.Strips(i).Text)
+                            Console.Write(txt)
+                        Next
+                    ElseIf parts.Count = 3 AndAlso parts(1) = "led" Then
+                        Select Case parts(2)
+                            Case "vpot"
+                                'print led de Vpot
+                                Console.Write("|")
+                                For Each cs In _desk.ChannelStrips
+                                    Dim NbLedOn As Integer = 0
+                                    Dim LedIndex As Integer? = Nothing
+                                    For i = 0 To cs.Vpot.VpotLedCmd.Leds_Status.Count - 1
+                                        If cs.Vpot.VpotLedCmd.Leds_Status(i) Then
+                                            NbLedOn += 1
+                                            LedIndex = i
+                                        End If
+                                    Next
+                                    Dim txt As String = String.Format("{0};{1}|", NbLedOn, If(LedIndex IsNot Nothing, LedIndex, " "))
+                                    Console.Write(txt)
+                                Next
+                            Case "mute"
+                                'print led de mute
+                                Console.Write("|")
+                                For Each cs In _desk.ChannelStrips
+                                    Dim txt As String = String.Format("Led:{0};IsBlinking:{1}|", If(cs.Mute.Led, "On", "Off"), If(cs.Mute.IsBlinking, "On", "Off"))
+                                    Console.Write(txt)
+                                Next
+                            Case "solo"
+                                'print led de solo
+                                Console.Write("|")
+                                For Each cs In _desk.ChannelStrips
+                                    Dim txt As String = String.Format("Led:{0};IsBlinking:{1}|", If(cs.Solo.Led, "On", "Off"), If(cs.Solo.IsBlinking, "On", "Off"))
+                                    Console.Write(txt)
+                                Next
+                            Case "auto"
+                                'print led de automation
+                                Console.Write("|")
+                                For Each cs In _desk.ChannelStrips
+                                    Dim autoLed = cs.AutoModeLed
 
+                                    Dim txt As String = String.Format(autoLed.AutoMode.ToString & ";IsBlinking:{0}|", If(autoLed.IsBlinking, "On", "Off"))
+                                    Console.Write(txt)
+                                Next
+                            Case "switchactive"
+                                'print led de solo
+                                Console.Write("|")
+                                For Each cs In _desk.ChannelStrips
+                                    Dim txt As String = String.Format("Led:{0};IsBlinking:{1}|", If(cs.SwitchActive.Led, "On", "Off"), If(cs.SwitchActive.IsBlinking, "On", "Off"))
+                                    Console.Write(txt)
+                                Next
+                            Case "switchactiveled"
+                                'print led de solo
+                                Console.Write("|")
+                                For Each cs In _desk.ChannelStrips
+                                    Dim txt As String = String.Format("Led:{0};IsBlinking:{1}|", If(cs.LedSwitchActive.Led, "On", "Off"), If(cs.LedSwitchActive.IsBlinking, "On", "Off"))
+                                    Console.Write(txt)
+                                Next
+
+
+                        End Select
+
+
+                    Else
+
+                        'print all screen
+                        Console.Write("|")
+                        For Each cs In _desk.ChannelStrips
+                            Dim txt As String = String.Format("{0}|", cs.ScribbleStrip.Text)
+                            Console.Write(txt)
+                        Next
+
+                    End If
+                    Console.Write(vbCrLf)
+
+                Case "ResetC24SENDORDER"
+                    If parts.Count = 2 AndAlso parts(1) = "All" Then
+                        'reset all 
+                        For Each track In _controller._ReaperProj.Tracks
+                            Reaper.utility.SetProjectExtState("C24SENDORDER", track.TrackIndex, "")
+                            Console.WriteLine("Reset C24SENDORDER for track :" & track.TrackIndex)
+                        Next
+                    ElseIf parts.Count = 2 AndAlso parts(1) <> "All" Then
+                        Dim trkIndex As Integer = -1
+                        If Integer.TryParse(parts(1), trkIndex) Then
+                            Reaper.utility.SetProjectExtState("C24SENDORDER", trkIndex, "")
+                            Console.WriteLine("Reset C24SENDORDER for track :" & trkIndex)
+                        Else
+                            Console.Write(" trackIndex ou all ")
+                        End If
+                    End If
+
+                Case "ctl"
+                    If parts.Count = 2 AndAlso parts(1) = "h" Then
+
+                        _controller.C24_Desk.Ctl_Clutch.ButtonCmd_OnButtonStatusChange(True)
+                        Console.Write("Ctl is hold")
+                    ElseIf parts.Count = 2 AndAlso parts(1) = "r" Then
+                        _controller.C24_Desk.Ctl_Clutch.ButtonCmd_OnButtonStatusChange(False)
+                        Console.Write("Ctl is released")
+                    Else
+                        Console.Write("option non valide")
+                    End If
+                Case "ctrl"
+                    If parts.Count = 2 AndAlso parts(1) = "h" Then
+                        _controller.C24_Desk.Ctrl.ButtonCmd_OnButtonStatusChange(True)
+                        Console.Write("Ctrl is hold")
+                    ElseIf parts.Count = 2 AndAlso parts(1) = "r" Then
+                        _controller.C24_Desk.Ctrl.ButtonCmd_OnButtonStatusChange(False)
+                        Console.Write("Ctrl is released")
+                    Else
+                        Console.Write("option non valide")
+                    End If
+                Case "opt"
+                    If parts.Count = 2 AndAlso parts(1) = "h" Then
+                        _controller.C24_Desk.Opt.ButtonCmd_OnButtonStatusChange(True)
+                        Console.Write("Opt is hold")
+                    ElseIf parts.Count = 2 AndAlso parts(1) = "r" Then
+                        _controller.C24_Desk.Opt.ButtonCmd_OnButtonStatusChange(False)
+                        Console.Write("Opt is released")
+                    Else
+                        Console.Write("option non valide")
+                    End If
+                Case "sht"
+                    If parts.Count = 2 AndAlso parts(1) = "h" Then
+                        _controller.C24_Desk.Shift.ButtonCmd_OnButtonStatusChange(True)
+                        Console.Write("Shift is hold")
+                    ElseIf parts.Count = 2 AndAlso parts(1) = "r" Then
+                        _controller.C24_Desk.Shift.ButtonCmd_OnButtonStatusChange(False)
+                        Console.Write("Shift is released")
+                    Else
+                        Console.Write("option non valide")
+                    End If
+                Case "nudge"
+                    If parts.Count = 2 AndAlso parts(1) = "h" Then
+                        _controller.C24_Desk.Nudge.ButtonCmd_OnButtonStatusChange(True)
+                        Console.Write("Nudge is hold")
+                    ElseIf parts.Count = 2 AndAlso parts(1) = "r" Then
+                        _controller.C24_Desk.Nudge.ButtonCmd_OnButtonStatusChange(False)
+                        Console.Write("Nudge is released")
+                    Else
+                        Console.Write("option non valide")
+                    End If
+                Case "Clear", "clear", "cls"
+                    Console.Clear()
                 Case Else
                     Console.WriteLine($"Commande inconnue : '{cmd}'. Tapez 'help'.")
 
@@ -329,18 +581,41 @@ Public Class Main
         Console.WriteLine("  bridge <commande>                           — Envoie une commande brute au bridge Reaper")
         Console.WriteLine("                                                Exemple : bridge COUNT_TRACKS")
         Console.WriteLine("  tracks                                      — Liste les pistes du projet actif")
+        Console.WriteLine("  ctl/ctrl/opt/sht <option>                   — active/désactive le modifier")
+        Console.WriteLine("  option : h                                  — hold : active le modifier")
+        Console.WriteLine("  option : r                                  — release : désactive le modifier")
         Console.WriteLine("  interfaces                                  — Liste les interfaces réseau disponibles")
         Console.WriteLine("  components                                  — Liste les composants C24 enregistrés")
         Console.WriteLine("  C24desk_OnButtonReleased <Group> <Name>     — Simule le relâchement d'un bouton C24")
         Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
+        Console.WriteLine("  C24desk_OnButtonPressed <Group> <Name>      — Simule la pression d'un bouton C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnButtonReleased ChannelStrip_1 Solo_1")
+        Console.WriteLine("  C24desk_GetButtonStatus <Group> <Name>      — Retourne l état de la led d'un bouton C24")
+        Console.WriteLine("                                                Exemple : C24desk_GetButtonStatus ChannelStrip_1 Solo_1 retourne ""Led=On|IsBlinking=Off""")
+        Console.WriteLine("  C24desk_GetButtonStatus <Group>             — Retourne l état des leds de tous le group")
+        Console.WriteLine("                                                Exemple : C24desk_GetButtonStatus ChannelStrip_1  retourne ""Mute1:Led=On;IsBlinking=Off etc...""")
         Console.WriteLine("  C24desk_OnVpotRotate <Group> <Name> <Value> — Simule la rotation d'un composant Vpot C24")
         Console.WriteLine("                                                Exemple : C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 -1")
+        Console.WriteLine("  C24desk_GetFaderValue <Group> <Name>        — Retourne la valeur de la position d'un composant Fader C24")
+        Console.WriteLine("                                                Exemple : C24desk_OnFaderVolChange ChannelStrip_1 Fader_1")
         Console.WriteLine("  C24desk_OnFaderVolChange <Group> <Name> <VolDb> — Simule le deplacement d'un composant Fader C24")
         Console.WriteLine("                                                Exemple : C24desk_OnFaderVolChange ChannelStrip_1 Fader_1 -1")
         Console.WriteLine("  C24desk_OnFaderNormChange <Group> <Name> <NormValue> — Simule le deplacement d'un composant Fader C24")
         Console.WriteLine("                                                Exemple : C24desk_OnFaderNormChange ChannelStrip_1 Fader_1 -1")
         Console.WriteLine("  ConvertTxt2Csv <input> <output>             — Convertit un log Wireshark TXT en CSV")
         Console.WriteLine("                                                Exemple : ConvertTxt2Csv ""C:\cap.txt"" ""C:\out.csv""")
+        Console.WriteLine("  Clear                                       — Efface la console")
+        Console.WriteLine("  Print [ch]                                  — Affiche le text dans tous les écrans (24). ")
+        Console.WriteLine("                                               Option avec ""ch"" pour afficher le channel bar")
+        Console.WriteLine("  Print [led] <options>                       — Affiche le status des leds")
+        Console.WriteLine("  options: vpot                                 Option avec ""vpot"" pour afficher ""nb de led On;l'index de la led On""")
+        Console.WriteLine("  options: mute/solo                            Option avec ""mute/solo"" pour afficher le status des leds On/Off et Isblinking On/Off ")
+        Console.WriteLine("  options: auto                                 Option avec ""auto"" pour afficher le status des leds de l'automation avec Isblinking On/Off ")
+        Console.WriteLine("  options: switchactive                         Option avec ""switchactive"" pour afficher le status des leds On/Off et Isblinking On/Off de switchactive")
+        Console.WriteLine("  options: switchactiveled                      Option avec ""switchactiveled"" pour afficher le status des leds On/Off et Isblinking On/Off des leds a coté de switchactive")
+        Console.WriteLine("  ResetC24SENDORDER <option>                  — Efface dans le dictionnaire C24SENDORDER de clés/valeurs de Reaper ")
+        Console.WriteLine("  option: trkIndex                              Option l'index de la piste 0,1,2,etc ")
+        Console.WriteLine("  option: All                                   Option toutes les pistes")
         Console.WriteLine("  quit / exit                                 — Arrête le driver")
     End Sub
     Private Shared Function ParseCommandParts(input As String) As List(Of String)

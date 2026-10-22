@@ -87,7 +87,8 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetAppVersion = GetDel<ReaperAPI.GetAppVersionDel>(getFn, "GetAppVersion");
             ReaperAPI.GetResourcePath = GetDel<ReaperAPI.GetResourcePathDel>(getFn, "GetResourcePath");
             ReaperAPI.GetExePath = GetDel<ReaperAPI.GetExePathDel>(getFn, "GetExePath");
-           
+            ReaperAPI.GetToggleCommandState = GetDel<ReaperAPI.GetToggleCommandStateDel>(getFn, "GetToggleCommandState");
+
             // Projet
             ReaperAPI.InsertTrackAtIndex = GetDel<ReaperAPI.InsertTrackAtIndexDel>(getFn, "InsertTrackAtIndex");
             ReaperAPI.main_openProject = GetDel<ReaperAPI.main_openProjectDel>(getFn, "main_openProject");
@@ -99,6 +100,11 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetProjectPathEx = GetDel<ReaperAPI.GetProjectPathExDel>(getFn, "GetProjectPathEx");
             ReaperAPI.GetProjectLength = GetDel<ReaperAPI.GetProjectLengthDel>(getFn, "GetProjectLength");
             ReaperAPI.DeleteTrack = GetDel<ReaperAPI.DeleteTrackDel>(getFn, "DeleteTrack");
+            ReaperAPI.Main_SaveProject = GetDel<ReaperAPI.Main_SaveProjectDel>(getFn, "Main_SaveProject");
+            ReaperAPI.SelectProjectInstance = GetDel<ReaperAPI.SelectProjectInstanceDel>(getFn, "SelectProjectInstance");
+            ReaperAPI.SetProjExtState = GetDel<ReaperAPI.SetProjExtStateDel>(getFn, "SetProjExtState");
+            ReaperAPI.GetProjExtState = GetDel<ReaperAPI.GetProjExtStateDel>(getFn, "GetProjExtState");
+            ReaperAPI.GetMasterMuteSoloFlags = GetDel<ReaperAPI.GetMasterMuteSoloFlagsDel>(getFn, "GetMasterMuteSoloFlags");
 
             // Transport
             ReaperAPI.GetPlayState = GetDel<ReaperAPI.GetPlayStateDel>(getFn, "GetPlayState");
@@ -106,9 +112,10 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetPlayPosition2 = GetDel<ReaperAPI.GetPlayPosition2Del>(getFn, "GetPlayPosition2");
             ReaperAPI.GetCursorPosition = GetDel<ReaperAPI.GetCursorPositionDel>(getFn, "GetCursorPosition");
             ReaperAPI.SetEditCurPos = GetDel<ReaperAPI.SetEditCurPosDel>(getFn, "SetEditCurPos");
-            ReaperAPI.GetLoopTimeRange2 = GetDel<ReaperAPI.GetLoopTimeRange2Del>(getFn, "GetLoopTimeRange2");
-            ReaperAPI.SetLoopTimeRange2 = GetDel<ReaperAPI.SetLoopTimeRange2Del>(getFn, "SetLoopTimeRange2");
-
+            ReaperAPI.GetSet_LoopTimeRange2 = GetDel<ReaperAPI.GetSet_LoopTimeRange2Del>(getFn, "GetSet_LoopTimeRange2");
+            ReaperAPI.MoveEditCursor = GetDel<ReaperAPI.MoveEditCursorDel>(getFn, "MoveEditCursor");
+            ReaperAPI.SnapToGrid = GetDel<ReaperAPI.SnapToGridDel>(getFn, "SnapToGrid");
+            
             // Tempo / Signature
             ReaperAPI.Master_GetTempo = GetDel<ReaperAPI.Master_GetTempoDel>(getFn, "Master_GetTempo");
             ReaperAPI.Master_GetPlayRateAtTime = GetDel<ReaperAPI.Master_GetPlayRateAtTimeDel>(getFn, "Master_GetPlayRateAtTime");
@@ -121,7 +128,10 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetTempoTimeSigMarker = GetDel<ReaperAPI.GetTempoTimeSigMarkerDel>(getFn, "GetTempoTimeSigMarker");
             ReaperAPI.format_timepos = GetDel<ReaperAPI.format_timeposDel>(getFn, "format_timepos");
             ReaperAPI.format_timepos2 = GetDel<ReaperAPI.format_timepos2Del>(getFn, "format_timepos2");
-
+            ReaperAPI.BR_GetNextGridDivision = GetDel<ReaperAPI.BR_GetNextGridDivisionDel>(getFn, "BR_GetNextGridDivision");
+            ReaperAPI.BR_GetPrevGridDivision = GetDel<ReaperAPI.BR_GetPrevGridDivisionDel>(getFn, "BR_GetPrevGridDivision");
+            ReaperAPI.BR_GetClosestGridDivision = GetDel<ReaperAPI.BR_GetClosestGridDivisionDel>(getFn, "BR_GetClosestGridDivision");
+            ReaperAPI.GetSet_ArrangeView2 = GetDel<ReaperAPI.GetSet_ArrangeView2Del>(getFn, "GetSet_ArrangeView2");
             // Groups
             ReaperAPI.GetSetTrackGroupMembershipEx = GetDel<ReaperAPI.GetSetTrackGroupMembershipExDel>(getFn, "GetSetTrackGroupMembershipEx");
 
@@ -149,7 +159,6 @@ public static unsafe class ReaperEntry
             ReaperAPI.CreateTrackSend = GetDel<ReaperAPI.CreateTrackSendDel>(getFn, "CreateTrackSend");
             ReaperAPI.RemoveTrackSend = GetDel<ReaperAPI.RemoveTrackSendDel>(getFn, "RemoveTrackSend");
             ReaperAPI.AnyTrackSolo = GetDel<ReaperAPI.AnyTrackSoloDel>(getFn, "AnyTrackSolo");
-
             // Sélection
             ReaperAPI.CountSelectedTracks = GetDel<ReaperAPI.CountSelectedTracksDel>(getFn, "CountSelectedTracks");
             ReaperAPI.GetSelectedTrack = GetDel<ReaperAPI.GetSelectedTrackDel>(getFn, "GetSelectedTrack");
@@ -187,7 +196,8 @@ public static unsafe class ReaperEntry
             ReaperAPI.TrackFX_SetNamedConfigParm = GetDel<ReaperAPI.TrackFX_SetNamedConfigParmDel>(getFn, "TrackFX_SetNamedConfigParm");
             ReaperAPI.TrackFX_GetNamedConfigParm = GetDel<ReaperAPI.TrackFX_GetNamedConfigParmDel>(getFn, "TrackFX_GetNamedConfigParm");
             ReaperAPI.TrackFX_GetFXGUID = GetDel<ReaperAPI.TrackFX_GetFXGUIDDel>(getFn, "TrackFX_GetFXGUID");
-           
+            ReaperAPI.TrackFX_EndParamEdit = GetDel<ReaperAPI.TrackFX_EndParamEditDel>(getFn, "TrackFX_EndParamEdit");
+
 
 
             // ── Exposer EnqueueUIAction via ReaperAPI ─────────────────────────
@@ -208,10 +218,19 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetMediaSourceLength = GetDel<ReaperAPI.GetMediaSourceLengthDel>(getFn, "GetMediaSourceLength");
 
             // Marqueurs
-            ReaperAPI.CountProjectMarkers = GetDel<ReaperAPI.CountProjectMarkersDel>(getFn, "CountProjectMarkers");
-            ReaperAPI.EnumProjectMarkers = GetDel<ReaperAPI.EnumProjectMarkersDel>(getFn, "EnumProjectMarkers3");
+          
+           
             ReaperAPI.AddProjectMarker = GetDel<ReaperAPI.AddProjectMarkerDel>(getFn, "AddProjectMarker2");
             ReaperAPI.DeleteProjectMarker = GetDel<ReaperAPI.DeleteProjectMarkerDel>(getFn, "DeleteProjectMarker");
+           
+           
+            ReaperAPI.CountProjectMarkers = GetDel<ReaperAPI.CountProjectMarkersDel>(getFn, "CountProjectMarkers");
+            ReaperAPI.EnumProjectMarkers = GetDel<ReaperAPI.EnumProjectMarkersDel>(getFn, "EnumProjectMarkers");
+            ReaperAPI.AddProjectMarker = GetDel<ReaperAPI.AddProjectMarkerDel>(getFn, "AddProjectMarker2");
+            ReaperAPI.SetProjectMarker = GetDel<ReaperAPI.SetProjectMarkerDel>(getFn, "SetProjectMarker");
+            ReaperAPI.GetLastMarkerAndCurRegion = GetDel<ReaperAPI.GetLastMarkerAndCurRegionDel>(getFn, "GetLastMarkerAndCurRegion");
+            ReaperAPI.DeleteProjectMarker = GetDel<ReaperAPI.DeleteProjectMarkerDel>(getFn, "DeleteProjectMarker");
+            ReaperAPI.DeleteProjectMarkerByIndex = GetDel<ReaperAPI.DeleteProjectMarkerByIndexDel>(getFn, "DeleteProjectMarkerByIndex");
             ReaperAPI.GoToMarker = GetDel<ReaperAPI.GoToMarkerDel>(getFn, "GoToMarker");
             ReaperAPI.GoToRegion = GetDel<ReaperAPI.GoToRegionDel>(getFn, "GoToRegion");
 
@@ -238,7 +257,7 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetTrackSendUIMute = GetDel<ReaperAPI.GetTrackSendUIMuteDel>(getFn, "GetTrackSendUIMute");
             ReaperAPI.ToggleTrackSendUIMute = GetDel<ReaperAPI.ToggleTrackSendUIMuteDel>(getFn, "ToggleTrackSendUIMute");
             ReaperAPI.SetTrackUIVolume = GetDel<ReaperAPI.SetTrackUIVolumeDel>(getFn, "SetTrackUIVolume");
-
+          
             // Volume / Peak
             ReaperAPI.Track_GetPeakInfo = GetDel<ReaperAPI.Track_GetPeakInfoDel>(getFn, "Track_GetPeakInfo");
             ReaperAPI.Track_GetPeakHoldDB = GetDel<ReaperAPI.Track_GetPeakHoldDBDel>(getFn, "Track_GetPeakHoldDB");
@@ -265,6 +284,7 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetEnvelopeInfo_Value = GetDel<ReaperAPI.GetEnvelopeInfo_ValueDel>(getFn, "GetEnvelopeInfo_Value");
             ReaperAPI.GetEnvelopeStateChunk = GetDel<ReaperAPI.GetEnvelopeStateChunkDel>(getFn, "GetEnvelopeStateChunk");
             ReaperAPI.SetEnvelopeStateChunk = GetDel<ReaperAPI.SetEnvelopeStateChunkDel>(getFn, "SetEnvelopeStateChunk");
+            ReaperAPI.GetTrackEnvelopeByName = GetDel<ReaperAPI.GetTrackEnvelopeByNameDel>(getFn, "GetTrackEnvelopeByName");
 
             // MIDI Editor
             ReaperAPI.MIDIEditor_GetActive = GetDel<ReaperAPI.MIDIEditor_GetActiveDel>(getFn, "MIDIEditor_GetActive");
@@ -300,6 +320,9 @@ public static unsafe class ReaperEntry
             // "timer" est le nom de hook Reaper pour le callback periodique (~30 ms).
             delegate* unmanaged<void> timerPtr = &OnReaperTimer;
             RegisterAnsi(reg, "timer", (nint)timerPtr);
+
+            _getFnCached = getFn;
+            TryBindSwsApis();
 
             return ReaperBridge.Initialize(rec, dllDir);
         }
@@ -593,10 +616,39 @@ public static unsafe class ReaperEntry
     [UnmanagedCallersOnly]
     private static void OnReaperTimer()
     {
+        TryBindSwsApis();
         while (_uiQueue.TryDequeue(out var action))
         {
             try { action(); }
             catch { }
+        }
+    }
+
+    private static GetFuncRawDelegate? _getFnCached;
+
+    private static void TryBindSwsApis()
+    {
+        if (_getFnCached is null)
+        {
+            return;
+        }
+
+        if (ReaperAPI.BR_GetNextGridDivision is null)
+        {
+            ReaperAPI.BR_GetNextGridDivision =
+                GetDel<ReaperAPI.BR_GetNextGridDivisionDel>(_getFnCached, "BR_GetNextGridDivision");
+        }
+
+        if (ReaperAPI.BR_GetPrevGridDivision is null)
+        {
+            ReaperAPI.BR_GetPrevGridDivision =
+                GetDel<ReaperAPI.BR_GetPrevGridDivisionDel>(_getFnCached, "BR_GetPrevGridDivision");
+        }
+
+        if (ReaperAPI.BR_GetClosestGridDivision is null)
+        {
+            ReaperAPI.BR_GetClosestGridDivision =
+                GetDel<ReaperAPI.BR_GetClosestGridDivisionDel>(_getFnCached, "BR_GetClosestGridDivision");
         }
     }
 }

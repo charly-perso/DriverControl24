@@ -26,6 +26,29 @@ Public Class ReaperAPI
     Public Delegate Sub MarkProjectDirtyDel(proj As IntPtr)
     Public Shared MarkProjectDirty As MarkProjectDirtyDel
 
+    ''' <summary>
+    ''' Écrit une valeur d'état projet persistante (extname/key/value) dans le .rpp.
+    ''' Retourne &gt; 0 si l'écriture a réussi.
+    ''' </summary>
+    Public Delegate Function SetProjExtStateDel(
+    proj As IntPtr,
+    <MarshalAs(UnmanagedType.LPStr)> extname As String,
+    <MarshalAs(UnmanagedType.LPStr)> key As String,
+    <MarshalAs(UnmanagedType.LPStr)> value As String) As Integer
+    Public Shared SetProjExtState As SetProjExtStateDel
+
+    ''' <summary>
+    ''' Lit une valeur d'état projet persistante (extname/key) depuis le .rpp.
+    ''' Retourne &gt; 0 si la clé existe, 0 si absente, &lt; 0 en erreur.
+    ''' </summary>
+    Public Delegate Function GetProjExtStateDel(
+    proj As IntPtr,
+    <MarshalAs(UnmanagedType.LPStr)> extname As String,
+    <MarshalAs(UnmanagedType.LPStr)> key As String,
+    valueOut As IntPtr,
+    valueOutSz As Integer) As Integer
+    Public Shared GetProjExtState As GetProjExtStateDel
+
     ' ═══════════════════════════════════════════════════════════════
     '  PROJET
     ' ═══════════════════════════════════════════════════════════════
@@ -53,6 +76,12 @@ Public Class ReaperAPI
     ''' <summary>Piste maître du projet.</summary>
     Public Delegate Function GetMasterTrackDel(proj As IntPtr) As IntPtr
     Public Shared GetMasterTrack As GetMasterTrackDel
+    ''' <summary>
+    ''' Retourne les flags mute/solo de la piste master.
+    ''' Valeur brute entière (bitmask) retournée par l'API Reaper.
+    ''' </summary>
+    Public Delegate Function GetMasterMuteSoloFlagsDel() As Integer
+    Public Shared GetMasterMuteSoloFlags As GetMasterMuteSoloFlagsDel
 
     ''' <summary>Supprime une piste du projet actif par son index 0-based.</summary>
     Public Delegate Sub DeleteTrackDel(track As IntPtr)
@@ -101,6 +130,50 @@ Public Class ReaperAPI
     ''' <summary>Position en mesures/temps (buf = "1.2.3.00" etc).</summary>
     Public Delegate Sub format_timepos2Del(tpos As Double, buf As IntPtr, buflen As Integer, modeoverride As Integer)
     Public Shared format_timepos2 As format_timepos2Del
+
+    ''' <summary>Déplace le curseur d'édition d'un delta temporel (secondes).</summary>
+    ''' <param name="adjamt">Décalage en secondes (positif ou négatif).</param>
+    ''' <param name="dosel">True pour déplacer aussi la sélection temporelle.</param>
+    Public Delegate Sub MoveEditCursorDel(adjamt As Double, dosel As Boolean)
+    Public Shared MoveEditCursor As MoveEditCursorDel
+    ''' <summary>
+    ''' Aligne une position temporelle sur la grille du projet.
+    ''' </summary>
+    ''' <param name="proj">Projet cible (IntPtr.Zero = projet actif).</param>
+    ''' <param name="timePos">Position en secondes.</param>
+    ''' <returns>Position alignée sur la grille, en secondes.</returns>
+    Public Delegate Function SnapToGridDel(proj As IntPtr, timePos As Double) As Double
+    Public Shared SnapToGrid As SnapToGridDel
+    ''' <summary>
+    ''' Retourne la prochaine division de grille (SWS/BR) après la position donnée.
+    ''' </summary>
+    Public Delegate Function BR_GetNextGridDivisionDel(position As Double) As Double
+    Public Shared BR_GetNextGridDivision As BR_GetNextGridDivisionDel
+
+    ''' <summary>
+    ''' Retourne la division de grille (SWS/BR) précédente avant la position donnée.
+    ''' </summary>
+    Public Delegate Function BR_GetPrevGridDivisionDel(position As Double) As Double
+    Public Shared BR_GetPrevGridDivision As BR_GetPrevGridDivisionDel
+
+    ''' <summary>
+    ''' Retourne la division de grille (SWS/BR) la plus proche de la position donnée.
+    ''' </summary>
+    Public Delegate Function BR_GetClosestGridDivisionDel(position As Double) As Double
+    Public Shared BR_GetClosestGridDivision As BR_GetClosestGridDivisionDel
+    ''' <summary>
+    ''' Lit ou définit la vue d'arrangement.
+    ''' isSet=False : lit start_time / end_time.
+    ''' isSet=True  : applique start_time / end_time.
+    ''' </summary>
+    Public Delegate Function GetSet_ArrangeView2Del(
+        proj As IntPtr,
+        isSet As Boolean,
+        screen_x_start As Integer,
+        screen_x_end As Integer,
+        ByRef start_time As Double,
+        ByRef end_time As Double) As Boolean
+    Public Shared GetSet_ArrangeView2 As GetSet_ArrangeView2Del
 
     ' ═══════════════════════════════════════════════════════════════
     '  PISTES SENDS
@@ -350,6 +423,17 @@ Public Class ReaperAPI
         fx As Integer) As IntPtr
     Public Shared TrackFX_GetFXGUID As TrackFX_GetFXGUIDDel
 
+    ''' <summary>
+    ''' Termine l'édition d'un paramètre FX de piste, ce qui envoie un
+    ''' undo-point unique regroupant les modifications précédentes de
+    ''' <c>TrackFX_SetParam</c> / <c>TrackFX_SetParamNormalized</c>.
+    ''' À appeler après une série de modifications (ex : déplacement de
+    ''' Vpot/fader) pour éviter de créer un undo-point par valeur intermédiaire.
+    ''' Retourne True si l'opération a réussi.
+    ''' </summary>
+    Public Delegate Function TrackFX_EndParamEditDel(track As IntPtr, fx As Integer, param As Integer) As Boolean
+    Public Shared TrackFX_EndParamEdit As TrackFX_EndParamEditDel
+
     ' ═══════════════════════════════════════════════════════════════
     '  ITEMS / TAKES
     ' ═══════════════════════════════════════════════════════════════
@@ -383,42 +467,7 @@ Public Class ReaperAPI
         newvalue As Double) As Boolean
     Public Shared SetMediaItemInfo_Value As SetMediaItemInfo_ValueDel
 
-    ' ═══════════════════════════════════════════════════════════════
-    '  MARQUEURS / RÉGIONS
-    ' ═══════════════════════════════════════════════════════════════
 
-    ''' <summary>Nombre total de marqueurs+régions (nummarkersout/numregionsout par ByRef).</summary>
-    Public Delegate Function CountProjectMarkersDel(proj As IntPtr, ByRef nummarkersout As Integer, ByRef numregionsout As Integer) As Integer
-    Public Shared CountProjectMarkers As CountProjectMarkersDel
-
-    ''' <summary>Énumère marqueurs et régions (name = IntPtr → Marshal.PtrToStringAnsi).</summary>
-    Public Delegate Function EnumProjectMarkersDel(
-        idx As Integer,
-        ByRef isrgn As Boolean,
-        ByRef pos As Double,
-        ByRef rgnend As Double,
-        ByRef name As IntPtr,
-        ByRef markrgnindexnumber As Integer) As Integer
-    Public Shared EnumProjectMarkers As EnumProjectMarkersDel
-
-    ''' <summary>Ajoute un marqueur ou une région.</summary>
-    Public Delegate Function AddProjectMarkerDel(
-        proj As IntPtr, isrgn As Boolean, pos As Double, rgnend As Double,
-        <MarshalAs(UnmanagedType.LPStr)> name As String,
-        wantidx As Integer) As Integer
-    Public Shared AddProjectMarker As AddProjectMarkerDel
-
-    ''' <summary>Supprime un marqueur/région par son numéro.</summary>
-    Public Delegate Function DeleteProjectMarkerDel(proj As IntPtr, markrgnindexnumber As Integer, isrgn As Boolean) As Boolean
-    Public Shared DeleteProjectMarker As DeleteProjectMarkerDel
-
-    ''' <summary>Va au marqueur numéroté (use_timeline_order=True pour ordre chronologique).</summary>
-    Public Delegate Sub GoToMarkerDel(proj As IntPtr, marker_index As Integer, use_timeline_order As Boolean)
-    Public Shared GoToMarker As GoToMarkerDel
-
-    ''' <summary>Va à la région numérotée.</summary>
-    Public Delegate Sub GoToRegionDel(proj As IntPtr, region_index As Integer, use_timeline_order As Boolean)
-    Public Shared GoToRegion As GoToRegionDel
 
     ' ═══════════════════════════════════════════════════════════════
     '  SURFACE DE CONTRÔLE (CSurf)
@@ -427,6 +476,7 @@ Public Class ReaperAPI
     ''' <summary>Notifie Reaper d'un changement de volume via surface (retourne la valeur appliquée).</summary>
     Public Delegate Function CSurf_OnVolumeChangeDel(trackid As IntPtr, volume As Double, relative As Boolean) As Double
     Public Shared CSurf_OnVolumeChange As CSurf_OnVolumeChangeDel
+
 
     ''' <summary>Notifie Reaper d'un changement de pan via surface.</summary>
     Public Delegate Function CSurf_OnPanChangeDel(trackid As IntPtr, pan As Double, relative As Boolean) As Double
@@ -585,6 +635,10 @@ Public Class ReaperAPI
                                               igngroupflags As Integer) As Double
     Public Shared SetTrackUIVolume As SetTrackUIVolumeDel
 
+
+
+
+
     ' ══════════════════════════════════════════════════════════════════════════
     '  POINT HIT-TEST
     ' ══════════════════════════════════════════════════════════════════════════
@@ -688,6 +742,13 @@ Public Class ReaperAPI
 
     Public Delegate Function HookCommandDel(cmd As Integer, flag As Integer) As Boolean
 
+    ''' <summary>
+    ''' Retourne l'état toggle d'une action Reaper.
+    ''' 0=off, 1=on, -1=action non-toggle ou introuvable.
+    ''' </summary>
+    Public Delegate Function GetToggleCommandStateDel(command_id As Integer) As Integer
+    Public Shared GetToggleCommandState As GetToggleCommandStateDel
+
     ' ══════════════════════════════════════════════════════════════
     '  TEMPS / TEMPO / SIGNATURE (batch 2)
     ' ══════════════════════════════════════════════════════════════
@@ -737,17 +798,17 @@ Public Class ReaperAPI
     '  SÉLECTION TEMPORELLE / BOUCLE
     ' ══════════════════════════════════════════════════════════════
 
-    ''' <summary>Plage de sélection/boucle (start/end en secondes par ByRef).</summary>
-    Public Delegate Sub GetLoopTimeRange2Del(
-        proj As IntPtr, isLoop As Boolean, allowautoseek As Boolean,
-        ByRef startOut As Double, ByRef endOut As Double)
-    Public Shared GetLoopTimeRange2 As GetLoopTimeRange2Del
-
-    ''' <summary>Définit la plage de sélection/boucle.</summary>
-    Public Delegate Sub SetLoopTimeRange2Del(
-        proj As IntPtr, isLoop As Boolean, allowautoseek As Boolean,
-        startIn As Double, endIn As Double, undoBeginBlock As Boolean)
-    Public Shared SetLoopTimeRange2 As SetLoopTimeRange2Del
+    ''' <summary>
+    ''' Lit/définit la plage loop/time selection (API native unifiée).
+    ''' </summary>
+    Public Delegate Sub GetSet_LoopTimeRange2Del(
+        proj As IntPtr,
+        <MarshalAs(UnmanagedType.I1)> isSet As Boolean,
+        <MarshalAs(UnmanagedType.I1)> isLoop As Boolean,
+        ByRef startInOut As Double,
+        ByRef endInOut As Double,
+        <MarshalAs(UnmanagedType.I1)> allowautoseek As Boolean)
+    Public Shared GetSet_LoopTimeRange2 As GetSet_LoopTimeRange2Del
 
     ' ══════════════════════════════════════════════════════════════
     '  VOLUME / NIVEAU / PEAK
@@ -768,6 +829,80 @@ Public Class ReaperAPI
     ''' <summary>Convertit valeur slider [0..4] → dB.</summary>
     Public Delegate Function SLIDER2DBDel(y As Double) As Double
     Public Shared SLIDER2DB As SLIDER2DBDel
+
+    ' ═══════════════════════════════════════════════════════════════
+    '  MARQUEURS / RÉGIONS
+    ' ═══════════════════════════════════════════════════════════════
+
+    ''' <summary>Nombre total de marqueurs+régions (nummarkersout/numregionsout par ByRef).</summary>
+    Public Delegate Function CountProjectMarkersDel(proj As IntPtr, ByRef nummarkersout As Integer, ByRef numregionsout As Integer) As Integer
+    Public Shared CountProjectMarkers As CountProjectMarkersDel
+
+
+    ''' <summary>
+    ''' Énumère marqueurs et régions.
+    ''' Signature sûre : bool natif (I1) + name en pointeur.
+    ''' </summary>
+    Public Delegate Function EnumProjectMarkersDel(
+        idx As Integer,
+        <MarshalAs(UnmanagedType.I1)> ByRef isrgn As Boolean,
+        ByRef pos As Double,
+        ByRef rgnend As Double,
+        ByRef name As IntPtr,
+        ByRef markrgnindexnumber As Integer) As Integer
+    Public Shared EnumProjectMarkers As EnumProjectMarkersDel
+
+    ''' <summary>
+    ''' Ajoute un marqueur ou une région.
+    ''' Retourne le numéro de marqueur/région créé.
+    ''' </summary>
+    Public Delegate Function AddProjectMarkerDel(
+        proj As IntPtr,
+        isrgn As Boolean,
+        pos As Double,
+        rgnend As Double,
+        <MarshalAs(UnmanagedType.LPStr)> name As String,
+        wantidx As Integer,
+        color As Integer) As Integer
+    Public Shared AddProjectMarker As AddProjectMarkerDel
+
+    ''' <summary>Modifie un marqueur/région existant par numéro.</summary>
+    Public Delegate Function SetProjectMarkerDel(
+        markrgnindexnumber As Integer,
+        isrgn As Boolean,
+        pos As Double,
+        rgnend As Double,
+        <MarshalAs(UnmanagedType.LPStr)> name As String,
+        color As Integer) As Boolean
+    Public Shared SetProjectMarker As SetProjectMarkerDel
+
+    ''' <summary>
+    ''' Retourne le dernier marqueur passé et la région courante à un instant donné.
+    ''' </summary>
+    Public Delegate Function GetLastMarkerAndCurRegionDel(
+        proj As IntPtr,
+        time As Double,
+        ByRef markeridx As Integer,
+        ByRef regionidx As Integer) As Integer
+    Public Shared GetLastMarkerAndCurRegion As GetLastMarkerAndCurRegionDel
+
+    ''' <summary>Supprime un marqueur/région par son numéro.</summary>
+    Public Delegate Function DeleteProjectMarkerDel(proj As IntPtr, markrgnindexnumber As Integer, isrgn As Boolean) As Boolean
+    Public Shared DeleteProjectMarker As DeleteProjectMarkerDel
+
+    ''' <summary>Supprime un marqueur/région par index d'énumération.</summary>
+    Public Delegate Function DeleteProjectMarkerByIndexDel(proj As IntPtr, markrgnidx As Integer) As Boolean
+    Public Shared DeleteProjectMarkerByIndex As DeleteProjectMarkerByIndexDel
+
+    ''' <summary>Va au marqueur numéroté (use_timeline_order=True pour ordre chronologique).</summary>
+    Public Delegate Sub GoToMarkerDel(proj As IntPtr, marker_index As Integer, use_timeline_order As Boolean)
+    Public Shared GoToMarker As GoToMarkerDel
+
+    ''' <summary>Va à la région numérotée.</summary>
+    Public Delegate Sub GoToRegionDel(proj As IntPtr, region_index As Integer, use_timeline_order As Boolean)
+    Public Shared GoToRegion As GoToRegionDel
+
+
 
     ' ══════════════════════════════════════════════════════════════
     '  COULEURS
@@ -1064,6 +1199,18 @@ Public Class ReaperAPI
             <MarshalAs(UnmanagedType.LPStr)> str As String,
             isundopoint As Boolean) As Boolean
     Public Shared SetEnvelopeStateChunk As SetEnvelopeStateChunkDel
+
+    ''' <summary>
+    ''' Retourne l'enveloppe d'une piste par son nom exact.
+    ''' Exemple de noms courants : "Volume", "Pan", "Mute".
+    ''' </summary>
+    ''' <param name="track">Pointeur MediaTrack*.</param>
+    ''' <param name="envname">Nom exact de l'enveloppe.</param>
+    Public Delegate Function GetTrackEnvelopeByNameDel(
+    track As IntPtr,
+    <MarshalAs(UnmanagedType.LPStr)> envname As String) As IntPtr
+    Public Shared GetTrackEnvelopeByName As GetTrackEnvelopeByNameDel
+
 
     ' ══════════════════════════════════════════════════════════════
     '  MIDI EDITOR

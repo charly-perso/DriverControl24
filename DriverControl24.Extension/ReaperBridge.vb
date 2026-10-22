@@ -1,4 +1,5 @@
 ﻿Imports System.Diagnostics
+Imports System.Globalization
 Imports System.Runtime.InteropServices
 Imports DriverConfig
 
@@ -220,7 +221,29 @@ Public Class ReaperBridge
         Try
             Dim parts = request.Split("|"c)
             Select Case parts(0)
+                Case "RELAY_HOOKPOSTCOMMAND"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage RELAY_HOOKPOSTCOMMAND|command|flag"
+                    End If
 
+                    Dim command As Integer = 0
+                    Dim flag As Integer = 0
+
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, command) = False Then
+                        Return "ERROR:Invalid command"
+                    End If
+
+                    If Integer.TryParse(parts(2), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, flag) = False Then
+                        Return "ERROR:Invalid flag"
+                    End If
+
+                    Dim handled As Boolean = OnReaperCommand(command, flag)
+
+                    If handled Then
+                        Return "1"
+                    End If
+
+                    Return "0"
                  ' ── SHOW_CONSOLE_MSG|message ──────────────────────────────────
                 ' Affiche un message dans la console Reaper (View → ReaScript console).
                 ' Le message peut contenir des "|" — tout ce qui suit le premier "|"
@@ -252,12 +275,89 @@ Public Class ReaperBridge
 
                 Case "PING"
                     Return "PONG"
+                    ' ── SET_MIXER_SCROLL|trackIndex ────────────────────────────────────
+' Définit la piste la plus à gauche dans le mixer.
+' Réponse : "OK" ou "ERROR:..."
+                Case "SET_MIXER_SCROLL"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage SET_MIXER_SCROLL|trackIndex"
+                    End If
 
+                    If ReaperAPI.SetMixerScroll Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim trackIndex As Integer = 0
+                    If Not Integer.TryParse(parts(1), trackIndex) Then
+                        Return "ERROR:Invalid trackIndex"
+                    End If
+
+                    Dim tr As IntPtr = GetTrackByIndex(trackIndex)
+                    If tr = IntPtr.Zero Then
+                        Return "ERROR:Track not found"
+                    End If
+
+                    ReaperAPI.SetMixerScroll(tr)
+                    Return "OK"
+                    ' ── MOVE_EDIT_CURSOR|deltaSeconds[|doSel] ──────────────────────────
+' deltaSeconds : décalage en secondes (InvariantCulture)
+' doSel        : 1=déplace aussi la sélection temporelle, 0=défaut
+' Réponse      : "OK" ou "ERROR:..."
+                Case "MOVE_EDIT_CURSOR"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage MOVE_EDIT_CURSOR|deltaSeconds[|doSel]"
+                    End If
+
+                    If ReaperAPI.MoveEditCursor Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim deltaSeconds As Double = 0
+                    If Not Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, deltaSeconds) Then
+                        Return "ERROR:Invalid deltaSeconds"
+                    End If
+
+                    Dim doSel As Boolean = False
+                    If parts.Length >= 3 Then
+                        If parts(2) = "1" Then
+                            doSel = True
+                        End If
+                    End If
+
+                    ReaperAPI.MoveEditCursor(deltaSeconds, doSel)
+                    Return "OK"
+                    ' ── SNAP_TO_GRID|time ──────────────────────────────────────────────
+' Aligne une position temporelle sur la grille du projet actif.
+' Réponse : position alignée (InvariantCulture) ou "ERROR:..."
+                Case "SNAP_TO_GRID"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage SNAP_TO_GRID|time"
+                    End If
+
+                    If ReaperAPI.SnapToGrid Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim timePos As Double = 0
+                    If Not Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, timePos) Then
+                        Return "ERROR:Invalid time"
+                    End If
+
+                    Dim snapped As Double = ReaperAPI.SnapToGrid(IntPtr.Zero, timePos)
+                    Return snapped.ToString("G", Globalization.CultureInfo.InvariantCulture)
                 Case "GET_TRACK_COUNT"
                     If ReaperAPI.GetNumTracks Is Nothing Then Return "ERROR:API unavailable"
                     Return ReaperAPI.GetNumTracks().ToString()
 
+                    ' ── GET_MASTER_MUTE_SOLO_FLAGS ───────────────────────────────────────
+' Retourne le bitmask brut mute/solo de la piste master.
+                Case "GET_MASTER_MUTE_SOLO_FLAGS"
+                    If ReaperAPI.GetMasterMuteSoloFlags Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
 
+                    Dim flags As Integer = ReaperAPI.GetMasterMuteSoloFlags()
+                    Return flags.ToString(Globalization.CultureInfo.InvariantCulture)
 
                 ' ── GET_TRACK_INFO|trackIndex|paramName ───────────────────────
                 Case "GET_TRACK_INFO"
@@ -376,7 +476,25 @@ Public Class ReaperBridge
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
                     Dim holdDb = ReaperAPI.Track_GetPeakHoldDB(tr, Integer.Parse(parts(2)), clear:=True)
                     Return holdDb.ToString("G", Globalization.CultureInfo.InvariantCulture)
+' ── GET_TOGGLE_COMMAND_STATE|commandId ─────────────────────────
+' Retourne l'état toggle d'une action Reaper :
+' 0=off, 1=on, -1=non-toggle/introuvable.
+                Case "GET_TOGGLE_COMMAND_STATE"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage GET_TOGGLE_COMMAND_STATE|commandId"
+                    End If
 
+                    If ReaperAPI.GetToggleCommandState Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim commandId As Integer = 0
+                    If Not Integer.TryParse(parts(1), commandId) Then
+                        Return "ERROR:Invalid commandId"
+                    End If
+
+                    Dim state As Integer = ReaperAPI.GetToggleCommandState(commandId)
+                    Return state.ToString(Globalization.CultureInfo.InvariantCulture)
                 ' ── CSurf_ON_SEND_VOL|trackIndex|sendIndex|volume[|relative] ──────
                 ' volume  : [0..4] absolu (1.0 = 0 dB) — ou delta si relative=1
                 ' relative: 0=absolu (défaut)  1=relatif
@@ -957,6 +1075,30 @@ Public Class ReaperBridge
                         destTr, Integer.Parse(parts(4)),
                         parts(5) = "1")
                     Return "OK"
+                    ' ── PLUGIN_REGISTER|name|infoPtr ─────────────────────────────────────
+' name    : nom de registre Reaper (ex: "hookcommand", "timer", etc.)
+' infoPtr : adresse IntPtr en décimal signé (Int64)
+' Réponse : code retour entier de Plugin_Register
+                Case "PLUGIN_REGISTER"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage PLUGIN_REGISTER|name|infoPtr"
+                    End If
+
+                    If ReaperAPI.Plugin_Register Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim infoRaw As String = parts(parts.Length - 1)
+                    Dim name As String = String.Join("|", parts, 1, parts.Length - 2)
+
+                    Dim infoVal As Long = 0
+                    If Not Long.TryParse(infoRaw, Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, infoVal) Then
+                        Return "ERROR:Invalid infoPtr"
+                    End If
+
+                    Dim infoPtr As New IntPtr(infoVal)
+                    Dim rc As Integer = ReaperAPI.Plugin_Register(name, infoPtr)
+                    Return rc.ToString(Globalization.CultureInfo.InvariantCulture)
 
                                          ' ── GET_CURSOR_POSITION ───────────────────────────────────────
                 ' Réponse : position du curseur d'édition en secondes (InvariantCulture)
@@ -1638,7 +1780,7 @@ Public Class ReaperBridge
                     Dim vol As Double = 0
                     Double.TryParse(parts(3), Globalization.NumberStyles.Any,
                                     Globalization.CultureInfo.InvariantCulture, vol)
-                    Dim isend As Integer = 1
+                    Dim isend As Integer = 0
                     If parts.Length >= 5 Then Integer.TryParse(parts(4), isend)
                     Return If(ReaperAPI.SetTrackSendUIVol(tr, sendIdx, vol, isend), "OK", "ERROR:Set failed")
 
@@ -1699,8 +1841,9 @@ Public Class ReaperBridge
                     Else
                         volOk = ReaperAPI.SetTrackSendInfo_Value(tr, cat, sendIdx, "D_VOL", vol)
                     End If
-                    Dim panOk = ReaperAPI.SetTrackSendInfo_Value(tr, cat, sendIdx, "D_PAN", pan)
-                    Return If(volOk AndAlso panOk, "OK", "ERROR:Partial set failed")
+                    'Dim panOk = ReaperAPI.SetTrackSendInfo_Value(tr, cat, sendIdx, "D_PAN", pan)
+                    'AndAlso panOk
+                    Return If(volOk, "OK", "ERROR:Partial set failed")
 
 
                                     ' ── GET_TRACK_UI_PAN|trackIndex ───────────────────────────────
@@ -2395,9 +2538,10 @@ Public Class ReaperBridge
                                                   Try
                                                       Dim ok = ReaperAPI.GetTrackStateChunk(tr, buf, TrackChunkBufSize, False)
                                                       If Not ok Then Return "ERROR:GetTrackStateChunk failed"
-                                                      Dim chunk = If(Marshal.PtrToStringAnsi(buf), String.Empty)
-                                                      Return chunk.Replace(vbCrLf, vbLf).Replace(vbCr, "").Replace(vbLf, "\n")
-                                                  Finally
+                        Dim chunk = If(Marshal.PtrToStringAnsi(buf), String.Empty)
+
+                        Return chunk.Replace(vbCrLf, vbLf).Replace(vbCr, "").Replace(vbLf, "\n")
+                    Finally
                                                       Marshal.FreeHGlobal(buf)
                                                   End Try
 
@@ -2412,8 +2556,10 @@ Public Class ReaperBridge
                                                   If ReaperAPI.SetTrackStateChunk Is Nothing Then Return "ERROR:API unavailable"
                                                   Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                                                   If tr = IntPtr.Zero Then Return "ERROR:Track not found"
-                                                  Dim chunk = String.Join("|", parts, 2, parts.Length - 2).Replace("\n", vbLf)
-                                                  ReaperAPI.EnqueueUIAction(Sub()
+                    Dim chunk = String.Join("|", parts, 2, parts.Length - 2).Replace("\n", vbLf)
+                    'Dim logpath As String = "C:\Users\chcolin\AppData\Roaming\REAPER\UserPlugins\BridgeLog.txt"
+                    'IO.File.WriteAllText(logpath, chunk)
+                    ReaperAPI.EnqueueUIAction(Sub()
                                                                                 ReaperAPI.SetTrackStateChunk(tr, chunk, False)
                                                                             End Sub)
                                                   Return "OK"
@@ -2448,9 +2594,935 @@ Public Class ReaperBridge
                     Dim hwnd = ReaperAPI.GetMainHwnd()
                     Return hwnd.ToInt64().ToString(Globalization.CultureInfo.InvariantCulture)
 
+                                    ' ── TRACKFX_END_PARAM_EDIT|trackIndex|fxIndex|paramIndex ──────
+                ' Finalise une session d'édition d'un paramètre FX.
+                ' À appeler une seule fois en fin de geste (fin de drag encodeur/fader)
+                ' après une série de SET_FX_PARAM / SET_FX_PARAM_NORM.
+                ' Réponse : "OK" ou "ERROR:..."
+                Case "TRACKFX_END_PARAM_EDIT"
+                    If parts.Length < 4 Then Return "ERROR:Usage TRACKFX_END_PARAM_EDIT|trackIndex|fxIndex|paramIndex"
+                    If ReaperAPI.TrackFX_EndParamEdit Is Nothing Then Return "ERROR:API unavailable"
+                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                    Dim fxIdx As Integer = 0, pmIdx As Integer = 0
+                    Integer.TryParse(parts(2), fxIdx)
+                    Integer.TryParse(parts(3), pmIdx)
+                    Return If(ReaperAPI.TrackFX_EndParamEdit(tr, fxIdx, pmIdx), "OK", "ERROR:EndParamEdit failed")
 
+                    ' ── GET_TRACK_ENVELOPE_BY_NAME|trackIndex|envName ─────────────────────
+' Retourne l'index 0-based de l'enveloppe si trouvée, sinon -1.
+                Case "GET_TRACK_ENVELOPE_BY_NAME"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage GET_TRACK_ENVELOPE_BY_NAME|trackIndex|envName"
+                    End If
+
+                    If ReaperAPI.GetTrackEnvelopeByName Is Nothing OrElse
+                       ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                       ReaperAPI.CountTrackEnvelopes Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                    If tr = IntPtr.Zero Then
+                        Return "ERROR:Track not found"
+                    End If
+
+                    Dim envName As String = String.Join("|", parts, 2, parts.Length - 2)
+                    Dim envPtr = ReaperAPI.GetTrackEnvelopeByName(tr, envName)
+
+                    If envPtr = IntPtr.Zero Then
+                        Return "-1"
+                    End If
+
+                    Dim envCount = ReaperAPI.CountTrackEnvelopes(tr)
+                    For i As Integer = 0 To envCount - 1
+                        Dim e = ReaperAPI.GetTrackEnvelope(tr, i)
+                        If e = envPtr Then
+                            Return i.ToString(Globalization.CultureInfo.InvariantCulture)
+                        End If
+                    Next
+
+                    Return "-1"
+
+                                    ' ── BR_GET_NEXT_GRID_DIVISION|position ─────────────────────────
+                Case "BR_GET_NEXT_GRID_DIVISION"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage BR_GET_NEXT_GRID_DIVISION|position"
+                    End If
+
+                    If ReaperAPI.BR_GetNextGridDivision Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim pos As Double = 0
+                    If Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pos) = False Then
+                        Return "ERROR:Invalid position"
+                    End If
+
+                    Dim result As Double = ReaperAPI.BR_GetNextGridDivision(pos)
+                    Return result.ToString("G", Globalization.CultureInfo.InvariantCulture)
+
+                ' ── BR_GET_PREV_GRID_DIVISION|position ─────────────────────────
+                Case "BR_GET_PREV_GRID_DIVISION"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage BR_GET_PREV_GRID_DIVISION|position"
+                    End If
+
+                    If ReaperAPI.BR_GetPrevGridDivision Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim pos As Double = 0
+                    If Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pos) = False Then
+                        Return "ERROR:Invalid position"
+                    End If
+
+                    Dim result As Double = ReaperAPI.BR_GetPrevGridDivision(pos)
+                    Return result.ToString("G", Globalization.CultureInfo.InvariantCulture)
+
+                ' ── BR_GET_CLOSEST_GRID_DIVISION|position ──────────────────────
+                Case "BR_GET_CLOSEST_GRID_DIVISION"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage BR_GET_CLOSEST_GRID_DIVISION|position"
+                    End If
+
+                    If ReaperAPI.BR_GetClosestGridDivision Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim pos As Double = 0
+                    If Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pos) = False Then
+                        Return "ERROR:Invalid position"
+                    End If
+
+                    Dim result As Double = ReaperAPI.BR_GetClosestGridDivision(pos)
+                    Return result.ToString("G", Globalization.CultureInfo.InvariantCulture)
+
+                                    ' ── MAIN_ON_COMMAND SAFE|commandId[|flag] ──────────────────────────
+                ' Exécute une action Reaper safe UI par son ID.
+                ' flag : optionnel (défaut 0)
+                ' Réponse : "OK" ou "ERROR:..."
+                Case "MAIN_ON_COMMAND_SAFE"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage MAIN_ON_COMMAND|commandId[|flag]"
+                    End If
+
+                    If ReaperAPI.Main_OnCommand Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim commandId As Integer = 0
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, commandId) = False Then
+                        Return "ERROR:Invalid commandId"
+                    End If
+
+                    Dim flag As Integer = 0
+                    If parts.Length >= 3 Then
+                        If Integer.TryParse(parts(2), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, flag) = False Then
+                            Return "ERROR:Invalid flag"
+                        End If
+                    End If
+
+                    ReaperAPI.EnqueueUIAction(
+                             Sub()
+                                 ReaperAPI.Main_OnCommand(commandId, flag)
+                             End Sub)
+                    Return "OK"
+
+                    ' ── MAIN_ON_COMMAND|commandId[|flag] ──────────────────────────
+                ' Exécute une action Reaper par son ID.
+                ' flag : optionnel (défaut 0)
+                ' Réponse : "OK" ou "ERROR:..."
+                Case "MAIN_ON_COMMAND"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage MAIN_ON_COMMAND|commandId[|flag]"
+                    End If
+
+                    If ReaperAPI.Main_OnCommand Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim commandId As Integer = 0
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, commandId) = False Then
+                        Return "ERROR:Invalid commandId"
+                    End If
+
+                    Dim flag As Integer = 0
+                    If parts.Length >= 3 Then
+                        If Integer.TryParse(parts(2), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, flag) = False Then
+                            Return "ERROR:Invalid flag"
+                        End If
+                    End If
+
+
+                    ReaperAPI.Main_OnCommand(commandId, flag)
+
+                    Return "OK"
+                Case "CREATE_TRACK_ENVELOPE"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage CREATE_TRACK_ENVELOPE|trackIndex|envName"
+                    End If
+
+                    If ReaperAPI.GetTrack Is Nothing OrElse
+                       ReaperAPI.SetTrackSelected Is Nothing OrElse
+                       ReaperAPI.Main_OnCommand Is Nothing OrElse
+                       ReaperAPI.CountTracks Is Nothing OrElse
+                       ReaperAPI.CountSelectedTracks Is Nothing OrElse
+                       ReaperAPI.GetSelectedTrack Is Nothing OrElse
+                       ReaperAPI.EnqueueUIAction Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim trackIndex As Integer = 0
+                    If Not Integer.TryParse(parts(1), trackIndex) Then
+                        Return "ERROR:Invalid trackIndex"
+                    End If
+
+                    Dim tr = GetTrackByIndex(trackIndex)
+                    If tr = IntPtr.Zero Then
+                        Return "ERROR:Track not found"
+                    End If
+
+                    Dim envName As String = String.Join("|", parts, 2, parts.Length - 2).Trim()
+                    Dim normalizedName As String = envName.Replace("‑", "-").ToUpperInvariant()
+
+                    Dim actionId As Integer = 0
+                    Select Case normalizedName
+                        Case "VOLUME"
+                            actionId = 40406
+                        Case "PAN"
+                            actionId = 40407
+                        Case "MUTE"
+                            actionId = 40866
+                        Case "WIDTH"
+                            actionId = 40867
+                        Case "VOLUME (PRE-FX)"
+                            actionId = 40868
+                        Case "PAN (PRE-FX)"
+                            actionId = 40869
+                        Case "TRIM VOLUME"
+                            actionId = 41145
+                        Case Else
+                            Return "ERROR:Unknown envelope name"
+                    End Select
+
+                    ReaperAPI.EnqueueUIAction(
+                        Sub()
+                            Dim selectedBefore As New List(Of IntPtr)
+
+                            Dim selectedCount As Integer = ReaperAPI.CountSelectedTracks(IntPtr.Zero)
+                            For i As Integer = 0 To selectedCount - 1
+                                Dim st = ReaperAPI.GetSelectedTrack(IntPtr.Zero, i)
+                                If st <> IntPtr.Zero Then
+                                    selectedBefore.Add(st)
+                                End If
+                            Next
+
+                            Dim trackCount As Integer = ReaperAPI.CountTracks(IntPtr.Zero)
+                            For i As Integer = 0 To trackCount - 1
+                                Dim t = ReaperAPI.GetTrack(IntPtr.Zero, i)
+                                If t <> IntPtr.Zero Then
+                                    ReaperAPI.SetTrackSelected(t, False)
+                                End If
+                            Next
+
+                            ReaperAPI.SetTrackSelected(tr, True)
+                            ReaperAPI.Main_OnCommand(actionId, 0)
+
+                            For i As Integer = 0 To trackCount - 1
+                                Dim t = ReaperAPI.GetTrack(IntPtr.Zero, i)
+                                If t <> IntPtr.Zero Then
+                                    ReaperAPI.SetTrackSelected(t, False)
+                                End If
+                            Next
+
+                            For Each st In selectedBefore
+                                If st <> IntPtr.Zero Then
+                                    ReaperAPI.SetTrackSelected(st, True)
+                                End If
+                            Next
+                        End Sub)
+
+                    Return "OK"
+
+                    ' ── GET_PROJECT_EXT_STATE|extName|key ────────────────────────────
+' Lit une valeur persistée dans le projet via GetProjExtState.
+' Réponse : valeur brute, chaîne vide si clé absente, ou "ERROR:..."
+                Case "GET_PROJECT_EXT_STATE"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage GET_PROJECT_EXT_STATE|extName|key"
+                    End If
+                    If ReaperAPI.GetProjExtState Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Const BufSize As Integer = 65536
+                    Dim buf As IntPtr = Marshal.AllocHGlobal(BufSize)
+                    Try
+                        Marshal.WriteByte(buf, 0)
+                        Dim rc As Integer = ReaperAPI.GetProjExtState(IntPtr.Zero, parts(1), parts(2), buf, BufSize)
+                        If rc > 0 Then
+                            Dim value As String = Marshal.PtrToStringAnsi(buf)
+                            If value Is Nothing Then
+                                Return String.Empty
+                            End If
+                            Return value
+                        End If
+                        If rc = 0 Then
+                            Return String.Empty
+                        End If
+                        Return "ERROR:Get failed"
+                    Finally
+                        Marshal.FreeHGlobal(buf)
+                    End Try
+
+' ── SET_PROJECT_EXT_STATE|extName|key|value ──────────────────────
+' Écrit une valeur persistée dans le projet via SetProjExtState.
+' Réponse : "OK" ou "ERROR:..."
+                Case "SET_PROJECT_EXT_STATE"
+                    If parts.Length < 4 Then
+                        Return "ERROR:Usage SET_PROJECT_EXT_STATE|extName|key|value"
+                    End If
+                    If ReaperAPI.SetProjExtState Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim value As String = String.Join("|", parts, 3, parts.Length - 3)
+                    Dim rc As Integer = ReaperAPI.SetProjExtState(IntPtr.Zero, parts(1), parts(2), value)
+                    If rc > 0 Then
+                        Return "OK"
+                    End If
+                    Return "ERROR:Set failed"
+
+                                    ' ── GET_ARRANGE_VIEW2[|screenXStart|screenXEnd] ─────────────────
+                Case "GET_ARRANGE_VIEW2"
+                    If ReaperAPI.GetSet_ArrangeView2 Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim screenXStart As Integer = 0
+                    Dim screenXEnd As Integer = 0
+
+                    If parts.Length >= 2 Then
+                        If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, screenXStart) = False Then
+                            Return "ERROR:Invalid screenXStart"
+                        End If
+                    End If
+
+                    If parts.Length >= 3 Then
+                        If Integer.TryParse(parts(2), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, screenXEnd) = False Then
+                            Return "ERROR:Invalid screenXEnd"
+                        End If
+                    End If
+
+                    Dim startTime As Double = 0
+                    Dim endTime As Double = 0
+                    Dim ok As Boolean = ReaperAPI.GetSet_ArrangeView2(
+                        IntPtr.Zero,
+                        False,
+                        screenXStart,
+                        screenXEnd,
+                        startTime,
+                        endTime)
+
+                    If ok = False Then
+                        Return "ERROR:GetSet_ArrangeView2 failed"
+                    End If
+
+                    Return startTime.ToString("G", Globalization.CultureInfo.InvariantCulture) &
+                           "|" &
+                           endTime.ToString("G", Globalization.CultureInfo.InvariantCulture)
+
+                                    ' ── ADD_PROJECT_MARKER|isrgn|pos|rgnend|wantidx|color|name ──────────────
+                Case "ADD_PROJECT_MARKER"
+                    If parts.Length < 7 Then
+                        Return "ERROR:Usage ADD_PROJECT_MARKER|isrgn|pos|rgnend|wantidx|color|name"
+                    End If
+
+                    If ReaperAPI.AddProjectMarker Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim isrgn As Boolean = False
+                    If parts(1) = "1" OrElse parts(1).ToLowerInvariant() = "true" Then
+                        isrgn = True
+                    End If
+
+                    Dim pos As Double = 0
+                    If Double.TryParse(parts(2), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pos) = False Then
+                        Return "ERROR:Invalid pos"
+                    End If
+
+                    Dim rgnend As Double = 0
+                    If Double.TryParse(parts(3), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, rgnend) = False Then
+                        Return "ERROR:Invalid rgnend"
+                    End If
+
+                    Dim wantidx As Integer = -1
+                    If Integer.TryParse(parts(4), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, wantidx) = False Then
+                        Return "ERROR:Invalid wantidx"
+                    End If
+
+                    Dim color As Integer = 0
+                    If Integer.TryParse(parts(5), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, color) = False Then
+                        Return "ERROR:Invalid color"
+                    End If
+
+                    Dim name As String = String.Join("|", parts, 6, parts.Length - 6)
+                    Dim created As Integer = ReaperAPI.AddProjectMarker(IntPtr.Zero, isrgn, pos, rgnend, name, wantidx, color)
+                    Return created.ToString(Globalization.CultureInfo.InvariantCulture)
+
+                ' ── SET_PROJECT_MARKER|id|isrgn|pos|rgnend|color|name ───────────────────
+                Case "SET_PROJECT_MARKER"
+                    If parts.Length < 7 Then
+                        Return "ERROR:Usage SET_PROJECT_MARKER|id|isrgn|pos|rgnend|color|name"
+                    End If
+
+                    If ReaperAPI.SetProjectMarker Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim id As Integer = 0
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, id) = False Then
+                        Return "ERROR:Invalid id"
+                    End If
+
+                    Dim isrgn As Boolean = False
+                    If parts(2) = "1" OrElse parts(2).ToLowerInvariant() = "true" Then
+                        isrgn = True
+                    End If
+
+                    Dim pos As Double = 0
+                    If Double.TryParse(parts(3), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, pos) = False Then
+                        Return "ERROR:Invalid pos"
+                    End If
+
+                    Dim rgnend As Double = 0
+                    If Double.TryParse(parts(4), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, rgnend) = False Then
+                        Return "ERROR:Invalid rgnend"
+                    End If
+
+                    Dim color As Integer = 0
+                    If Integer.TryParse(parts(5), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, color) = False Then
+                        Return "ERROR:Invalid color"
+                    End If
+
+                    Dim name As String = String.Join("|", parts, 6, parts.Length - 6)
+                    Dim ok As Boolean = ReaperAPI.SetProjectMarker(id, isrgn, pos, rgnend, name, color)
+
+                    If ok Then
+                        Return "OK"
+                    End If
+
+                    Return "ERROR:SetProjectMarker failed"
+
+                ' ── GET_LAST_MARKER_AND_CUR_REGION|time ─────────────────────────────────
+                Case "GET_LAST_MARKER_AND_CUR_REGION"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage GET_LAST_MARKER_AND_CUR_REGION|time"
+                    End If
+
+                    If ReaperAPI.GetLastMarkerAndCurRegion Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim time As Double = 0
+                    If Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, time) = False Then
+                        Return "ERROR:Invalid time"
+                    End If
+
+                    Dim markerIdx As Integer = -1
+                    Dim regionIdx As Integer = -1
+                    ReaperAPI.GetLastMarkerAndCurRegion(IntPtr.Zero, time, markerIdx, regionIdx)
+
+                    Return markerIdx.ToString(Globalization.CultureInfo.InvariantCulture) &
+                           "|" &
+                           regionIdx.ToString(Globalization.CultureInfo.InvariantCulture)
+                                                    ' ── ENUM_PROJECT_MARKERS|markrgnidx ─────────────────────────────────────
+                ' Énumère un marqueur/région par index d'énumération (0-based).
+                ' Réponse :
+                '   "0"                              -> index hors plage
+                '   "1|isrgn|pos|rgnend|id|name"    -> trouvé
+                Case "ENUM_PROJECT_MARKERS"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage ENUM_PROJECT_MARKERS|markrgnidx"
+                    End If
+
+                    If ReaperAPI.EnumProjectMarkers Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim markrgnidx As Integer = 0
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, markrgnidx) = False Then
+                        Return "ERROR:Invalid markrgnidx"
+                    End If
+
+                    Dim isrgn As Boolean = False
+                    Dim pos As Double = 0
+                    Dim rgnend As Double = 0
+                    Dim namePtr As IntPtr = IntPtr.Zero
+                    Dim markrgnindexnumber As Integer = 0
+
+                    Dim rc As Integer = ReaperAPI.EnumProjectMarkers(
+                        markrgnidx,
+                        isrgn,
+                        pos,
+                        rgnend,
+                        namePtr,
+                        markrgnindexnumber)
+
+                    If rc = 0 Then
+                        Return "0"
+                    End If
+
+                    Dim markerName As String = String.Empty
+                    If namePtr <> IntPtr.Zero Then
+                        Dim tmpName As String = Marshal.PtrToStringAnsi(namePtr)
+                        If tmpName IsNot Nothing Then
+                            markerName = tmpName
+                        End If
+                    End If
+
+                    Dim isrgnValue As String = "0"
+                    If isrgn Then
+                        isrgnValue = "1"
+                    Else
+                        isrgnValue = "0"
+                    End If
+
+                    Return "1|" &
+                           isrgnValue & "|" &
+                           pos.ToString("G", Globalization.CultureInfo.InvariantCulture) & "|" &
+                           rgnend.ToString("G", Globalization.CultureInfo.InvariantCulture) & "|" &
+                           markrgnindexnumber.ToString(Globalization.CultureInfo.InvariantCulture) & "|" &
+                           markerName
+
+                ' ── DELETE_PROJECT_MARKER_BY_INDEX|markrgnidx ───────────────────────────
+                Case "DELETE_PROJECT_MARKER_BY_INDEX"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage DELETE_PROJECT_MARKER_BY_INDEX|markrgnidx"
+                    End If
+
+                    If ReaperAPI.DeleteProjectMarkerByIndex Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim markrgnidx As Integer = 0
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, markrgnidx) = False Then
+                        Return "ERROR:Invalid markrgnidx"
+                    End If
+
+                    Dim ok As Boolean = ReaperAPI.DeleteProjectMarkerByIndex(IntPtr.Zero, markrgnidx)
+
+                    If ok Then
+                        Return "OK"
+                    End If
+
+                    Return "ERROR:DeleteProjectMarkerByIndex failed"
+                                    ' ── DELETE_PROJECT_MARKER|markrgnindexnumber|isrgn ─────────────────────
+                ' markrgnindexnumber : numéro de marqueur/région (ID Reaper)
+                ' isrgn              : 0=marker  1=region
+                ' Réponse            : "OK" ou "ERROR:..."
+                Case "DELETE_PROJECT_MARKER"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage DELETE_PROJECT_MARKER|markrgnindexnumber|isrgn"
+                    End If
+
+                    If ReaperAPI.DeleteProjectMarker Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim markrgnindexnumber As Integer = 0
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, markrgnindexnumber) = False Then
+                        Return "ERROR:Invalid markrgnindexnumber"
+                    End If
+
+                    Dim isrgn As Boolean = False
+                    If parts(2) = "1" OrElse parts(2).ToLowerInvariant() = "true" Then
+                        isrgn = True
+                    End If
+
+                    Dim ok As Boolean = ReaperAPI.DeleteProjectMarker(IntPtr.Zero, markrgnindexnumber, isrgn)
+
+                    If ok Then
+                        Return "OK"
+                    End If
+
+                    Return "ERROR:DeleteProjectMarker failed"
+                ' ── SET_ARRANGE_VIEW2|startTime|endTime[|screenXStart|screenXEnd] ─
+                Case "SET_ARRANGE_VIEW2"
+                    If parts.Length < 3 Then
+                        Return "ERROR:Usage SET_ARRANGE_VIEW2|startTime|endTime[|screenXStart|screenXEnd]"
+                    End If
+
+                    If ReaperAPI.GetSet_ArrangeView2 Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim startTime As Double = 0
+                    Dim endTime As Double = 0
+                    Dim screenXStart As Integer = 0
+                    Dim screenXEnd As Integer = 0
+
+                    If Double.TryParse(parts(1), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, startTime) = False Then
+                        Return "ERROR:Invalid startTime"
+                    End If
+
+                    If Double.TryParse(parts(2), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, endTime) = False Then
+                        Return "ERROR:Invalid endTime"
+                    End If
+
+                    If parts.Length >= 4 Then
+                        If Integer.TryParse(parts(3), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, screenXStart) = False Then
+                            Return "ERROR:Invalid screenXStart"
+                        End If
+                    End If
+
+                    If parts.Length >= 5 Then
+                        If Integer.TryParse(parts(4), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, screenXEnd) = False Then
+                            Return "ERROR:Invalid screenXEnd"
+                        End If
+                    End If
+
+                    Dim ok As Boolean = ReaperAPI.GetSet_ArrangeView2(
+                        IntPtr.Zero,
+                        True,
+                        screenXStart,
+                        screenXEnd,
+                        startTime,
+                        endTime)
+
+                    If ok Then
+                        Return "OK"
+                    End If
+
+                    Return "ERROR:GetSet_ArrangeView2 failed"
+                                    ' ── GET_SET_LOOP_TIME_RANGE|isSet|isLoop|allowAutoSeek|startTime|endTime|undoBeginBlock ──
+                ' isSet          : 0=Get  1=Set
+                ' isLoop         : 0=Time selection  1=Loop points
+                ' allowAutoSeek  : 0/1
+                ' startTime/endTime : secondes (InvariantCulture)
+                ' undoBeginBlock : 0/1 (utilisé uniquement en mode Set)
+                ' Réponse :
+                '   mode Get -> "start|end"
+                '   mode Set -> "OK"
+                Case "GET_SET_LOOP_TIME_RANGE"
+                    If parts.Length < 7 Then
+                        Return "ERROR:Usage GET_SET_LOOP_TIME_RANGE|isSet|isLoop|allowAutoSeek|startTime|endTime|undoBeginBlock"
+                    End If
+
+                    If ReaperAPI.GetSet_LoopTimeRange2 Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim isSet As Boolean = False
+                    If parts(1) = "1" OrElse parts(1).ToLowerInvariant() = "true" Then
+                        isSet = True
+                    End If
+
+                    Dim isLoop As Boolean = False
+                    If parts(2) = "1" OrElse parts(2).ToLowerInvariant() = "true" Then
+                        isLoop = True
+                    End If
+
+                    Dim allowAutoSeek As Boolean = False
+                    If parts(3) = "1" OrElse parts(3).ToLowerInvariant() = "true" Then
+                        allowAutoSeek = True
+                    End If
+
+                    Dim startTime As Double = 0
+                    If Double.TryParse(parts(4), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, startTime) = False Then
+                        Return "ERROR:Invalid startTime"
+                    End If
+
+                    Dim endTime As Double = 0
+                    If Double.TryParse(parts(5), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, endTime) = False Then
+                        Return "ERROR:Invalid endTime"
+                    End If
+
+                    ReaperAPI.GetSet_LoopTimeRange2(
+                        IntPtr.Zero,
+                        isSet,
+                        isLoop,
+                        startTime,
+                        endTime,
+                        allowAutoSeek)
+
+                    If isSet Then
+                        Return "OK"
+                    End If
+
+                    Return startTime.ToString("G", Globalization.CultureInfo.InvariantCulture) &
+                           "|" &
+                           endTime.ToString("G", Globalization.CultureInfo.InvariantCulture)
+                                    ' ── COUNT_PROJECT_MARKERS ────────────────────────────────────────────────
+                ' Retourne le nombre total de marqueurs+régions, puis le détail.
+                ' Réponse : "total|numMarkers|numRegions"
+                Case "COUNT_PROJECT_MARKERS"
+                    If ReaperAPI.CountProjectMarkers Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim numMarkers As Integer = 0
+                    Dim numRegions As Integer = 0
+                    Dim total As Integer = ReaperAPI.CountProjectMarkers(IntPtr.Zero, numMarkers, numRegions)
+
+                    Return total.ToString(Globalization.CultureInfo.InvariantCulture) &
+                           "|" &
+                           numMarkers.ToString(Globalization.CultureInfo.InvariantCulture) &
+                           "|" &
+                           numRegions.ToString(Globalization.CultureInfo.InvariantCulture)
+
+                                    ' ── GET_SELECTED_MEDIA_ITEMS|projectIndex ────────────────────────────────
+                ' projectIndex : index 0-based du projet ouvert, -1 = projet actif
+                ' Réponse : "count|t:i|t:i|..."  (t = index piste, i = index item sur la piste)
+                Case "GET_SELECTED_MEDIA_ITEMS"
+                    If parts.Length < 2 Then
+                        Return "ERROR:Usage GET_SELECTED_MEDIA_ITEMS|projectIndex"
+                    End If
+
+                    If ReaperAPI.CountTracks Is Nothing OrElse
+                       ReaperAPI.GetTrack Is Nothing OrElse
+                       ReaperAPI.GetTrackNumMediaItems Is Nothing OrElse
+                       ReaperAPI.GetTrackMediaItem Is Nothing OrElse
+                       ReaperAPI.GetMediaItemInfo_Value Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim selProjIdx As Integer = -1
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, selProjIdx) = False Then
+                        Return "ERROR:Invalid projectIndex"
+                    End If
+
+                    Dim selProj As IntPtr = IntPtr.Zero
+                    If TryGetProject(selProjIdx, selProj) = False Then
+                        Return "ERROR:Project not found"
+                    End If
+
+                    Dim selTokens As New List(Of String)
+                    Dim selTrackCount As Integer = ReaperAPI.CountTracks(selProj)
+                    For t As Integer = 0 To selTrackCount - 1
+                        Dim tr As IntPtr = ReaperAPI.GetTrack(selProj, t)
+                        If tr = IntPtr.Zero Then
+                            Continue For
+                        End If
+
+                        Dim itemCount As Integer = ReaperAPI.GetTrackNumMediaItems(tr)
+                        For i As Integer = 0 To itemCount - 1
+                            Dim item As IntPtr = ReaperAPI.GetTrackMediaItem(tr, i)
+                            If item = IntPtr.Zero Then
+                                Continue For
+                            End If
+
+                            If ReaperAPI.GetMediaItemInfo_Value(item, "B_UISEL") = 1 Then
+                                selTokens.Add(t.ToString(Globalization.CultureInfo.InvariantCulture) & ":" & i.ToString(Globalization.CultureInfo.InvariantCulture))
+                            End If
+                        Next
+                    Next
+
+                    If selTokens.Count = 0 Then
+                        Return "0"
+                    End If
+
+                    Return selTokens.Count.ToString(Globalization.CultureInfo.InvariantCulture) & "|" & String.Join("|", selTokens)
+
+                ' ── SET_MEDIA_ITEMS_SELECTED|projectIndex|clearOthers|selected|t:i|t:i|... ──
+                ' clearOthers : 1 = désélectionne d'abord tous les items du projet
+                ' selected    : 1 = sélectionner les items listés, 0 = les désélectionner
+                ' Exécuté sur le thread principal Reaper (EnqueueUIAction).
+                ' Réponse : "OK" ou "ERROR:..."
+                Case "SET_MEDIA_ITEMS_SELECTED"
+                    If parts.Length < 4 Then
+                        Return "ERROR:Usage SET_MEDIA_ITEMS_SELECTED|projectIndex|clearOthers|selected|t:i|..."
+                    End If
+
+                    If ReaperAPI.CountTracks Is Nothing OrElse
+                       ReaperAPI.GetTrack Is Nothing OrElse
+                       ReaperAPI.GetTrackNumMediaItems Is Nothing OrElse
+                       ReaperAPI.GetTrackMediaItem Is Nothing OrElse
+                       ReaperAPI.SetMediaItemInfo_Value Is Nothing OrElse
+                       ReaperAPI.EnqueueUIAction Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim setProjIdx As Integer = -1
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, setProjIdx) = False Then
+                        Return "ERROR:Invalid projectIndex"
+                    End If
+
+                    Dim setProj As IntPtr = IntPtr.Zero
+                    If TryGetProject(setProjIdx, setProj) = False Then
+                        Return "ERROR:Project not found"
+                    End If
+
+                    Dim clearOthers As Boolean = (parts(2) = "1")
+                    Dim selValue As Double = 0.0
+                    If parts(3) = "1" Then
+                        selValue = 1.0
+                    End If
+
+                    Dim refs As New List(Of KeyValuePair(Of Integer, Integer))
+                    For k As Integer = 4 To parts.Length - 1
+                        Dim rt As Integer = 0
+                        Dim ri As Integer = 0
+                        If TryParseItemRef(parts(k), rt, ri) = False Then
+                            Return "ERROR:Invalid item reference"
+                        End If
+
+                        refs.Add(New KeyValuePair(Of Integer, Integer)(rt, ri))
+                    Next
+
+                    ReaperAPI.EnqueueUIAction(
+                        Sub()
+                            If clearOthers Then
+                                Dim allTracks As Integer = ReaperAPI.CountTracks(setProj)
+                                For t As Integer = 0 To allTracks - 1
+                                    Dim ctr As IntPtr = ReaperAPI.GetTrack(setProj, t)
+                                    If ctr = IntPtr.Zero Then
+                                        Continue For
+                                    End If
+
+                                    Dim cnt As Integer = ReaperAPI.GetTrackNumMediaItems(ctr)
+                                    For i As Integer = 0 To cnt - 1
+                                        Dim citem As IntPtr = ReaperAPI.GetTrackMediaItem(ctr, i)
+                                        If citem <> IntPtr.Zero Then
+                                            ReaperAPI.SetMediaItemInfo_Value(citem, "B_UISEL", 0.0)
+                                        End If
+                                    Next
+                                Next
+                            End If
+
+                            For Each r In refs
+                                Dim rtr As IntPtr = ReaperAPI.GetTrack(setProj, r.Key)
+                                If rtr = IntPtr.Zero Then
+                                    Continue For
+                                End If
+
+                                Dim ritem As IntPtr = ReaperAPI.GetTrackMediaItem(rtr, r.Value)
+                                If ritem <> IntPtr.Zero Then
+                                    ReaperAPI.SetMediaItemInfo_Value(ritem, "B_UISEL", selValue)
+                                End If
+                            Next
+
+                            If ReaperAPI.UpdateArrange IsNot Nothing Then
+                                ReaperAPI.UpdateArrange()
+                            End If
+                        End Sub)
+
+                    Return "OK"
+                                    ' ── GET_MEDIA_ITEMS_INFO|projectIndex|param|t:i|t:i|... ─────────────────
+                ' Lit un paramètre numérique pour chaque item listé.
+                ' Réponse : "v0|v1|..." (InvariantCulture, "NaN" si item introuvable)
+                Case "GET_MEDIA_ITEMS_INFO"
+                    If parts.Length < 4 Then
+                        Return "ERROR:Usage GET_MEDIA_ITEMS_INFO|projectIndex|param|t:i|..."
+                    End If
+
+                    If ReaperAPI.GetMediaItemInfo_Value Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim giProjIdx As Integer = -1
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, giProjIdx) = False Then
+                        Return "ERROR:Invalid projectIndex"
+                    End If
+
+                    Dim giProj As IntPtr = IntPtr.Zero
+                    If TryGetProject(giProjIdx, giProj) = False Then
+                        Return "ERROR:Project not found"
+                    End If
+
+                    Dim giValues As New List(Of String)
+                    For k As Integer = 3 To parts.Length - 1
+                        Dim rt As Integer = 0
+                        Dim ri As Integer = 0
+                        If TryParseItemRef(parts(k), rt, ri) = False Then
+                            Return "ERROR:Invalid item reference"
+                        End If
+
+                        Dim gItem As IntPtr = GetItemByRef(giProj, rt, ri)
+                        If gItem = IntPtr.Zero Then
+                            giValues.Add("NaN")
+                        Else
+                            giValues.Add(ReaperAPI.GetMediaItemInfo_Value(gItem, parts(2)).ToString("G", Globalization.CultureInfo.InvariantCulture))
+                        End If
+                    Next
+
+                    Return String.Join("|", giValues)
+
+                ' ── SET_MEDIA_ITEMS_INFO|projectIndex|param|value|t:i|t:i|... ───────────
+                ' Écrit la même valeur numérique sur chaque item listé.
+                ' Exécuté sur le thread principal Reaper. Réponse : "OK" ou "ERROR:..."
+                Case "SET_MEDIA_ITEMS_INFO"
+                    If parts.Length < 5 Then
+                        Return "ERROR:Usage SET_MEDIA_ITEMS_INFO|projectIndex|param|value|t:i|..."
+                    End If
+
+                    If ReaperAPI.SetMediaItemInfo_Value Is Nothing OrElse
+                       ReaperAPI.EnqueueUIAction Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim siProjIdx As Integer = -1
+                    If Integer.TryParse(parts(1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, siProjIdx) = False Then
+                        Return "ERROR:Invalid projectIndex"
+                    End If
+
+                    Dim siProj As IntPtr = IntPtr.Zero
+                    If TryGetProject(siProjIdx, siProj) = False Then
+                        Return "ERROR:Project not found"
+                    End If
+
+                    Dim siParam As String = parts(2)
+                    Dim siValue As Double = 0
+                    If Double.TryParse(parts(3), Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, siValue) = False Then
+                        Return "ERROR:Invalid value"
+                    End If
+
+                    Dim siRefs As New List(Of KeyValuePair(Of Integer, Integer))
+                    For k As Integer = 4 To parts.Length - 1
+                        Dim rt As Integer = 0
+                        Dim ri As Integer = 0
+                        If TryParseItemRef(parts(k), rt, ri) = False Then
+                            Return "ERROR:Invalid item reference"
+                        End If
+
+                        siRefs.Add(New KeyValuePair(Of Integer, Integer)(rt, ri))
+                    Next
+
+                    ReaperAPI.EnqueueUIAction(
+                        Sub()
+                            For Each r In siRefs
+                                Dim sItem As IntPtr = GetItemByRef(siProj, r.Key, r.Value)
+                                If sItem <> IntPtr.Zero Then
+                                    ReaperAPI.SetMediaItemInfo_Value(sItem, siParam, siValue)
+                                End If
+                            Next
+
+                            If ReaperAPI.UpdateArrange IsNot Nothing Then
+                                ReaperAPI.UpdateArrange()
+                            End If
+                        End Sub)
+
+                    Return "OK"
+                Case "GET_SELECTED_TRACKS"
+                    Dim proj As IntPtr = IntPtr.Zero
+                    Dim projIdx As Integer = Integer.Parse(parts(1), CultureInfo.InvariantCulture)
+                    If projIdx >= 0 Then
+                        proj = ReaperAPI.EnumProjects(projIdx, IntPtr.Zero, 0)
+                    End If
+                    Dim count As Integer = ReaperAPI.CountSelectedTracks(proj)
+                    Dim result As New List(Of String)
+                    For i As Integer = 0 To count - 1
+                        Dim tr As IntPtr = ReaperAPI.GetSelectedTrack(proj, i)
+                        If tr <> IntPtr.Zero Then
+                            Dim num As Double = ReaperAPI.GetMediaTrackInfo_Value(tr, "IP_TRACKNUMBER")
+                            result.Add((CInt(num) - 1).ToString(CultureInfo.InvariantCulture))
+                        End If
+                    Next
+                    Return String.Join("|", result)
                 Case Else
-                                                  Return $"ERROR:Unknown {parts(0)}"
+                    Return $"ERROR:Unknown {parts(0)}"
 
 
             End Select
@@ -2461,10 +3533,78 @@ Public Class ReaperBridge
 
     End Function
 
-    ''' <summary>Retourne le pointeur de piste (index 0-based, projet actif).</summary>
+    ''' <summary>Retourne le pointeur de piste (index 0-based, projet actif,-1 pour le Master).</summary>
     Private Shared Function GetTrackByIndex(index As Integer) As IntPtr
-        If ReaperAPI.GetTrack Is Nothing Then Return IntPtr.Zero
-        Return ReaperAPI.GetTrack(IntPtr.Zero, index)
+        If index >= 0 Then
+            If ReaperAPI.GetTrack Is Nothing Then Return IntPtr.Zero
+            Return ReaperAPI.GetTrack(IntPtr.Zero, index)
+        ElseIf index = -1 Then
+            If ReaperAPI.GetMasterTrack Is Nothing Then Return IntPtr.Zero
+            Return ReaperAPI.GetMasterTrack(IntPtr.Zero)
+        Else
+            Return IntPtr.Zero
+        End If
+
     End Function
 
+    ''' <summary>
+    ''' Résout un index de projet en pointeur ReaProject*.
+    ''' projectIndex &lt; 0 = projet actif (IntPtr.Zero).
+    ''' </summary>
+    ''' <param name="projectIndex">Index 0-based parmi les projets ouverts, ou -1.</param>
+    ''' <param name="proj">Pointeur résolu.</param>
+    ''' <returns>False si le projet n'existe pas ou si l'API est indisponible.</returns>
+    Private Shared Function TryGetProject(projectIndex As Integer, ByRef proj As IntPtr) As Boolean
+        proj = IntPtr.Zero
+        If projectIndex < 0 Then
+            Return True
+        End If
+
+        If ReaperAPI.EnumProjects Is Nothing Then
+            Return False
+        End If
+
+        proj = ReaperAPI.EnumProjects(projectIndex, IntPtr.Zero, 0)
+        If proj = IntPtr.Zero Then
+            Return False
+        End If
+
+        Return True
+    End Function
+
+    ''' <summary>
+    ''' Décode une référence d'item "trackIndex:itemIndex".
+    ''' </summary>
+    Private Shared Function TryParseItemRef(token As String, ByRef trackIdx As Integer, ByRef itemIdx As Integer) As Boolean
+        Dim sep As Integer = token.IndexOf(":"c)
+        If sep <= 0 Then
+            Return False
+        End If
+
+        If Integer.TryParse(token.Substring(0, sep), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, trackIdx) = False Then
+            Return False
+        End If
+
+        If Integer.TryParse(token.Substring(sep + 1), Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, itemIdx) = False Then
+            Return False
+        End If
+
+        Return True
+    End Function
+    ''' <summary>
+    ''' Résout une référence d'item (piste + index d'item) en pointeur MediaItem*.
+    ''' Retourne IntPtr.Zero si la piste ou l'item est introuvable.
+    ''' </summary>
+    Private Shared Function GetItemByRef(proj As IntPtr, trackIdx As Integer, itemIdx As Integer) As IntPtr
+        If ReaperAPI.GetTrack Is Nothing OrElse ReaperAPI.GetTrackMediaItem Is Nothing Then
+            Return IntPtr.Zero
+        End If
+
+        Dim tr As IntPtr = ReaperAPI.GetTrack(proj, trackIdx)
+        If tr = IntPtr.Zero Then
+            Return IntPtr.Zero
+        End If
+
+        Return ReaperAPI.GetTrackMediaItem(tr, itemIdx)
+    End Function
 End Class
