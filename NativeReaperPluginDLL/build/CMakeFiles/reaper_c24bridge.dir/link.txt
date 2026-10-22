@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -dynamiclib -Wl,-headerpad_max_install_names -o reaper_c24bridge.dylib -install_name @rpath/reaper_c24bridge.dylib CMakeFiles/reaper_c24bridge.dir/dllmain.cpp.o CMakeFiles/reaper_c24bridge.dir/pch.cpp.o
