@@ -1,19 +1,42 @@
 #include "pch.h"
 #include "reaper_plugin.h"
-#include <windows.h>
 #include <fstream>
 #include <string>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <cstring>
+#endif
 
 static reaper_plugin_info_t* g_rec = nullptr;
 
+static std::string GetLogPath()
+{
+#ifdef _WIN32
+    return "C:\\Users\\chcolin\\AppData\\Roaming\\REAPER\\UserPlugins\\NativeReaperPlugIn.log";
+#else
+    const char* home = std::getenv("HOME");
+    std::string path = (home != nullptr) ? home : "/tmp";
+    path += "/Library/Application Support/REAPER/UserPlugins/NativeReaperPlugIn.log";
+    return path;
+#endif
+}
+
 static void LogFile(const char* text)
 {
-    std::ofstream f("C:\\Users\\chcolin\\AppData\\Roaming\\REAPER\\UserPlugins\\NativeReaperPlugIn.log", std::ios::app);
+    std::ofstream f(GetLogPath(), std::ios::app);
     if (f.is_open())
     {
         f << text << "\n";
     }
 }
+
+#ifdef _WIN32
 
 static bool SendEventToPipe(const std::string& payload)
 {
@@ -61,6 +84,73 @@ static bool SendEventToPipe(const std::string& payload)
 
     return true;
 }
+
+#else
+
+static std::string GetSocketPath()
+{
+    const char* tmp = std::getenv("TMPDIR");
+    std::string dir = (tmp != nullptr && tmp[0] != '\0') ? tmp : "/tmp/";
+    if (dir.back() != '/')
+    {
+        dir += "/";
+    }
+    return dir + "CoreFxPipe_c24_reaper_events";
+}
+
+static bool SendEventToPipe(const std::string& payload)
+{
+    std::string path = GetSocketPath();
+
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0)
+    {
+        LogFile("SendEventToPipe: socket failed");
+        return false;
+    }
+
+    int noSigPipe = 1;
+    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe));
+
+    sockaddr_un addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    if (path.size() >= sizeof(addr.sun_path))
+    {
+        LogFile("SendEventToPipe: path too long");
+        close(fd);
+        return false;
+    }
+    std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
+
+    if (connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0)
+    {
+        LogFile("SendEventToPipe: connect failed");
+        close(fd);
+        return false;
+    }
+
+    std::string line = payload;
+    line += "\n";
+
+    size_t total = 0;
+    while (total < line.size())
+    {
+        ssize_t n = write(fd, line.c_str() + total, line.size() - total);
+        if (n <= 0)
+        {
+            LogFile("SendEventToPipe: write failed");
+            close(fd);
+            return false;
+        }
+        total += static_cast<size_t>(n);
+    }
+
+    close(fd);
+    return true;
+}
+
+#endif
 
 static void HookPostCommand2Callback(
     KbdSectionInfo* section,
@@ -123,6 +213,7 @@ int REAPER_PLUGIN_ENTRYPOINT(REAPER_PLUGIN_HINSTANCE hInstance, reaper_plugin_in
     return 1;
 }
 
+#ifdef _WIN32
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
     (void)hModule;
@@ -139,3 +230,4 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
     return TRUE;
 }
+#endif
