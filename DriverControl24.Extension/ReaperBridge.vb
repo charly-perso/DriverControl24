@@ -12,6 +12,32 @@ End Class
 
 Public Class ReaperBridge
 
+    Private Shared Function RunOnMainThread(Of T)(work As Func(Of T), timeoutMs As Integer) As T
+        Dim result As T = Nothing
+        Dim failure As Exception = Nothing
+        Dim done As New System.Threading.ManualResetEventSlim(False)
+
+        ReaperAPI.EnqueueUIAction(
+            Sub()
+                Try
+                    result = work()
+                Catch ex As Exception
+                    failure = ex
+                Finally
+                    done.Set()
+                End Try
+            End Sub)
+
+        If Not done.Wait(timeoutMs) Then
+            Throw New TimeoutException("Main thread did not process the request")
+        End If
+
+        If failure IsNot Nothing Then
+            Throw failure
+        End If
+
+        Return result
+    End Function
     Private Shared Sub BridgeLog(message As String)
         Try
             IO.File.AppendAllText(
@@ -328,7 +354,13 @@ Public Class ReaperBridge
                     Integer.TryParse(parts(1), msgType)
                     Dim title = parts(2)
                     Dim msg = String.Join("|", parts, 3, parts.Length - 3)
-                    Return ReaperAPI.ShowMessageBox(msg, title, msgType).ToString()
+                    Dim showBox = ReaperAPI.ShowMessageBox
+                    Dim boxResult As Integer = RunOnMainThread(
+                        Function()
+                            Return showBox(msg, title, msgType)
+                        End Function,
+                        60000)
+                    Return boxResult.ToString()
 
                 Case "PING"
                     Return "PONG"
