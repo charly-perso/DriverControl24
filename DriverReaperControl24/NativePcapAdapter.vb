@@ -36,21 +36,55 @@ Namespace Control24
         ''' le PATH par défaut sous .NET 10.
         ''' </summary>
         Shared Sub New()
-            Dim npcapDir As String = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.System), "Npcap")
+            If OperatingSystem.IsWindows() Then
+                Dim npcapDir As String = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.System), "Npcap")
 
-            If System.IO.Directory.Exists(npcapDir) Then
-                Dim currentPath As String = Environment.GetEnvironmentVariable("PATH")
+                If System.IO.Directory.Exists(npcapDir) Then
+                    Dim currentPath As String = Environment.GetEnvironmentVariable("PATH")
 
-                If currentPath Is Nothing Then
-                    currentPath = ""
+                    If currentPath Is Nothing Then
+                        currentPath = ""
+                    End If
+
+                    If Not currentPath.Contains(npcapDir) Then
+                        Environment.SetEnvironmentVariable("PATH", npcapDir & ";" & currentPath)
+                    End If
                 End If
-
-                If Not currentPath.Contains(npcapDir) Then
-                    Environment.SetEnvironmentVariable("PATH", npcapDir & ";" & currentPath)
-                End If
+            Else
+                Try
+                    NativeLibrary.SetDllImportResolver(
+                        GetType(NativePcapAdapter).Assembly,
+                        AddressOf ResolvePcapLibrary)
+                Catch ex As InvalidOperationException
+                End Try
             End If
         End Sub
+
+        Private Shared Function ResolvePcapLibrary(libraryName As String,
+                                                   assembly As System.Reflection.Assembly,
+                                                   searchPath As DllImportSearchPath?) As IntPtr
+            If libraryName <> "wpcap.dll" Then
+                Return IntPtr.Zero
+            End If
+
+            Dim handle As IntPtr = IntPtr.Zero
+            Dim candidates As String()
+
+            If OperatingSystem.IsMacOS() Then
+                candidates = {"/usr/lib/libpcap.A.dylib", "/usr/lib/libpcap.dylib", "libpcap.dylib"}
+            Else
+                candidates = {"libpcap.so.0.8", "libpcap.so.1", "libpcap.so"}
+            End If
+
+            For Each candidate In candidates
+                If NativeLibrary.TryLoad(candidate, handle) Then
+                    Return handle
+                End If
+            Next
+
+            Return IntPtr.Zero
+        End Function
 
         ' bpf_program structure (for filter compilation)
         <StructLayout(LayoutKind.Sequential)>
@@ -89,7 +123,35 @@ Namespace Control24
                 Return _isCapturing   ' ✅
             End Get
         End Property
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl, CharSet:=CharSet.Ansi)>
+        Private Shared Function pcap_create(source As String, errbuf As StringBuilder) As IntPtr
+        End Function
 
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function pcap_set_snaplen(handle As IntPtr, snaplen As Integer) As Integer
+        End Function
+
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function pcap_set_promisc(handle As IntPtr, promisc As Integer) As Integer
+        End Function
+
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function pcap_set_timeout(handle As IntPtr, timeoutMs As Integer) As Integer
+        End Function
+
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function pcap_set_immediate_mode(handle As IntPtr, immediate As Integer) As Integer
+        End Function
+
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function pcap_activate(handle As IntPtr) As Integer
+        End Function
+
+        <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function pcap_setdirection(handle As IntPtr, direction As Integer) As Integer
+        End Function
+
+        Private Const PCAP_D_IN As Integer = 1
         <DllImport("wpcap.dll", CallingConvention:=CallingConvention.Cdecl)>
         Private Shared Sub pcap_close(handle As IntPtr)
         End Sub
@@ -208,12 +270,18 @@ Namespace Control24
         Private Function GetMacAddress(deviceName As String) As String
             Try
                 For Each nic In NetworkInterface.GetAllNetworkInterfaces()
-                    If deviceName.Contains(nic.Id) OrElse deviceName.Contains(nic.Name) Then
+                    Dim isMatch As Boolean
+                    If OperatingSystem.IsWindows() Then
+                        isMatch = deviceName.Contains(nic.Id) OrElse deviceName.Contains(nic.Name)
+                    Else
+                        isMatch = String.Equals(deviceName, nic.Name, StringComparison.Ordinal)
+                    End If
+
+                    If isMatch Then
                         Return BitConverter.ToString(nic.GetPhysicalAddress().GetAddressBytes()).Replace("-", ":")
                     End If
                 Next
             Catch
-                ' Ignore
             End Try
             Return Nothing
         End Function
@@ -272,20 +340,18 @@ Namespace Control24
                     Dim flags = PCAP_OPENFLAG_PROMISCUOUS Or PCAP_OPENFLAG_NOCAPTURE_LOCAL
 
 
-                    ' ✅ Handle principal — accès direct driver, sans rpcap://
-                    _handle = pcap_open(targetDevice, 65535, flags, 1, IntPtr.Zero, errbuf)   ' ✅ 1ms au lieu de 50ms
+                    ' Open capture handle (avec pcap_open dédié à Npcap)
+                    ' Réduit la latence d'activation (~50ms à 1ms mesuré) + HANDLE séparé pour TX
+                    _handle = OpenCaptureHandle(targetDevice, flags, errbuf)
                     If _handle = IntPtr.Zero Then
-                        ' ⚠️ Fallback : pcap_open_live sans NOCAPTURE_LOCAL
-                        ' Les TX loopbacks sont filtrés par BPF ("not ether src {mac}")
                         errbuf.Clear()
-                        _handle = pcap_open_live(targetDevice, 65535, 1, 1, errbuf)   ' ✅ 1ms
+                        _handle = pcap_open_live(targetDevice, 65535, 1, 1, errbuf)
                         If _handle = IntPtr.Zero Then
                             Throw New Exception($"Failed to open device: {errbuf}")
                         End If
                     End If
 
-                    ' ✅ Handle ACK dédié (même flags → NOCAPTURE_LOCAL)
-                    _handleAck = pcap_open(targetDevice, 65535, flags, 1, IntPtr.Zero, errbuf)
+                    _handleAck = OpenCaptureHandle(targetDevice, flags, errbuf)
                     If _handleAck = IntPtr.Zero Then
                     End If
 
@@ -297,6 +363,37 @@ Namespace Control24
                 Throw
             End Try
         End Sub
+
+        Private Function OpenCaptureHandle(targetDevice As String,
+                                           flags As Integer,
+                                           errbuf As StringBuilder) As IntPtr
+            If OperatingSystem.IsWindows() Then
+                Return pcap_open(targetDevice, 65535, flags, 1, IntPtr.Zero, errbuf)
+            End If
+
+            Dim h As IntPtr = pcap_create(targetDevice, errbuf)
+            If h = IntPtr.Zero Then
+                Return IntPtr.Zero
+            End If
+
+            pcap_set_snaplen(h, 65535)
+            pcap_set_promisc(h, 1)
+            pcap_set_timeout(h, 1)
+            pcap_set_immediate_mode(h, 1)
+
+            If pcap_activate(h) < 0 Then
+                Dim errPtr As IntPtr = pcap_geterr(h)
+                errbuf.Clear()
+                If errPtr <> IntPtr.Zero Then
+                    errbuf.Append(Marshal.PtrToStringAnsi(errPtr))
+                End If
+                pcap_close(h)
+                Return IntPtr.Zero
+            End If
+
+            pcap_setdirection(h, PCAP_D_IN)
+            Return h
+        End Function
 
         ''' <summary>
         ''' Set packet filter (BPF)
@@ -330,8 +427,8 @@ Namespace Control24
                         errPtr = pcap_geterr(_handle)
                         errMsg = If(errPtr <> IntPtr.Zero, Marshal.PtrToStringAnsi(errPtr), "Unknown error")
                         Throw New Exception($"Failed to compile filter: {errMsg}")
+                    Else
                     End If
-
                 Else
                 End If
 
