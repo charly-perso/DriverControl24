@@ -7,7 +7,8 @@
 #ifndef PCH_H
 #define PCH_H
 
-// ajouter les en-têtes à précompiler ici
+#ifdef _WIN32
 #include "framework.h"
+#endif
 
-#endif //PCH_H
+#endif
