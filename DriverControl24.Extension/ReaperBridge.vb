@@ -12,6 +12,14 @@ End Class
 
 Public Class ReaperBridge
 
+    Private Shared Sub BridgeLog(message As String)
+        Try
+            IO.File.AppendAllText(
+            IO.Path.Combine(IO.Path.GetTempPath(), "ReaperC24Bridge.log"),
+            $"{DateTime.Now:O} {message}{Environment.NewLine}")
+        Catch
+        End Try
+    End Sub
 
     Private Shared WithEvents _driverProcess As Process = Nothing
     Private Shared _dllDirectory As String = String.Empty
@@ -56,7 +64,9 @@ Public Class ReaperBridge
             autoStart = _ReaperConfigReader.GetBoolean("Driver", "Autostart", False)
             VSDebug = _ReaperConfigReader.GetBoolean("Driver", "VSDebug", False)
         End If
-
+        BridgeLog($"Initialize dllDirectory={dllDirectory}")
+        BridgeLog($"ini={iniFilePath} exists={IO.File.Exists(iniFilePath)}")
+        BridgeLog($"autoStart={autoStart} VSDebug={VSDebug}")
         If autoStart Then
             ' ── Bridge pipe on-demand (1 requête par connexion) ───────────────
             Task.Run(Function() StartPipeServerAsync())
@@ -167,7 +177,7 @@ Public Class ReaperBridge
         While True
             Dim hasError = False
             Try
-                Using pipe As New IO.Pipes.NamedPipeServerStream(
+                Using pipe As New System.IO.Pipes.NamedPipeServerStream(
                         "c24_reaper_bridge", IO.Pipes.PipeDirection.InOut, 1,
                         IO.Pipes.PipeTransmissionMode.Byte)   ' ✅ Byte = cross-platform (Message = Windows only)
                     Await pipe.WaitForConnectionAsync()
@@ -178,8 +188,9 @@ Public Class ReaperBridge
                         Await writer.WriteLineAsync(HandleRequest(request))
                     End If
                 End Using
-            Catch
+            Catch ex As Exception
                 hasError = True
+                BridgeLog($"Pipe server error: {ex}")
             End Try
             If hasError Then Await Task.Delay(100)
         End While
