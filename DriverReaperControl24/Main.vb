@@ -80,7 +80,9 @@ Public Class Main
             If interfaceName = "TestWithoutC24" Then
                 RunConsoleLoop(_controller)
             Else
-                ShowWindow(GetConsoleWindow(), SW_HIDE)
+                If OperatingSystem.IsWindows() Then
+                    HideConsoleWindow()
+                End If
                 Threading.Thread.Sleep(Threading.Timeout.Infinite)
             End If
         End If
@@ -672,6 +674,13 @@ Public Class Main
         For Each Net_interface In NetworkInterface.GetAllNetworkInterfaces()
             Console.WriteLine(Net_interface.Name)
         Next
+    End Sub
+
+    Private Shared Sub HideConsoleWindow()
+        Dim hwnd As IntPtr = GetConsoleWindow()
+        If hwnd <> IntPtr.Zero Then
+            ShowWindow(hwnd, SW_HIDE)
+        End If
     End Sub
 
     Protected Overridable Sub Dispose(disposing As Boolean)
