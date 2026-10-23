@@ -50,6 +50,26 @@ public static unsafe class ReaperEntry
         return ptr != IntPtr.Zero ? Marshal.GetDelegateForFunctionPointer<T>(ptr) : null;
     }
 
+    delegate IntPtr GetResourcePathRawDelegate();
+
+    static string ResolveUserPluginsDirectory(GetFuncRawDelegate getFn)
+    {
+        var ptr = GetFuncAnsi(getFn, "GetResourcePath");
+        if (ptr == IntPtr.Zero)
+        {
+            return string.Empty;
+        }
+
+        var fn = Marshal.GetDelegateForFunctionPointer<GetResourcePathRawDelegate>(ptr);
+        var resourcePath = Marshal.PtrToStringUTF8(fn());
+        if (string.IsNullOrEmpty(resourcePath))
+        {
+            return string.Empty;
+        }
+
+        return Path.Combine(resourcePath, "UserPlugins");
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "ReaperPluginEntry")]
     public static int ReaperPluginEntry(IntPtr hInstance, IntPtr rec)
     {
@@ -63,12 +83,20 @@ public static unsafe class ReaperEntry
                 return 0;
             }
 
-            var sb = new StringBuilder(260);
-            GetModuleFileNameW(hInstance, sb, 260);
-            var dllDir = Path.GetDirectoryName(sb.ToString()) ?? string.Empty;
-
             var reg = Marshal.GetDelegateForFunctionPointer<RegisterRawDelegate>(Marshal.ReadIntPtr(rec, 16));
             var getFn = Marshal.GetDelegateForFunctionPointer<GetFuncRawDelegate>(Marshal.ReadIntPtr(rec, 24));
+
+            string dllDir;
+            if (OperatingSystem.IsWindows())
+            {
+                var sb = new StringBuilder(260);
+                GetModuleFileNameW(hInstance, sb, 260);
+                dllDir = Path.GetDirectoryName(sb.ToString()) ?? string.Empty;
+            }
+            else
+            {
+                dllDir = ResolveUserPluginsDirectory(getFn);
+            }
 
             // ── Fonctions critiques ────────────────────────────────────────────
             ReaperAPI.ShowConsoleMsg = Marshal.GetDelegateForFunctionPointer<ReaperAPI.ShowConsoleMsgDel>(GetFuncAnsi(getFn, "ShowConsoleMsg"));
