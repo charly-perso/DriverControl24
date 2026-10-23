@@ -120,17 +120,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named reaper_c24bridge
+# Target rules for targets named reaper_c24events
 
 # Build rule for target.
-reaper_c24bridge: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 reaper_c24bridge
-.PHONY : reaper_c24bridge
+reaper_c24events: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 reaper_c24events
+.PHONY : reaper_c24events
 
 # fast build rule for target.
-reaper_c24bridge/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/build
-.PHONY : reaper_c24bridge/fast
+reaper_c24events/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/build
+.PHONY : reaper_c24events/fast
 
 #=============================================================================
 # Convenience rules to build test dependencies.
@@ -145,7 +145,7 @@ dllmain.o: dllmain.cpp.o
 
 # target to build an object file
 dllmain.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/dllmain.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/dllmain.cpp.o
 .PHONY : dllmain.cpp.o
 
 dllmain.i: dllmain.cpp.i
@@ -153,7 +153,7 @@ dllmain.i: dllmain.cpp.i
 
 # target to preprocess a source file
 dllmain.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/dllmain.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/dllmain.cpp.i
 .PHONY : dllmain.cpp.i
 
 dllmain.s: dllmain.cpp.s
@@ -161,32 +161,8 @@ dllmain.s: dllmain.cpp.s
 
 # target to generate assembly for a file
 dllmain.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/dllmain.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/dllmain.cpp.s
 .PHONY : dllmain.cpp.s
-
-pch.o: pch.cpp.o
-.PHONY : pch.o
-
-# target to build an object file
-pch.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/pch.cpp.o
-.PHONY : pch.cpp.o
-
-pch.i: pch.cpp.i
-.PHONY : pch.i
-
-# target to preprocess a source file
-pch.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/pch.cpp.i
-.PHONY : pch.cpp.i
-
-pch.s: pch.cpp.s
-.PHONY : pch.s
-
-# target to generate assembly for a file
-pch.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/pch.cpp.s
-.PHONY : pch.cpp.s
 
 # Help Target
 help:
@@ -196,13 +172,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... reaper_c24bridge"
+	@echo "... reaper_c24events"
 	@echo "... dllmain.o"
 	@echo "... dllmain.i"
 	@echo "... dllmain.s"
-	@echo "... pch.o"
-	@echo "... pch.i"
-	@echo "... pch.s"
 .PHONY : help
 
 

@@ -66,11 +66,11 @@ CMAKE_BINARY_DIR = /Users/charly/DriverControl24/NativeReaperPluginDLL/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/reaper_c24bridge.dir/all
+all: CMakeFiles/reaper_c24events.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/reaper_c24bridge.dir/codegen
+codegen: CMakeFiles/reaper_c24events.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -78,40 +78,40 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/reaper_c24bridge.dir/clean
+clean: CMakeFiles/reaper_c24events.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/reaper_c24bridge.dir
+# Target rules for target CMakeFiles/reaper_c24events.dir
 
 # All Build rule for target.
-CMakeFiles/reaper_c24bridge.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles --progress-num=1,2,3 "Built target reaper_c24bridge"
-.PHONY : CMakeFiles/reaper_c24bridge.dir/all
+CMakeFiles/reaper_c24events.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles --progress-num=1,2 "Built target reaper_c24events"
+.PHONY : CMakeFiles/reaper_c24events.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/reaper_c24bridge.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles 3
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/reaper_c24bridge.dir/all
+CMakeFiles/reaper_c24events.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/reaper_c24events.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles 0
-.PHONY : CMakeFiles/reaper_c24bridge.dir/rule
+.PHONY : CMakeFiles/reaper_c24events.dir/rule
 
 # Convenience name for target.
-reaper_c24bridge: CMakeFiles/reaper_c24bridge.dir/rule
-.PHONY : reaper_c24bridge
+reaper_c24events: CMakeFiles/reaper_c24events.dir/rule
+.PHONY : reaper_c24events
 
 # codegen rule for target.
-CMakeFiles/reaper_c24bridge.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles --progress-num=1,2,3 "Finished codegen for target reaper_c24bridge"
-.PHONY : CMakeFiles/reaper_c24bridge.dir/codegen
+CMakeFiles/reaper_c24events.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles --progress-num=1,2 "Finished codegen for target reaper_c24events"
+.PHONY : CMakeFiles/reaper_c24events.dir/codegen
 
 # clean rule for target.
-CMakeFiles/reaper_c24bridge.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24bridge.dir/build.make CMakeFiles/reaper_c24bridge.dir/clean
-.PHONY : CMakeFiles/reaper_c24bridge.dir/clean
+CMakeFiles/reaper_c24events.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/reaper_c24events.dir/build.make CMakeFiles/reaper_c24events.dir/clean
+.PHONY : CMakeFiles/reaper_c24events.dir/clean
 
 #=============================================================================
 # Targets to build the dependencies of tests.

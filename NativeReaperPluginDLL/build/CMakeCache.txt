@@ -131,7 +131,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=reaper_c24bridge
+CMAKE_PROJECT_NAME:STATIC=reaper_c24events
 
 //Value Computed by CMake
 CMAKE_PROJECT_SPDX_LICENSE:STATIC=
@@ -201,6 +201,9 @@ CMAKE_TAPI:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeD
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//Chemin vers WDL
+WDL_DIR:PATH=/Users/charly/DriverControl24/NativeReaperPluginDLL/../WDL/WDL
+
 //Value Computed by CMake
 reaper_c24bridge_BINARY_DIR:STATIC=/Users/charly/DriverControl24/NativeReaperPluginDLL/build
 
@@ -209,6 +212,15 @@ reaper_c24bridge_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 reaper_c24bridge_SOURCE_DIR:STATIC=/Users/charly/DriverControl24/NativeReaperPluginDLL
+
+//Value Computed by CMake
+reaper_c24events_BINARY_DIR:STATIC=/Users/charly/DriverControl24/NativeReaperPluginDLL/build
+
+//Value Computed by CMake
+reaper_c24events_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+reaper_c24events_SOURCE_DIR:STATIC=/Users/charly/DriverControl24/NativeReaperPluginDLL
 
 
 ########################

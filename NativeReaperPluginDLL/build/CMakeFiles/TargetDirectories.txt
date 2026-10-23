@@ -1,3 +1,3 @@
-/Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles/reaper_c24bridge.dir
+/Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles/reaper_c24events.dir
 /Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles/edit_cache.dir
 /Users/charly/DriverControl24/NativeReaperPluginDLL/build/CMakeFiles/rebuild_cache.dir
