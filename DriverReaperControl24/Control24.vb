@@ -4747,10 +4747,12 @@ Namespace Control24
 
                 'init Packet Manager 
                 _PacketManager = New Packet.PacketManager(Me)
-
+                _AllCmdBytesQueue = New ConcurrentQueue(Of List(Of Byte()))
 
                 ' Initialize packet capture
                 ' ✅ Native Pcap P/Invoke - Direct wpcap.dll access (NO NuGet dependencies!)
+                _ReceivedC24PacketQueue = New Concurrent.ConcurrentQueue(Of Packet.C24_Packet)
+                _AllCmdBytesQueue = New ConcurrentQueue(Of List(Of Byte()))
                 Try
                     '_log.Info("🚀 Initializing NativePcapAdapter (P/Invoke direct to wpcap.dll)...")
                     _packetCapture = New NativePcapAdapter()
@@ -4766,7 +4768,7 @@ Namespace Control24
                     '       Commandes -> Envois Ultra fast d'un Ack de réception puis Queue de traitement de commandes
                     '       Broadcast -> Init Procédure
                     '       Ack       -> Déblocage de Ackreceived pour permettre de nouveau des envois
-                    _ReceivedC24PacketQueue = New Concurrent.ConcurrentQueue(Of Packet.C24_Packet)
+
                     _packetCapture.StartCapture(AddressOf PacketHandler)
                     _isCapturing = True
 
@@ -4798,7 +4800,7 @@ Namespace Control24
                     SendingTimingQueueThread.Start()
 
                     'Start Sending All Commands bytes Queue Thread
-                    _AllCmdBytesQueue = New ConcurrentQueue(Of List(Of Byte()))
+
                     SendingAllCmdBytesQueueThread = New Thread(AddressOf SendingAllCmdBytesQueueLoop) With {
                         .Name = "SendingAllCmdBytesQueue",
                 .IsBackground = True,
@@ -4809,10 +4811,13 @@ Namespace Control24
 
 
                 Catch ex As Exception
-                    '_log.Error("❌ Native Pcap initialization failed: {0}", ex.Message)
-                    '_log.Error("💡 Solution: Install Npcap from https://npcap.com/")
-                    '_log.Error("💡 Make sure to enable 'WinPcap API-compatible Mode' during installation")
-                    Throw New Exception("Cannot initialize packet capture. Npcap is required for Control24.", ex)
+                    Dim message As String
+                    If OperatingSystem.IsWindows() Then
+                        message = "Cannot initialize packet capture. Npcap is required for Control24."
+                    Else
+                        message = "Cannot initialize packet capture. libpcap and access to /dev/bpf* are required for Control24."
+                    End If
+                    Throw New Exception($"{message} {ex.Message}", ex)
                 End Try
 
 
