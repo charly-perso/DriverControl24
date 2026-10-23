@@ -14092,7 +14092,12 @@ Namespace Reaper
                 _name = nameRaw
             End If
 
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                Return
+            End If
+
             Dim p = raw.Split("|"c)
+
             If p.Length < 55 Then Return
 
             Dim new_vol = ParseD(p(0))

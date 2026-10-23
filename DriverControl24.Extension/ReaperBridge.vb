@@ -170,69 +170,108 @@ Public Class ReaperBridge
         ' ← Ajouter ici tout autre nettoyage pré-déchargement
     End Sub
 
+    Private Shared _verboseLog As Boolean = True
 
+    Private Shared Function ProcessRequest(tag As String, request As String) As String
+        Dim response As String
+        Try
+            response = HandleRequest(request)
+        Catch ex As Exception
+            BridgeLog($"{tag}: EXCEPTION sur '{request}' : {ex}")
+            Return $"ERROR:{ex.Message}"
+        End Try
+
+        If response Is Nothing Then
+            BridgeLog($"{tag}: réponse Nothing pour '{request}'")
+            Return "ERROR:Null response"
+        End If
+
+        If _verboseLog Then
+            BridgeLog($"{tag}: '{request}' -> '{response}'")
+        Else
+            If response.StartsWith("ERROR", StringComparison.Ordinal) Then
+                BridgeLog($"{tag}: '{request}' -> '{response}'")
+            End If
+        End If
+
+        Return response
+    End Function
 
 
     Private Shared Async Function StartPipeServerAsync() As Task
-        BridgeLog("bridge: serveur créé, attente de connexion")
         While True
             Dim hasError = False
             Try
                 Using pipe As New System.IO.Pipes.NamedPipeServerStream(
-                        "c24_reaper_bridge", IO.Pipes.PipeDirection.InOut, 1,
-                        IO.Pipes.PipeTransmissionMode.Byte)   ' ✅ Byte = cross-platform (Message = Windows only)
+                        "c24_reaper_bridge",
+                        IO.Pipes.PipeDirection.InOut,
+                        1,
+                        IO.Pipes.PipeTransmissionMode.Byte)
+
+                    BridgeLog("bridge: serveur créé, attente de connexion")
                     Await pipe.WaitForConnectionAsync()
                     BridgeLog("bridge: client connecté")
+
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
+
                     Dim request = Await reader.ReadLineAsync()
-                    If request IsNot Nothing Then
-                        Await writer.WriteLineAsync(HandleRequest(request))
+                    If request Is Nothing Then
+                        BridgeLog("bridge: client déconnecté sans requête")
+                    Else
+                        Dim response = ProcessRequest("bridge", request)
+                        Await writer.WriteLineAsync(response)
                     End If
-                    BridgeLog($"bridge: requête lue = {request}")
                 End Using
             Catch ex As Exception
                 hasError = True
-                BridgeLog($"Pipe server error: {ex}")
+                BridgeLog($"bridge: erreur serveur : {ex}")
             End Try
-            If hasError Then Await Task.Delay(100)
+
+            If hasError Then
+                Await Task.Delay(100)
+            End If
         End While
     End Function
     ''' <summary>
     ''' Démarre le serveur pipe persistant pour le polling de changements.
-    ''' Contrairement au pipe on-demand, une seule connexion est maintenue ouverte
-    ''' et traite N requêtes séquentielles sans reconnexion.
+    ''' Une seule connexion est maintenue ouverte et traite N requêtes séquentielles.
     ''' Nom du pipe : c24_reaper_poll
     ''' </summary>
     Private Shared Async Function StartPollPipeServerAsync() As Task
-        BridgeLog("bridge: serveur créé, attente de connexion")
         While True
             Dim hasError = False
             Try
-                ' ── MaxAllowedServerInstances : le serveur accepte N connexions ──
                 Using pipe As New IO.Pipes.NamedPipeServerStream(
                         "c24_reaper_poll",
                         IO.Pipes.PipeDirection.InOut,
                         IO.Pipes.NamedPipeServerStream.MaxAllowedServerInstances,
                         IO.Pipes.PipeTransmissionMode.Byte)
+
+                    BridgeLog("poll: serveur créé, attente de connexion")
                     Await pipe.WaitForConnectionAsync()
-                    BridgeLog("bridge: client connecté")
+                    BridgeLog("poll: client connecté")
+
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
 
-                    ' ── Boucle multi-requêtes sur la même connexion ────────────
                     Dim request = Await reader.ReadLineAsync()
                     While request IsNot Nothing AndAlso pipe.IsConnected
-                        Await writer.WriteLineAsync(HandleRequest(request))
+                        Dim response = ProcessRequest("poll", request)
+                        Await writer.WriteLineAsync(response)
                         request = Await reader.ReadLineAsync()
                     End While
-                    BridgeLog($"bridge: requête lue = {request}")
+
+                    BridgeLog("poll: client déconnecté")
                 End Using
             Catch ex As Exception
-                BridgeLog($"Pipe server error: {ex}")
                 hasError = True
+                BridgeLog($"poll: erreur serveur : {ex}")
             End Try
-            If hasError Then Await Task.Delay(50)
+
+            If hasError Then
+                Await Task.Delay(50)
+            End If
         End While
     End Function
     Public Shared Function HandleRequest(request As String) As String
