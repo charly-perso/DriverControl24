@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -dynamiclib -Wl,-headerpad_max_install_names -o reaper_c24events.dylib -install_name @rpath/reaper_c24events.dylib CMakeFiles/reaper_c24events.dir/dllmain.cpp.o
