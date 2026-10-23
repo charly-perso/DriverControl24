@@ -398,55 +398,76 @@ Namespace Control24
         ''' <summary>
         ''' Set packet filter (BPF)
         ''' </summary>
+        Private Shared Function NormalizeMac(macAddress As String) As String
+            If String.IsNullOrWhiteSpace(macAddress) Then
+                Return Nothing
+            End If
+
+            Dim hex As New List(Of Char)
+            For Each c In macAddress
+                If Uri.IsHexDigit(c) Then
+                    hex.Add(Char.ToLowerInvariant(c))
+                End If
+            Next
+
+            If hex.Count <> 12 Then
+                Return Nothing
+            End If
+
+            Dim parts As New List(Of String)
+            For i = 0 To 10 Step 2
+                parts.Add(New String(New Char() {hex(i), hex(i + 1)}))
+            Next
+
+            Return String.Join(":", parts)
+        End Function
+
         Public Sub SetFilter(macAddress As String) Implements INetworkCapture.SetFilter
             If _handle = IntPtr.Zero Then
                 Throw New InvalidOperationException("Device not opened")
+            End If
+
+            Dim mac As String = NormalizeMac(macAddress)
+            If mac Is Nothing Then
+                Throw New ArgumentException($"Adresse MAC invalide pour le filtre BPF : '{macAddress}'")
             End If
 
             Dim fp As BpfProgram
             fp.bf_len = 0
             fp.bf_insns = IntPtr.Zero
 
-            Try
-                ' ✅ FIX: Exclude packets sent by US (our TX) - prevents duplicates from TX capture
-                ' Filter: protocol 0x885f AND (destination is our MAC OR broadcast) AND source is NOT our MAC
-                Dim filterStr = $"ether proto 0x885f and (ether dst {macAddress} or ether dst ff:ff:ff:ff:ff:ff) and not ether src {macAddress}"
+            Dim filterStr As String = $"ether proto 0x885f and (ether dst {mac} or ether dst ff:ff:ff:ff:ff:ff) and not ether src {mac}"
 
+            If pcap_compile(_handle, fp, filterStr, 1, 0) < 0 Then
+                Dim errPtr As IntPtr = pcap_geterr(_handle)
+                Dim errMsg As String = "Unknown error"
+                If errPtr <> IntPtr.Zero Then
+                    errMsg = Marshal.PtrToStringAnsi(errPtr)
+                End If
 
-                ' Compile the filter
+                filterStr = $"ether proto 0x885f and (ether dst {mac} or ether dst ff:ff:ff:ff:ff:ff)"
+
                 If pcap_compile(_handle, fp, filterStr, 1, 0) < 0 Then
-                    Dim errPtr = pcap_geterr(_handle)
-                    Dim errMsg = If(errPtr <> IntPtr.Zero, Marshal.PtrToStringAnsi(errPtr), "Unknown error")
-
-                    ' ⚠️ Fallback: if BPF filter fails, log error and try simpler filter
-
-                    ' Fallback filter (less optimal but should work)
-                    filterStr = $"ether proto 0x885f and (ether dst {macAddress} or ether dst ff:ff:ff:ff:ff:ff)"
-
-                    If pcap_compile(_handle, fp, filterStr, 1, 0) < 0 Then
-                        errPtr = pcap_geterr(_handle)
-                        errMsg = If(errPtr <> IntPtr.Zero, Marshal.PtrToStringAnsi(errPtr), "Unknown error")
-                        Throw New Exception($"Failed to compile filter: {errMsg}")
-                    Else
+                    errPtr = pcap_geterr(_handle)
+                    Dim errMsg2 As String = "Unknown error"
+                    If errPtr <> IntPtr.Zero Then
+                        errMsg2 = Marshal.PtrToStringAnsi(errPtr)
                     End If
-                Else
+                    Throw New Exception($"Failed to compile filter '{filterStr}' (mac reçue='{macAddress}') : {errMsg} / {errMsg2}")
                 End If
+            End If
 
-                ' Set the compiled filter
-                If pcap_setfilter(_handle, fp) < 0 Then
-                    Dim errPtr = pcap_geterr(_handle)
-                    Dim errMsg = If(errPtr <> IntPtr.Zero, Marshal.PtrToStringAnsi(errPtr), "Unknown error")
-                    pcap_freecode(fp) ' Free the compiled filter before throwing
-                    Throw New Exception($"Failed to set filter: {errMsg}")
+            If pcap_setfilter(_handle, fp) < 0 Then
+                Dim errPtr As IntPtr = pcap_geterr(_handle)
+                Dim errMsg As String = "Unknown error"
+                If errPtr <> IntPtr.Zero Then
+                    errMsg = Marshal.PtrToStringAnsi(errPtr)
                 End If
-
-
-                ' Free the compiled filter
                 pcap_freecode(fp)
+                Throw New Exception($"Failed to set filter: {errMsg}")
+            End If
 
-            Catch ex As Exception
-                Throw
-            End Try
+            pcap_freecode(fp)
         End Sub
 
         ''' <summary>
