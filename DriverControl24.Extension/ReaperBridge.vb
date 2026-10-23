@@ -174,6 +174,7 @@ Public Class ReaperBridge
 
 
     Private Shared Async Function StartPipeServerAsync() As Task
+        BridgeLog("bridge: serveur créé, attente de connexion")
         While True
             Dim hasError = False
             Try
@@ -181,12 +182,14 @@ Public Class ReaperBridge
                         "c24_reaper_bridge", IO.Pipes.PipeDirection.InOut, 1,
                         IO.Pipes.PipeTransmissionMode.Byte)   ' ✅ Byte = cross-platform (Message = Windows only)
                     Await pipe.WaitForConnectionAsync()
+                    BridgeLog("bridge: client connecté")
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
                     Dim request = Await reader.ReadLineAsync()
                     If request IsNot Nothing Then
                         Await writer.WriteLineAsync(HandleRequest(request))
                     End If
+                    BridgeLog($"bridge: requête lue = {request}")
                 End Using
             Catch ex As Exception
                 hasError = True
@@ -202,6 +205,7 @@ Public Class ReaperBridge
     ''' Nom du pipe : c24_reaper_poll
     ''' </summary>
     Private Shared Async Function StartPollPipeServerAsync() As Task
+        BridgeLog("bridge: serveur créé, attente de connexion")
         While True
             Dim hasError = False
             Try
@@ -212,6 +216,7 @@ Public Class ReaperBridge
                         IO.Pipes.NamedPipeServerStream.MaxAllowedServerInstances,
                         IO.Pipes.PipeTransmissionMode.Byte)
                     Await pipe.WaitForConnectionAsync()
+                    BridgeLog("bridge: client connecté")
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
 
@@ -221,6 +226,7 @@ Public Class ReaperBridge
                         Await writer.WriteLineAsync(HandleRequest(request))
                         request = Await reader.ReadLineAsync()
                     End While
+                    BridgeLog($"bridge: requête lue = {request}")
                 End Using
             Catch ex As Exception
                 BridgeLog($"Pipe server error: {ex}")
