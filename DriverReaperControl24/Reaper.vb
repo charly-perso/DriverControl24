@@ -23,14 +23,75 @@ Namespace Reaper
         IO.Pipes.PipeDirection.InOut)
 
                     pipe.Connect(timeout:=200)
-                    Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
-                    Dim reader As New IO.StreamReader(pipe)
+                    Dim writer As New IO.StreamWriter(pipe, New System.Text.UTF8Encoding(False), 1024, leaveOpen:=True) With {.AutoFlush = True}
+                    Dim reader As New IO.StreamReader(pipe, New System.Text.UTF8Encoding(False), False, 1024, leaveOpen:=True)
                     writer.WriteLine(request)
                     Return reader.ReadLine()
                 End Using
             Catch ex As Exception
                 Console.WriteLine(ex.Message)
                 Return String.Empty   ' Bridge non démarré (Reaper fermé / plugin absent)
+            End Try
+        End Function
+
+        ''' <summary>
+        ''' Écrit la requête suivie de LF dans le flux, en UTF-8, avec un buffer emprunté à ArrayPool.
+        ''' </summary>
+        ''' <param name="stream">Flux de destination.</param>
+        ''' <param name="text">Texte à envoyer.</param>
+        Private Sub WriteLineBytes(stream As IO.Stream, text As String)
+            Dim maxLength As Integer = System.Text.Encoding.UTF8.GetMaxByteCount(text.Length) + 1
+            Dim buffer As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(maxLength)
+            Try
+                Dim count As Integer = System.Text.Encoding.UTF8.GetBytes(text, 0, text.Length, buffer, 0)
+                buffer(count) = 10
+                stream.Write(buffer, 0, count + 1)
+                stream.Flush()
+            Finally
+                System.Buffers.ArrayPool(Of Byte).Shared.Return(buffer)
+            End Try
+        End Sub
+
+        ''' <summary>
+        ''' Lit une ligne (jusqu'à LF) depuis le flux avec un buffer emprunté à ArrayPool.
+        ''' Retourne Nothing si le flux est fermé avant tout octet reçu.
+        ''' </summary>
+        ''' <param name="stream">Flux source.</param>
+        ''' <returns>La ligne lue sans CR/LF final.</returns>
+        Private Function ReadLineBytes(stream As IO.Stream) As String
+            Dim buffer As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(1024)
+            Dim total As Integer = 0
+            Try
+                While True
+                    If total = buffer.Length Then
+                        Dim bigger As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(buffer.Length * 2)
+                        System.Buffer.BlockCopy(buffer, 0, bigger, 0, total)
+                        System.Buffers.ArrayPool(Of Byte).Shared.Return(buffer)
+                        buffer = bigger
+                    End If
+
+                    Dim read As Integer = stream.Read(buffer, total, buffer.Length - total)
+                    If read = 0 Then
+                        If total = 0 Then
+                            Return Nothing
+                        End If
+                        Exit While
+                    End If
+
+                    Dim lf As Integer = Array.IndexOf(buffer, CByte(10), total, read)
+                    total += read
+                    If lf >= 0 Then
+                        total = lf
+                        Exit While
+                    End If
+                End While
+
+                If total > 0 AndAlso buffer(total - 1) = 13 Then
+                    total -= 1
+                End If
+                Return System.Text.Encoding.UTF8.GetString(buffer, 0, total)
+            Finally
+                System.Buffers.ArrayPool(Of Byte).Shared.Return(buffer)
             End Try
         End Function
         ''' <summary>
@@ -10189,33 +10250,37 @@ Namespace Reaper
                 Dim playPos As Double = -1
                 Dim mL As Double = 0, mR As Double = 0
                 Dim mHoldL As Double = 0, mHoldR As Double = 0
-                Dim peaks As New Dictionary(Of Integer, (L As Double, R As Double))
-                Dim holds As New Dictionary(Of Integer, (L As Double, R As Double))
+                Dim peaks As New Dictionary(Of Integer, (L As Double, R As Double))(activeTracks.Length)
+                Dim holds As New Dictionary(Of Integer, (L As Double, R As Double))(activeTracks.Length)
 
                 If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
-                    Dim p = raw.Split("|"c)
+                    Dim pos As Integer = 0
+                    Dim fieldCount As Integer = 1
+                    For k = 0 To raw.Length - 1
+                        If raw(k) = "|"c Then
+                            fieldCount += 1
+                        End If
+                    Next
 
                     ' Format : playPos | masterL | masterR | masterHoldL | masterHoldR
                     '          | t0L | t0R | t0HoldL | t0HoldR | t1L | …
-                    If p.Length >= 5 Then
-                        Double.TryParse(p(0), Globalization.NumberStyles.Any, ic, playPos)
-                        Double.TryParse(p(1), Globalization.NumberStyles.Any, ic, mL)
-                        Double.TryParse(p(2), Globalization.NumberStyles.Any, ic, mR)
-                        Double.TryParse(p(3), Globalization.NumberStyles.Any, ic, mHoldL)
-                        Double.TryParse(p(4), Globalization.NumberStyles.Any, ic, mHoldR)
+                    If fieldCount >= 5 Then
+                        playPos = ReadNextDouble(raw, pos, ic)
+                        mL = ReadNextDouble(raw, pos, ic)
+                        mR = ReadNextDouble(raw, pos, ic)
+                        mHoldL = ReadNextDouble(raw, pos, ic)
+                        mHoldR = ReadNextDouble(raw, pos, ic)
 
                         ' ── Peaks pistes (4 champs par piste : L | R | HoldL | HoldR) ─
                         For i = 0 To activeTracks.Length - 1
                             Dim offset = 5 + i * 4
-                            If offset + 3 >= p.Length Then Exit For
+                            If offset + 3 >= fieldCount Then Exit For
 
                             Dim tIdx = activeTracks(i).trackIndex
-                            Dim tL As Double = 0, tR As Double = 0
-                            Dim tHL As Double = 0, tHR As Double = 0
-                            Double.TryParse(p(offset), Globalization.NumberStyles.Any, ic, tL)
-                            Double.TryParse(p(offset + 1), Globalization.NumberStyles.Any, ic, tR)
-                            Double.TryParse(p(offset + 2), Globalization.NumberStyles.Any, ic, tHL)
-                            Double.TryParse(p(offset + 3), Globalization.NumberStyles.Any, ic, tHR)
+                            Dim tL As Double = ReadNextDouble(raw, pos, ic)
+                            Dim tR As Double = ReadNextDouble(raw, pos, ic)
+                            Dim tHL As Double = ReadNextDouble(raw, pos, ic)
+                            Dim tHR As Double = ReadNextDouble(raw, pos, ic)
 
                             peaks(tIdx) = (tL, tR)
                             holds(tIdx) = (tHL, tHR)
@@ -10224,6 +10289,31 @@ Namespace Reaper
                 End If
 
                 Return New PeakSnapshot(playPos, mL, mR, mHoldL, mHoldR, peaks, holds)
+            End Function
+
+            ''' <summary>
+            ''' Lit le prochain champ délimité par '|' dans <paramref name="raw"/> à partir de <paramref name="pos"/>,
+            ''' le parse en Double (0 si non valide) et avance <paramref name="pos"/> après le séparateur.
+            ''' </summary>
+            ''' <param name="raw">Réponse complète du pipe.</param>
+            ''' <param name="pos">Position de lecture, mise à jour après lecture.</param>
+            ''' <param name="provider">Culture de parsing (InvariantCulture).</param>
+            ''' <returns>La valeur parsée, ou 0 si le champ n'est pas un nombre valide.</returns>
+            Private Shared Function ReadNextDouble(raw As String, ByRef pos As Integer, provider As IFormatProvider) As Double
+                Dim start As Integer = pos
+                Dim sep As Integer = raw.IndexOf("|"c, start)
+                Dim length As Integer
+                If sep < 0 Then
+                    length = raw.Length - start
+                    pos = raw.Length
+                Else
+                    length = sep - start
+                    pos = sep + 1
+                End If
+
+                Dim value As Double = 0
+                Double.TryParse(raw.AsSpan(start, length), Globalization.NumberStyles.Any, provider, value)
+                Return value
             End Function
 
             Protected Overridable Sub Dispose(disposing As Boolean)
@@ -12864,14 +12954,27 @@ Namespace Reaper
             If newCount <> _lastRawCount Then
                 _lastRawCount = newCount
 
-                ' ── 1. Cartographier les enveloppes FX existantes ─────────────
-                ' Doit précéder CreateEnvelope — utilisé dans le Select Case Else.
-                BuildFxParamMap()
+                ' ── 1. Lire les noms et compter les enveloppes non standard ───
+                Dim names(newCount - 1) As String
+                Dim fxEnvCount As Integer = 0
+                For i = 0 To newCount - 1
+                    names(i) = utility.GetEnvelopeName(_trackIndex, i)
+                    If IsStandardEnvelopeName(names(i)) = False Then
+                        fxEnvCount += 1
+                    End If
+                Next
 
-                ' ── 2. Reconstruire la liste ──────────────────────────────────
+                ' ── 2. Cartographier les enveloppes FX seulement si nécessaire ─
+                ' Doit précéder CreateEnvelope — utilisé dans le Select Case Else.
+                _fxParamMap.Clear()
+                If fxEnvCount > 0 Then
+                    BuildFxParamMap(fxEnvCount)
+                End If
+
+                ' ── 3. Reconstruire la liste ──────────────────────────────────
                 _envelopes.Clear()
                 For i = 0 To newCount - 1
-                    Dim envName = utility.GetEnvelopeName(_trackIndex, i)
+                    Dim envName = names(i)
                     Dim new_env = CreateEnvelope(i, envName)
                     If new_env IsNot Nothing Then
                         _envelopes.Add(new_env)
@@ -12897,7 +13000,7 @@ Namespace Reaper
         ''' Complexité : O(FX × Params) appels pipe — appelé uniquement quand
         ''' le nombre total d'enveloppes change.
         ''' </summary>
-        Private Sub BuildFxParamMap()
+        Private Sub BuildFxParamMap(expectedCount As Integer)
             _fxParamMap.Clear()
             Dim fxCount = GetFxCount()
             For fxIdx = 0 To fxCount - 1
@@ -12907,10 +13010,25 @@ Namespace Reaper
                                      _trackIndex, fxIdx, paramIdx, create:=False)
                     If envIdx >= 0 Then
                         _fxParamMap(envIdx) = (fxIdx, paramIdx)
+                        If _fxParamMap.Count >= expectedCount Then
+                            Return
+                        End If
                     End If
                 Next
             Next
         End Sub
+
+        ''' <summary>
+        ''' Indique si le nom correspond à une enveloppe standard (non FX).
+        ''' </summary>
+        Private Shared Function IsStandardEnvelopeName(name As String) As Boolean
+            Select Case name.ToUpperInvariant()
+                Case "VOLUME", "PAN", "MUTE", "SEND VOLUME", "SEND PAN", "SEND MUTE"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
 
         ' ── Factory ────────────────────────────────────────────────────────────
 

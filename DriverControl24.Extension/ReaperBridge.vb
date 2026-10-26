@@ -259,6 +259,67 @@ Public Class ReaperBridge
             End If
         End While
     End Function
+
+    ''' <summary>
+    ''' Lit une ligne (jusqu'à LF) depuis le flux, en UTF-8, avec un buffer emprunté à ArrayPool.
+    ''' Retourne Nothing si le flux est fermé avant tout octet reçu.
+    ''' </summary>
+    ''' <param name="stream">Flux source.</param>
+    ''' <returns>La ligne lue sans CR/LF final.</returns>
+    Private Shared Async Function ReadLineBytesAsync(stream As IO.Stream) As Task(Of String)
+        Dim buffer As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(1024)
+        Dim total As Integer = 0
+        Try
+            While True
+                If total = buffer.Length Then
+                    Dim bigger As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(buffer.Length * 2)
+                    System.Buffer.BlockCopy(buffer, 0, bigger, 0, total)
+                    System.Buffers.ArrayPool(Of Byte).Shared.Return(buffer)
+                    buffer = bigger
+                End If
+
+                Dim read As Integer = Await stream.ReadAsync(buffer, total, buffer.Length - total)
+                If read = 0 Then
+                    If total = 0 Then
+                        Return Nothing
+                    End If
+                    Exit While
+                End If
+
+                Dim lf As Integer = Array.IndexOf(buffer, CByte(10), total, read)
+                total += read
+                If lf >= 0 Then
+                    total = lf
+                    Exit While
+                End If
+            End While
+
+            If total > 0 AndAlso buffer(total - 1) = 13 Then
+                total -= 1
+            End If
+            Return System.Text.Encoding.UTF8.GetString(buffer, 0, total)
+        Finally
+            System.Buffers.ArrayPool(Of Byte).Shared.Return(buffer)
+        End Try
+    End Function
+
+    ''' <summary>
+    ''' Écrit le texte suivi de LF dans le flux, en UTF-8, avec un buffer emprunté à ArrayPool.
+    ''' </summary>
+    ''' <param name="stream">Flux de destination.</param>
+    ''' <param name="text">Texte à envoyer.</param>
+    Private Shared Async Function WriteLineBytesAsync(stream As IO.Stream, text As String) As Task
+        Dim maxLength As Integer = System.Text.Encoding.UTF8.GetMaxByteCount(text.Length) + 1
+        Dim buffer As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(maxLength)
+        Try
+            Dim count As Integer = System.Text.Encoding.UTF8.GetBytes(text, 0, text.Length, buffer, 0)
+            buffer(count) = 10
+            Await stream.WriteAsync(buffer, 0, count + 1)
+            Await stream.FlushAsync()
+        Finally
+            System.Buffers.ArrayPool(Of Byte).Shared.Return(buffer)
+        End Try
+    End Function
     ''' <summary>
     ''' Démarre le serveur pipe persistant pour le polling de changements.
     ''' Une seule connexion est maintenue ouverte et traite N requêtes séquentielles.
