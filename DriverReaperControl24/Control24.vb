@@ -2065,7 +2065,7 @@ Namespace Control24
                     _JogWheelCmd.Rotate_Velocity = Value
                 End If
                 RaiseEvent OnJogWheelChange(_JogWheelCmd.Rotate_Direction, Math.Abs(_JogWheelCmd.Rotate_Velocity))
-                Console.WriteLine(_JogWheelCmd.Rotate_Direction.ToString, Math.Abs(_JogWheelCmd.Rotate_Velocity))
+                'Console.WriteLine(_JogWheelCmd.Rotate_Direction.ToString, Math.Abs(_JogWheelCmd.Rotate_Velocity))
             End Sub
 
         End Class

@@ -7953,31 +7953,31 @@ Public Class C24ReaperController
     Sub SetMoveCursorCommandID(direction As Control24.Commands.Direction, velocity As Integer, SnapToGridAL As C24ActionLinker, Selection As Boolean)
         If direction = Direction.Left Then
             If SnapToGridAL.State Then
-                Reaper.utility.Main_OnCommand(40646)
-                Console.WriteLine(40646)
+                Reaper.utility.Main_OnCommand_SafeUI(40646)
+                'Console.WriteLine(40646)
                 If Selection Then
                     Dim CurPos = Reaper.utility.GetCursorPosition
                     If CurPos > CtlPoint Then
-                        Reaper.utility.Main_OnCommand(40626)
-                        Console.WriteLine(40626)
+                        Reaper.utility.Main_OnCommand_SafeUI(40626)
+                        'Console.WriteLine(40626)
                     Else
-                        Reaper.utility.Main_OnCommand(40625)
-                        Console.WriteLine(40625)
+                        Reaper.utility.Main_OnCommand_SafeUI(40625)
+                        'Console.WriteLine(40625)
                     End If
                 End If
 
 
             Else
                 If Selection Then
-                    Reaper.utility.Main_OnCommand(40102)
-                    Console.WriteLine(40102)
+                    Reaper.utility.Main_OnCommand_SafeUI(40102)
+                    'Console.WriteLine(40102)
                 Else
                     If velocity > 2 Then
-                        Reaper.utility.Main_OnCommand(41666)
-                        Console.WriteLine(41666)
+                        Reaper.utility.Main_OnCommand_SafeUI(41666)
+                        'Console.WriteLine(41666)
                     Else
-                        Reaper.utility.Main_OnCommand(40104)
-                        Console.WriteLine(40104)
+                        Reaper.utility.Main_OnCommand_SafeUI(40104)
+                        'Console.WriteLine(40104)
                     End If
                 End If
 
@@ -7985,29 +7985,29 @@ Public Class C24ReaperController
 
         Else 'Right
             If SnapToGridAL.State Then
-                Reaper.utility.Main_OnCommand(40647)
+                Reaper.utility.Main_OnCommand_SafeUI(40647)
                 Console.WriteLine(40647)
                 If Selection Then
                     Dim CurPos = Reaper.utility.GetCursorPosition
                     If CurPos > CtlPoint Then
-                        Reaper.utility.Main_OnCommand(40626)
-                        Console.WriteLine(40626)
+                        Reaper.utility.Main_OnCommand_SafeUI(40626)
+                        'Console.WriteLine(40626)
                     Else
-                        Reaper.utility.Main_OnCommand(40625)
-                        Console.WriteLine(40625)
+                        Reaper.utility.Main_OnCommand_SafeUI(40625)
+                        'Console.WriteLine(40625)
                     End If
                 End If
             Else
                 If Selection Then
-                    Reaper.utility.Main_OnCommand(40103)
-                    Console.WriteLine(40103)
+                    Reaper.utility.Main_OnCommand_SafeUI(40103)
+                    'Console.WriteLine(40103)
                 Else
                     If velocity > 2 Then
-                        Reaper.utility.Main_OnCommand(41667)
-                        Console.WriteLine(41667)
+                        Reaper.utility.Main_OnCommand_SafeUI(41667)
+                        'Console.WriteLine(41667)
                     Else
-                        Reaper.utility.Main_OnCommand(40105)
-                        Console.WriteLine(40105)
+                        Reaper.utility.Main_OnCommand_SafeUI(40105)
+                        'Console.WriteLine(40105)
                     End If
                 End If
 
