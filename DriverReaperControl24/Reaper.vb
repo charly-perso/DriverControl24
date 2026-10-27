@@ -15,24 +15,68 @@ Namespace Reaper
 #Region "Utility"
 
     Public Module utility
-        ' Dans C24_Desk — test de connexion au bridge Reaper
-        Public Function CallReaperBridge(request As String) As String
-            Try
-                Using pipe As New IO.Pipes.NamedPipeClientStream(
-        ".", "c24_reaper_bridge",
-        IO.Pipes.PipeDirection.InOut)
+        Private Const BridgePoolSize As Integer = 4
+        Private ReadOnly _bridgeSlots As New SemaphoreSlim(BridgePoolSize, BridgePoolSize)
+        Private ReadOnly _bridgePool As New System.Collections.Concurrent.ConcurrentBag(Of IO.Pipes.NamedPipeClientStream)
 
-                    pipe.Connect(timeout:=200)
-                    Dim writer As New IO.StreamWriter(pipe, New System.Text.UTF8Encoding(False), 1024, leaveOpen:=True) With {.AutoFlush = True}
-                    Dim reader As New IO.StreamReader(pipe, New System.Text.UTF8Encoding(False), False, 1024, leaveOpen:=True)
-                    writer.WriteLine(request)
-                    Return reader.ReadLine()
-                End Using
-            Catch ex As Exception
-                Console.WriteLine(ex.Message)
-                Return String.Empty   ' Bridge non démarré (Reaper fermé / plugin absent)
+        ''' <summary>
+        ''' Envoie une requête au bridge via une connexion persistante empruntée au pool.
+        ''' Retente une fois avec une connexion neuve si la connexion réutilisée est périmée.
+        ''' </summary>
+        Public Function CallReaperBridge(request As String) As String
+            _bridgeSlots.Wait()
+            Try
+                For attempt = 0 To 1
+                    Dim pipe As IO.Pipes.NamedPipeClientStream = Nothing
+                    Dim reused As Boolean = _bridgePool.TryTake(pipe)
+                    Try
+                        If Not reused Then
+                            pipe = New IO.Pipes.NamedPipeClientStream(
+                        ".", "c24_reaper_bridge", IO.Pipes.PipeDirection.InOut)
+                            pipe.Connect(timeout:=200)
+                        End If
+
+                        WriteLineBytes(pipe, request)
+                        Dim response As String = ReadLineBytes(pipe)
+                        If response Is Nothing Then
+                            Throw New IO.IOException("Connexion fermée par le bridge")
+                        End If
+
+                        _bridgePool.Add(pipe)
+                        Return response
+                    Catch ex As Exception
+                        If pipe IsNot Nothing Then
+                            pipe.Dispose()
+                        End If
+                        If reused = False Then
+                            Console.WriteLine(ex.Message)
+                            Return String.Empty
+                        End If
+                    End Try
+                Next
+                Return String.Empty
+            Finally
+                _bridgeSlots.Release()
             End Try
         End Function
+
+
+        '' Dans C24_Desk — test de connexion au bridge Reaper
+        'Public Function CallReaperBridge(request As String) As String
+        '    Try
+        '        Using pipe As New IO.Pipes.NamedPipeClientStream(
+        '".", "c24_reaper_bridge",
+        'IO.Pipes.PipeDirection.InOut)
+
+        '            pipe.Connect(timeout:=200)
+        '            WriteLineBytes(pipe, request)
+        '            Return ReadLineBytes(pipe)
+        '        End Using
+        '    Catch ex As Exception
+        '        Console.WriteLine(ex.Message)
+        '        Return String.Empty   ' Bridge non démarré (Reaper fermé / plugin absent)
+        '    End Try
+        'End Function
 
         ''' <summary>
         ''' Écrit la requête suivie de LF dans le flux, en UTF-8, avec un buffer emprunté à ArrayPool.
@@ -100,7 +144,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetLastTouchedTrackIndex() As Integer
             Dim raw = CallReaperBridge("GET_LAST_TOUCHED_TRACK")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim idx As Integer = -1
             Integer.TryParse(raw, idx)
             Return idx
@@ -113,7 +157,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetLastTouchedFXInfo() As (trackIndex As Integer, fxIndex As Integer, paramIndex As Integer)
             Dim raw = CallReaperBridge("GET_LAST_TOUCHED_FX")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return (-1, -1, -1)
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return (-1, -1, -1)
             Dim p = raw.Split("|"c)
             If p.Length < 3 Then Return (-1, -1, -1)
             Dim t As Integer = -1, f As Integer = -1, pm As Integer = -1
@@ -152,7 +196,7 @@ Namespace Reaper
         ''' </summary>
         Public Function CountTracks() As Integer
             Dim raw = CallReaperBridge("COUNT_TRACKS")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim count As Integer = -1
             Integer.TryParse(raw, count)
             Return count
@@ -208,7 +252,7 @@ Namespace Reaper
         Public Function GetTrackInfoD(trackIndex As Integer,
                                       param As String) As Double
             Dim raw = CallReaperBridge($"GET_TRACK_INFO|{trackIndex}|{param}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
@@ -236,7 +280,7 @@ Namespace Reaper
         Public Function CreateTrackSend(srcTrackIndex As Integer,
                                         destTrackIndex As Integer) As Integer
             Dim raw = CallReaperBridge($"CREATE_TRACK_SEND|{srcTrackIndex}|{destTrackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim idx As Integer = -1
             Integer.TryParse(raw, idx)
             Return idx
@@ -244,7 +288,7 @@ Namespace Reaper
         Public Function CreateTrackOutput(_trackIndex As Integer, _OutputIndex As Integer)
             Dim raw = utility.CallReaperBridge(
                 $"SET_SEND_INFO|{_trackIndex}|{"2"}|{"-1"}|{"P_DESTTRACK"}|{_OutputIndex.ToString("G", CultureInfo.InvariantCulture)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim idx As Integer = -1
             Integer.TryParse(raw, idx)
             Return idx
@@ -293,7 +337,7 @@ Namespace Reaper
         ''' </summary>
         Public Function Track_GetPeakInfo(trackIndex As Integer, channel As Integer) As Double
             Dim raw = CallReaperBridge($"GET_TRACK_PEAK|{trackIndex}|{channel}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Double = -1
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -309,7 +353,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -369,7 +413,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -392,7 +436,7 @@ Namespace Reaper
                 Return (-1, -1, -1)
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (-1, -1, -1)
             End If
 
@@ -441,7 +485,7 @@ Namespace Reaper
                 Return (-1, False, -1, -1, "", -1)
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (-1, False, -1, -1, "", -1)
             End If
 
@@ -520,7 +564,7 @@ Namespace Reaper
                 Return False
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return False
             End If
 
@@ -583,7 +627,7 @@ Namespace Reaper
                 Return (-1, -1)
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (-1, -1)
             End If
 
@@ -671,12 +715,12 @@ Namespace Reaper
                 Return (-1, -1)
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (-1, -1)
             End If
 
             Dim p = raw.Split("|"c)
-            If p.Length <2 Then
+            If p.Length < 2 Then
                 Return (-1, -1)
             End If
 
@@ -716,7 +760,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -737,7 +781,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -758,7 +802,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -778,7 +822,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -797,7 +841,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -836,7 +880,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -871,7 +915,7 @@ Namespace Reaper
                 Return False
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return False
             End If
 
@@ -890,7 +934,7 @@ Namespace Reaper
                 Return False
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return False
             End If
 
@@ -908,7 +952,7 @@ Namespace Reaper
                 Return -1
             End If
 
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -923,7 +967,7 @@ Namespace Reaper
         ''' </summary>
         Public Function Track_GetPeakStereo(trackIndex As Integer) As (L As Double, R As Double)
             Dim raw = CallReaperBridge($"GET_TRACK_PEAK_STEREO|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return (-1, -1)
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return (-1, -1)
             Dim p = raw.Split("|"c)
             If p.Length < 2 Then Return (-1, -1)
             Dim ic = Globalization.CultureInfo.InvariantCulture
@@ -940,7 +984,7 @@ Namespace Reaper
         ''' </summary>
         Public Function Track_GetPeakHoldDB(trackIndex As Integer, channel As Integer) As Double
             Dim raw = CallReaperBridge($"GET_TRACK_PEAK_HOLD|{trackIndex}|{channel}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -953,7 +997,7 @@ Namespace Reaper
         ''' </summary>
         Public Function Track_ResetPeakHoldDB(trackIndex As Integer, channel As Integer) As Double
             Dim raw = CallReaperBridge($"RESET_TRACK_PEAK_HOLD|{trackIndex}|{channel}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -969,7 +1013,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetInstalledFXList() As IReadOnlyList(Of InstalledFXInfo)
             Dim raw = CallReaperBridge("GET_INSTALLED_FX_LIST")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return Array.Empty(Of InstalledFXInfo)()
             End If
             Dim p = raw.Split("|"c)
@@ -987,7 +1031,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetInstalledFXListByType(fxType As String) As IReadOnlyList(Of String)
             Dim raw = CallReaperBridge($"GET_INSTALLED_FX_LIST_BYTYPE|{fxType}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return Array.Empty(Of String)()
             End If
             Return raw.Split("|"c)
@@ -1040,7 +1084,7 @@ Namespace Reaper
                                           groupType As TrackGroupType) As UInteger
             Dim raw = CallReaperBridge(
                 $"GET_TRACK_GROUP|{trackIndex}|{TrackGroupTypeName(groupType)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0UI
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0UI
             Dim v As Long = 0
             Long.TryParse(raw, v)
             Return CType(v, UInteger)
@@ -1056,7 +1100,7 @@ Namespace Reaper
                                           setVal As UInteger) As UInteger
             Dim raw = CallReaperBridge(
                 $"SET_TRACK_GROUP|{trackIndex}|{TrackGroupTypeName(groupType)}|{setMask}|{setVal}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0UI
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0UI
             Dim v As Long = 0
             Long.TryParse(raw, v)
             Return CType(v, UInteger)
@@ -1098,7 +1142,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetNumAudioInputs() As Integer
             Dim raw = CallReaperBridge("GET_NUM_AUDIO_INPUTS")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Integer = -1
             Integer.TryParse(raw, v)
             Return v
@@ -1110,7 +1154,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetNumAudioOutputs() As Integer
             Dim raw = CallReaperBridge("GET_NUM_AUDIO_OUTPUTS")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Integer = -1
             Integer.TryParse(raw, v)
             Return v
@@ -1122,7 +1166,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetAudioInputName(channelIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_AUDIO_INPUT_NAME|{channelIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1132,7 +1176,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetAudioOutputName(channelIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_AUDIO_OUTPUT_NAME|{channelIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1141,7 +1185,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetAllAudioInputs() As IReadOnlyList(Of AudioChannelInfo)
             Dim raw = CallReaperBridge("GET_ALL_AUDIO_INPUTS")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return Array.Empty(Of AudioChannelInfo)()
             End If
             Dim names = raw.Split("|"c)
@@ -1157,7 +1201,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetAllAudioOutputs() As IReadOnlyList(Of AudioChannelInfo)
             Dim raw = CallReaperBridge("GET_ALL_AUDIO_OUTPUTS")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return Array.Empty(Of AudioChannelInfo)()
             End If
             Dim names = raw.Split("|"c)
@@ -1178,7 +1222,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetCursorPosition() As Double
             Dim raw = CallReaperBridge("GET_CURSOR_POSITION")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Double = -1
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -1205,7 +1249,7 @@ Namespace Reaper
                                            mode As TimePositionMode) As String
             Dim raw = CallReaperBridge(
                 $"FORMAT_TIMEPOS|{time.ToString("G", Globalization.CultureInfo.InvariantCulture)}|{CInt(mode)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1216,7 +1260,7 @@ Namespace Reaper
         Public Function TimePositionToQN(time As Double) As Double
             Dim raw = CallReaperBridge(
                 $"TIMEPOS_TO_QN|{time.ToString("G", Globalization.CultureInfo.InvariantCulture)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Double = -1
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -1230,7 +1274,7 @@ Namespace Reaper
         Public Function QNToTimePosition(qn As Double) As Double
             Dim raw = CallReaperBridge(
                 $"QN_TO_TIMEPOS|{qn.ToString("G", Globalization.CultureInfo.InvariantCulture)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Double = -1
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -1244,7 +1288,7 @@ Namespace Reaper
         Public Function GetTimeSigAtTime(time As Double) As (Num As Integer, Den As Integer, BPM As Double)
             Dim raw = CallReaperBridge(
                 $"GET_TIMESIG_AT_TIME|{time.ToString("G", Globalization.CultureInfo.InvariantCulture)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return (0, 0, 0)
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return (0, 0, 0)
             Dim p = raw.Split("|"c)
             If p.Length < 3 Then Return (0, 0, 0)
             Dim ic = Globalization.CultureInfo.InvariantCulture
@@ -1263,7 +1307,7 @@ Namespace Reaper
         Public Function GetCursorInfo() As CursorInfo
             Dim raw = CallReaperBridge("GET_CURSOR_INFO")
             Dim ic = Globalization.CultureInfo.InvariantCulture
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return New CursorInfo(0, 0, 0, 0, 0, 4, 0, 4, 4, 120, String.Empty)
             End If
             Dim p = raw.Split("|"c)
@@ -1295,7 +1339,7 @@ Namespace Reaper
                                     Optional recFX As Boolean = False) As Integer
             Dim raw = CallReaperBridge(
                 $"ADD_FX_BY_NAME|{trackIndex}|{fxName}|{If(recFX, "1", "0")}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim idx As Integer = -1
             Integer.TryParse(raw, idx)
             Return idx
@@ -1329,7 +1373,7 @@ Namespace Reaper
         ''' </summary>
         Public Function CanUndo() As String
             Dim raw = CallReaperBridge("CAN_UNDO")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1339,7 +1383,7 @@ Namespace Reaper
         ''' </summary>
         Public Function CanRedo() As String
             Dim raw = CallReaperBridge("CAN_REDO")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1369,7 +1413,7 @@ Namespace Reaper
         Public Function GetProjectInfo() As ReaperProjectInfo
             Dim raw = CallReaperBridge("GET_PROJECT_INFO")
             Dim ic = Globalization.CultureInfo.InvariantCulture
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return New ReaperProjectInfo(String.Empty, String.Empty, False, 0, 0, 0)
             End If
             Dim p = raw.Split("|"c)
@@ -1389,7 +1433,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetProjectStateChangeCount() As Integer
             Dim raw = CallReaperBridge("GET_PROJECT_STATE_COUNT")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Integer = -1
             Integer.TryParse(raw, v)
             Return v
@@ -1424,7 +1468,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetProjectFilePath() As String
             Dim raw = CallReaperBridge("GET_PROJECT_FILE_PATH")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1443,7 +1487,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetProjectLength() As Double
             Dim raw = CallReaperBridge("GET_PROJECT_LENGTH")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Double = -1
             Double.TryParse(raw, Globalization.NumberStyles.Any,
                             Globalization.CultureInfo.InvariantCulture, v)
@@ -1455,7 +1499,7 @@ Namespace Reaper
         ''' </summary>
         Public Function EnumAllProjects() As IReadOnlyList(Of String)
             Dim raw = CallReaperBridge("ENUM_PROJECTS")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return Array.Empty(Of String)()
             End If
             Return raw.Split("|"c)
@@ -1479,7 +1523,7 @@ Namespace Reaper
                                      time As Double) As (Value As Double, DvdS As Double)
             Dim raw = CallReaperBridge(
                 $"EVAL_ENVELOPE|{trackIndex}|{envIndex}|{time.ToString("G", CultureInfo.InvariantCulture)}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (Double.MinValue, 0)
             End If
             Dim p = raw.Split("|"c)
@@ -1540,7 +1584,7 @@ Namespace Reaper
                                               fxIndex As Integer,
                                               paramIndex As Integer) As Double
             Dim raw = CallReaperBridge($"GET_FX_PARAM_NORM|{trackIndex}|{fxIndex}|{paramIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
@@ -1557,7 +1601,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetTrackUIVolume(trackIndex As Integer) As Double
             Dim raw = CallReaperBridge($"GET_TRACK_UI_VOL|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
@@ -1569,7 +1613,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetTrackUIVolPan(trackIndex As Integer) As (Vol As Double, Pan As Double)
             Dim raw = CallReaperBridge($"GET_TRACK_UI_VOL_PAN|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (Double.MinValue, Double.MinValue)
             End If
             Dim p = raw.Split("|"c)
@@ -1595,7 +1639,7 @@ Namespace Reaper
                                          Optional igngroupflags As Integer = 0) As Double
             Dim raw = CallReaperBridge(
                 $"SET_TRACK_UI_VOL|{trackIndex}|{vol.ToString("G", CultureInfo.InvariantCulture)}|0|{If(done, "1", "0")}|{igngroupflags}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return vol
             End If
             Dim result As Double = vol
@@ -1654,7 +1698,7 @@ Namespace Reaper
                                            sendIndex As Integer,
                                            Optional category As SendCategory = SendCategory.Sends) As Boolean
             Dim raw = CallReaperBridge($"GET_SEND_MUTE|{trackIndex}|{CInt(category)}|{sendIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return False
             Return raw = "1"
         End Function
 
@@ -1675,7 +1719,7 @@ Namespace Reaper
                                              sendIndex As Integer,
                                              Optional category As SendCategory = SendCategory.Sends) As (Vol As Double, Pan As Double)
             Dim raw = CallReaperBridge($"GET_SEND_VOL_PAN|{trackIndex}|{CInt(category)}|{sendIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (Double.MinValue, Double.MinValue)
             End If
             Dim p = raw.Split("|"c)
@@ -1748,7 +1792,7 @@ Namespace Reaper
                                       Optional igngroupflags As Integer = 0) As Double
             Dim raw = CallReaperBridge(
                 $"SET_TRACK_UI_PAN|{trackIndex}|{pan.ToString("G", CultureInfo.InvariantCulture)}|{If(done, "1", "0")}|{igngroupflags}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return pan
             End If
             Dim result As Double = pan
@@ -1762,7 +1806,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetTrackUIMute(trackIndex As Integer) As Boolean
             Dim raw = CallReaperBridge($"GET_TRACK_UI_MUTE|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return False
             Return raw = "1"
         End Function
 
@@ -1779,7 +1823,7 @@ Namespace Reaper
             Dim muteInt As Integer = If(mute, 1, 0)
             Dim raw = CallReaperBridge(
                 $"SET_TRACK_UI_MUTE|{trackIndex}|{muteInt}|{igngroupflags}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return mute
             End If
             Dim result As Integer = -1
@@ -1796,7 +1840,7 @@ Namespace Reaper
                                           Optional igngroupflags As Integer = 0) As Boolean
             Dim raw = CallReaperBridge(
                 $"SET_TRACK_UI_MUTE|{trackIndex}|-1|{igngroupflags}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return False
             End If
             Dim result As Integer = -1
@@ -1845,7 +1889,7 @@ Namespace Reaper
         ''' <param name="trackIndex">Index 0-based de la piste.</param>
         Public Function CountTrackEnvelopes(trackIndex As Integer) As Integer
             Dim raw = CallReaperBridge($"COUNT_TRACK_ENVELOPES|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Integer = -1
             Integer.TryParse(raw, v)
             Return v
@@ -1862,7 +1906,7 @@ Namespace Reaper
         Public Function GetEnvelopeName(trackIndex As Integer,
                                          envIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_ENVELOPE_NAME|{trackIndex}|{envIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1876,7 +1920,7 @@ Namespace Reaper
         Public Function GetEnvelopeGuid(trackIndex As Integer,
                                          envIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_ENVELOPE_GUID|{trackIndex}|{envIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1891,7 +1935,7 @@ Namespace Reaper
                                         envIndex As Integer,
                                         key As String) As String
             Dim raw = CallReaperBridge($"GET_ENVELOPE_EXT|{trackIndex}|{envIndex}|{key}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             Return raw
         End Function
 
@@ -1921,7 +1965,7 @@ Namespace Reaper
                                             envIndex As Integer,
                                             paramName As String) As Double
             Dim raw = CallReaperBridge($"GET_ENVELOPE_PROP_VAL|{trackIndex}|{envIndex}|{paramName}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
@@ -1938,7 +1982,7 @@ Namespace Reaper
                                             envIndex As Integer,
                                             paramName As String) As Double
             Dim raw = CallReaperBridge($"GET_ENVELOPE_PROP_VAL2|{trackIndex}|{envIndex}|{paramName}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return Double.MinValue
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return Double.MinValue
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
@@ -1978,7 +2022,7 @@ Namespace Reaper
                                             Optional create As Boolean = False) As Integer
             Dim raw = CallReaperBridge(
                 $"GET_FX_ENVELOPE|{trackIndex}|{fxIndex}|{paramIndex}|{If(create, "1", "0")}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Integer = -1
             Integer.TryParse(raw, v)
             Return v
@@ -2021,7 +2065,7 @@ Namespace Reaper
         Public Function GetEnvelopeStateChunk(trackIndex As Integer,
                                                envIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_ENVELOPE_STATE_CHUNK|{trackIndex}|{envIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return String.Empty
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return String.Empty
             ' Décoder \n littéral → vrais sauts de ligne LF
             Return raw.Replace("\n", vbLf)
         End Function
@@ -2053,7 +2097,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetPlayPosition() As Double
             Dim raw = CallReaperBridge("GET_PLAY_POSITION")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return -1
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return -1
             Dim v As Double = -1
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
@@ -2202,7 +2246,7 @@ Namespace Reaper
         ''' <param name="trackIndex">Index 0-based de la piste.</param>
         Public Function GetTrackGUID(trackIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_TRACK_GUID|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return "err"
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return "err"
             Return raw
         End Function
 
@@ -2377,7 +2421,7 @@ Namespace Reaper
         Public Function GetBpm() As Double
             Dim ic = Globalization.CultureInfo.InvariantCulture
             Dim raw = CallReaperBridge("GET_MASTER_TEMPO")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return 120.0
             End If
             Dim bpm As Double = 120.0
@@ -2395,7 +2439,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetBeatsPerBar() As Integer
             Dim raw = CallReaperBridge("GET_TIMESIG_NUMERATOR")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return 4
             End If
             Dim num As Integer = 4
@@ -2462,7 +2506,7 @@ Namespace Reaper
             Dim _FxParamValues As New FxParamValues
             Dim exRaw = utility.CallReaperBridge(
                $"GET_FX_PARAM_EX|{trackIndex}|{fxIndex}|{paramIndex}")
-            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Dim p = exRaw.Split("|"c)
                 If p.Length >= 4 Then
 
@@ -2517,7 +2561,7 @@ Namespace Reaper
                                              parmName As String) As String
             Dim raw = CallReaperBridge(
                 $"GET_FX_NAMED_CONFIG_PARM|{trackIndex}|{fxIndex}|{parmName}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return String.Empty
             End If
             Return raw
@@ -2537,7 +2581,7 @@ Namespace Reaper
         ''' <param name="trackIndex">Index 0-based de la piste.</param>
         Public Function GetTrackStateChunk(trackIndex As Integer) As String
             Dim raw = CallReaperBridge($"GET_TRACK_STATE_CHUNK|{trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return String.Empty
             End If
             ' Décoder \n littéral → saut de ligne réel
@@ -2580,7 +2624,7 @@ Namespace Reaper
         Public Function GetTrackFromPoint(screenX As Integer,
                                           screenY As Integer) As (trackIndex As Integer, infoOut As Integer)
             Dim raw = CallReaperBridge($"GET_TRACK_FROM_POINT|{screenX}|{screenY}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return (-1, 0)
             End If
             Dim p = raw.Split("|"c)
@@ -2603,7 +2647,7 @@ Namespace Reaper
         ''' </summary>
         Public Function GetMainHwnd() As IntPtr
             Dim raw = CallReaperBridge("GET_MAIN_HWND")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return IntPtr.Zero
             End If
             Dim value As Long = 0
@@ -2684,7 +2728,7 @@ Namespace Reaper
                                                envelopeName As String) As Integer
             Dim raw = CallReaperBridge($"GET_TRACK_ENVELOPE_BY_NAME|{trackIndex}|{envelopeName}")
 
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return -1
             End If
 
@@ -2730,7 +2774,7 @@ Namespace Reaper
                 End If
 
             End If
-            If raw.StartsWith("ERROR") Then
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return String.Empty
             End If
             Return raw
@@ -2763,7 +2807,7 @@ Namespace Reaper
                 Return 0
             End If
 
-            If rawCount.StartsWith("ERROR") Then
+            If rawCount.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return 0
             End If
 
@@ -2783,7 +2827,7 @@ Namespace Reaper
         Public Function GetSelectedTracks(Optional projectIndex As Integer = -1) As List(Of Integer)
             Dim result As New List(Of Integer)
             Dim answer As String = CallReaperBridge("GET_SELECTED_TRACKS|" & projectIndex.ToString(CultureInfo.InvariantCulture))
-            If String.IsNullOrEmpty(answer) OrElse answer.StartsWith("ERROR:") Then
+            If String.IsNullOrEmpty(answer) OrElse answer.StartsWith("ERROR:", StringComparison.Ordinal) Then
                 Return result
             End If
             For Each s In answer.Split("|"c)
@@ -3358,7 +3402,7 @@ Namespace Reaper
                     ' GET_SEND_ALL_INFO → idx 0=vol  1=pan  3=mute  6=sendMode
                     Dim raw = _pipe.Request(
                 $"GET_SEND_ALL_INFO|{_trackIndex}|{_category}|{sIdx}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Continue For
 
                     Dim p = raw.Split("|"c)
                     If p.Length < 7 Then Continue For
@@ -3625,7 +3669,7 @@ Namespace Reaper
                     ' ── Vol + Pan + Mute + SendMode en 1 seule requête ────────
                     ' GET_SEND_ALL_INFO → idx 0=vol  1=pan  3=mute  6=sendMode
                     Dim raw = _pipe.Request($"GET_SEND_ALL_INFO|{tIdx}|{_category}|{_TracksSendIndex(tIdx).Value}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Continue For
 
                     Dim p = raw.Split("|"c)
                     If p.Length < 7 Then Continue For
@@ -3947,7 +3991,7 @@ Namespace Reaper
                     Return result
                 End If
 
-                If rawCount.StartsWith("ERROR") Then
+                If rawCount.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Return result
                 End If
 
@@ -3962,7 +4006,7 @@ Namespace Reaper
 
                 For e = 0 To envCount - 1
                     Dim rawGuid = _pipe.Request($"GET_ENVELOPE_GUID|{trackIndex}|{e}")
-                    If String.IsNullOrEmpty(rawGuid) OrElse rawGuid.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(rawGuid) OrElse rawGuid.StartsWith("ERROR", StringComparison.Ordinal) Then
                         result.Add("err")
                     Else
                         result.Add(rawGuid)
@@ -3987,13 +4031,13 @@ Namespace Reaper
                 Dim result As New List(Of String)
 
                 Dim rawCount = _pipe.Request($"GET_NUM_SENDS|{trackIndex}|{CInt(SendCategory.Sends)}")
-                If String.IsNullOrEmpty(rawCount) OrElse rawCount.StartsWith("ERROR") Then Return result
+                If String.IsNullOrEmpty(rawCount) OrElse rawCount.StartsWith("ERROR", StringComparison.Ordinal) Then Return result
                 Dim sendCount As Integer = 0
                 If Not Integer.TryParse(rawCount, sendCount) OrElse sendCount <= 0 Then Return result
 
                 For s = 0 To sendCount - 1
                     Dim rawInfo = _pipe.Request($"GET_SEND_ALL_INFO|{trackIndex}|{CInt(SendCategory.Sends)}|{s}")
-                    If String.IsNullOrEmpty(rawInfo) OrElse rawInfo.StartsWith("ERROR") Then Continue For
+                    If String.IsNullOrEmpty(rawInfo) OrElse rawInfo.StartsWith("ERROR", StringComparison.Ordinal) Then Continue For
                     Dim p = rawInfo.Split("|"c)
                     If p.Length < 11 Then Continue For
 
@@ -4005,7 +4049,7 @@ Namespace Reaper
                     End If
 
                     Dim destGuid = _pipe.Request($"GET_TRACK_GUID|{destTrackIndex}")
-                    If String.IsNullOrEmpty(destGuid) OrElse destGuid.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(destGuid) OrElse destGuid.StartsWith("ERROR", StringComparison.Ordinal) Then
                         destGuid = "err"
                     End If
                     result.Add(destGuid)
@@ -4029,7 +4073,7 @@ Namespace Reaper
 
                 ' ── 2. Nombre de pistes ───────────────────────────────────────────
                 Dim rawCount = _pipe.Request("COUNT_TRACKS")
-                If String.IsNullOrEmpty(rawCount) OrElse rawCount.StartsWith("ERROR") Then Return
+                If String.IsNullOrEmpty(rawCount) OrElse rawCount.StartsWith("ERROR", StringComparison.Ordinal) Then Return
 
                 Dim newCount As Integer = -1
                 If Not Integer.TryParse(rawCount, newCount) Then Return
@@ -4039,7 +4083,7 @@ Namespace Reaper
                 Dim newGuids As New List(Of String)(newCount)
                 For i = 0 To newCount - 1
                     Dim rawGuid = _pipe.Request($"GET_TRACK_GUID|{i}")
-                    If String.IsNullOrEmpty(rawGuid) OrElse rawGuid.StartsWith("ERROR") Then Return
+                    If String.IsNullOrEmpty(rawGuid) OrElse rawGuid.StartsWith("ERROR", StringComparison.Ordinal) Then Return
                     newGuids.Add(rawGuid)
                 Next
 
@@ -4247,12 +4291,12 @@ Namespace Reaper
                 ' ── Snapshot initial via le pipe propre ───────────────────────
 
                 _lastFilePath = _pipe.Request("GET_PROJECT_FILE_PATH")
-                If _lastFilePath.StartsWith("ERROR") Then _lastFilePath = String.Empty
+                If _lastFilePath.StartsWith("ERROR", StringComparison.Ordinal) Then _lastFilePath = String.Empty
 
                 Dim projectsRaw = _pipe.Request("ENUM_PROJECTS")
                 _lastOpenProjects.Clear()
                 If Not String.IsNullOrEmpty(projectsRaw) AndAlso
-                   Not projectsRaw.StartsWith("ERROR") Then
+                   Not projectsRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     _lastOpenProjects.AddRange(projectsRaw.Split("|"c))
                 End If
 
@@ -4280,7 +4324,7 @@ Namespace Reaper
             Private Sub PollProject()
                 ' ── Projet actif ──────────────────────────────────────────────
                 Dim currentPath = _pipe.Request("GET_PROJECT_FILE_PATH")
-                If String.IsNullOrEmpty(currentPath) OrElse currentPath.StartsWith("ERROR") Then
+                If String.IsNullOrEmpty(currentPath) OrElse currentPath.StartsWith("ERROR", StringComparison.Ordinal) Then
                     currentPath = String.Empty
                 End If
 
@@ -4294,7 +4338,7 @@ Namespace Reaper
                 Dim projectsRaw = _pipe.Request("ENUM_PROJECTS")
                 Dim openProjects As String() = Array.Empty(Of String)()
                 If Not String.IsNullOrEmpty(projectsRaw) AndAlso
-                   Not projectsRaw.StartsWith("ERROR") Then
+                   Not projectsRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     openProjects = projectsRaw.Split("|"c)
                 End If
 
@@ -4601,7 +4645,7 @@ Namespace Reaper
                     ' ── Utilise le pipe propre du monitor ─────────────────────
                     Dim raw = _pipe.Request(
                     $"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Continue For
                     End If
 
@@ -4843,7 +4887,7 @@ Namespace Reaper
                     ' ── Utilise le pipe propre du monitor ─────────────────────
                     Dim raw = _pipe.Request(
                         $"GET_FX_PARAM_NORM|{_trackIndex}|{_fxIndex}|{entry.paramIndex}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Continue For
 
                     Dim newVal As Double = Double.MinValue
                     If Not Double.TryParse(raw, Globalization.NumberStyles.Any,
@@ -5357,7 +5401,7 @@ Namespace Reaper
                     ' ── Vol + Pan (1 requête via le pipe propre) ──────────────
                     Dim rawVP = _pipe.Request($"GET_TRACK_UI_VOL_PAN|{tIdx}")
                     If Not String.IsNullOrEmpty(rawVP) AndAlso
-                       Not rawVP.StartsWith("ERROR") Then
+                       Not rawVP.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Dim p = rawVP.Split("|"c)
                         If p.Length >= 2 Then
                             Dim newVol As Double = Double.MinValue
@@ -5383,7 +5427,7 @@ Namespace Reaper
                     ' ── Mute (1 requête via le pipe propre) ───────────────────
                     Dim rawMute = _pipe.Request($"GET_TRACK_UI_MUTE|{tIdx}")
                     If Not String.IsNullOrEmpty(rawMute) AndAlso
-                       Not rawMute.StartsWith("ERROR") Then
+                       Not rawMute.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Dim newMute = rawMute = "1"
                         If Not entry.isSuspended Then
                             Dim muteChg As Boolean
@@ -5532,7 +5576,7 @@ Namespace Reaper
                     Return
                 End If
 
-                If raw.StartsWith("ERROR") Then
+                If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Threading.Volatile.Write(_isPlaying, False)
                     Return
                 End If
@@ -5705,7 +5749,7 @@ Namespace Reaper
                     End If
                     If _TrackSendIndexes(tIdx) Is Nothing Then Continue For
                     Dim rawVP As String = _pipe.Request($"GET_SEND_VOL_PAN|{tIdx}|{_category}|{_TrackSendIndexes(tIdx).Value}")
-                    If String.IsNullOrEmpty(rawVP) OrElse rawVP.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(rawVP) OrElse rawVP.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Continue For
                     End If
 
@@ -5726,7 +5770,7 @@ Namespace Reaper
                     End If
 
                     Dim rawMute As String = _pipe.Request($"GET_SEND_MUTE|{tIdx}|{_category}|{_TrackSendIndexes(tIdx).Value}")
-                    If String.IsNullOrEmpty(rawMute) OrElse rawMute.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(rawMute) OrElse rawMute.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Continue For
                     End If
 
@@ -5926,7 +5970,7 @@ Namespace Reaper
                     Return
                 End If
 
-                If raw.StartsWith("ERROR") Then
+                If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Threading.Volatile.Write(_isPlaying, False)
                     Return
                 End If
@@ -6027,7 +6071,7 @@ Namespace Reaper
                     Dim sIdx As Integer = entry.sendIndex
 
                     Dim rawVP As String = _pipe.Request($"GET_SEND_VOL_PAN|{_trackIndex}|{_category}|{sIdx}")
-                    If String.IsNullOrEmpty(rawVP) OrElse rawVP.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(rawVP) OrElse rawVP.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Continue For
                     End If
 
@@ -6049,7 +6093,7 @@ Namespace Reaper
                     End If
 
                     Dim rawMute As String = _pipe.Request($"GET_SEND_MUTE|{_trackIndex}|{_category}|{sIdx}")
-                    If String.IsNullOrEmpty(rawMute) OrElse rawMute.StartsWith("ERROR") Then
+                    If String.IsNullOrEmpty(rawMute) OrElse rawMute.StartsWith("ERROR", StringComparison.Ordinal) Then
                         Continue For
                     End If
                     newMute = rawMute = "1"
@@ -6233,7 +6277,7 @@ Namespace Reaper
                     Return
                 End Try
 
-                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
                 Dim p = raw.Split("|"c)
                 If p.Length < 3 Then Return
 
@@ -6280,7 +6324,7 @@ Namespace Reaper
 
                 Console.WriteLine($"[PollPipe] Réponse brute : '{raw}'")
 
-                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
                 Dim p = raw.Split("|"c)
 
                 Console.WriteLine($"[PollPipe] Champs : {p.Length}  → {String.Join(" | ", p)}")
@@ -9200,7 +9244,7 @@ Namespace Reaper
                 Dim raw = utility.CallReaperBridge(
                     $"GET_NUM_SENDS|{trackIndex}|{CInt(SendCategory.Hardware)}")
                 Dim count As Integer = 0
-                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
+                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Integer.TryParse(raw, count)
                 End If
 
@@ -10253,7 +10297,7 @@ Namespace Reaper
                 Dim peaks As New Dictionary(Of Integer, (L As Double, R As Double))(activeTracks.Length)
                 Dim holds As New Dictionary(Of Integer, (L As Double, R As Double))(activeTracks.Length)
 
-                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
+                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Dim pos As Integer = 0
                     Dim fieldCount As Integer = 1
                     For k = 0 To raw.Length - 1
@@ -10970,7 +11014,7 @@ Namespace Reaper
                     If Not create Then Return False
                     Dim raw = utility.CallReaperBridge(
                             $"CREATE_TRACK_ENVELOPE|{trackIndex}|{name}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return False
                     Integer.TryParse(raw, envIdx)
                     If envIdx < 0 Then Return False
                 End If
@@ -10994,7 +11038,7 @@ Namespace Reaper
                     If Not create Then Return False
                     Dim raw = utility.CallReaperBridge(
                             $"CREATE_SEND_ENVELOPE|{trackIndex}|{sendIndex}|{name}")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return False
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return False
                     Integer.TryParse(raw, envIdx)
                     If envIdx < 0 Then Return False
                 End If
@@ -11008,7 +11052,7 @@ Namespace Reaper
             ''' </summary>
             Private Function GetFxParamCount(trackIndex As Integer, fxIndex As Integer) As Integer
                 Dim raw = utility.CallReaperBridge($"GET_FX_ALL_INFO|{trackIndex}|{fxIndex}")
-                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0
                 Dim p = raw.Split("|"c)
                 If p.Length < 3 Then Return 0
                 Dim count As Integer = 0
@@ -11022,7 +11066,7 @@ Namespace Reaper
             ''' </summary>
             Private Function GetFxCount(trackIndex As Integer) As Integer
                 Dim raw = utility.CallReaperBridge($"GET_FX_COUNT|{trackIndex}")
-                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
+                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0
                 Dim count As Integer = 0
                 Integer.TryParse(raw, count)
                 Return count
@@ -11237,7 +11281,7 @@ Namespace Reaper
                 Dim raw = utility.CallReaperBridge(
                     $"GET_NUM_SENDS|{_trackIndex}|{_category}")
                 Dim count As Integer = 0
-                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
+                If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Integer.TryParse(raw, count)
                 End If
 
@@ -11568,7 +11612,7 @@ Namespace Reaper
                 For i = 0 To _sends.Count - 1
                     Dim raw = utility.CallReaperBridge(
                         $"GET_SEND_INFO|{_trackIndex}|{_category}|{i}|IP_DSTTRKIDX")
-                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Continue For
+                    If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Continue For
                     Dim idx As Integer = -1
                     Integer.TryParse(raw, idx)
                     If idx = destTrackIndex Then Return i
@@ -12804,7 +12848,7 @@ Namespace Reaper
         '        End If
 
         '        Dim raw = utility.CallReaperBridge("GET_TIME_SELECTION")
-        '        If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+        '        If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
         '            Return (0, 0)
         '        End If
 
@@ -13093,7 +13137,7 @@ Namespace Reaper
         ''' </summary>
         Private Function GetFxCount() As Integer
             Dim raw = utility.CallReaperBridge($"GET_FX_COUNT|{_trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0
             Dim count As Integer = 0
             Integer.TryParse(raw, count)
             Return count
@@ -13106,7 +13150,7 @@ Namespace Reaper
         ''' </summary>
         Private Function GetFxParamCount(fxIndex As Integer) As Integer
             Dim raw = utility.CallReaperBridge($"GET_FX_ALL_INFO|{_trackIndex}|{fxIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return 0
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0
             Dim p = raw.Split("|"c)
             If p.Length < 3 Then Return 0
             Dim count As Integer = 0
@@ -14206,11 +14250,11 @@ Namespace Reaper
                 raw = utility.CallReaperBridge($"GET_TRACK_ALL_INFO|{_index}")
             End If
             ' ── Nom ───────────────────────────────────────────────────────────
-            If Not String.IsNullOrEmpty(nameRaw) AndAlso Not nameRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(nameRaw) AndAlso Not nameRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 _name = nameRaw
             End If
 
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Return
             End If
 
@@ -15005,7 +15049,7 @@ Namespace Reaper
         Public Sub Refresh()
             Dim raw = utility.CallReaperBridge(
                 $"GET_SEND_ALL_INFO|{_trackIndex}|{_category}|{_sendIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
 
             Dim p = raw.Split("|"c)
             If p.Length < 11 Then Return
@@ -15260,7 +15304,7 @@ Namespace Reaper
         ''' </summary>
         Public Sub Refresh()
             Dim raw = utility.CallReaperBridge($"GET_NUM_SENDS|{_trackIndex}|{_category}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
 
             Dim newCount As Integer = 0
             If Not Integer.TryParse(raw, newCount) Then Return
@@ -15464,7 +15508,7 @@ Namespace Reaper
                     Dim fmtRaw =
                         utility.CallReaperBridge(
                     $"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
-                    If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR") Then
+                    If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                         _formatted = fmtRaw
                     Else
                         _formatted = "err"
@@ -15518,7 +15562,7 @@ Namespace Reaper
         Public Sub Refresh()
             Dim nameRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_NAME|{_trackIndex}|{_fxIndex}|{_paramIndex}")
-            If Not String.IsNullOrEmpty(nameRaw) AndAlso Not nameRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(nameRaw) AndAlso Not nameRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 _name = nameRaw
                 'Console.WriteLine("----------------------")
                 'Console.WriteLine(_name)
@@ -15527,7 +15571,7 @@ Namespace Reaper
             ' ── TrackFX_GetParamEx : valeur brute + min, max, mid ─────────────
             Dim exRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_EX|{_trackIndex}|{_fxIndex}|{_paramIndex}")
-            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Dim p = exRaw.Split("|"c)
                 If p.Length >= 4 Then
                     Dim new_raw As Double = 0
@@ -15543,7 +15587,7 @@ Namespace Reaper
 
             Dim valRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_NORMALIZED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
-            If Not String.IsNullOrEmpty(valRaw) AndAlso Not valRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(valRaw) AndAlso Not valRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Dim new_norm As Double = 0
                 Double.TryParse(valRaw, NumberStyles.Any, Ic, new_norm)
                 Set_NewNormValue(new_norm)
@@ -15552,14 +15596,14 @@ Namespace Reaper
 
             Dim fmtRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
-            If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 _formatted = fmtRaw
                 'Console.WriteLine("FormatValue:" & _formatted)
             End If
 
             Dim stepRaw = utility.CallReaperBridge(
                 $"GET_FX_PARAM_STEP_SIZES|{_trackIndex}|{_fxIndex}|{_paramIndex}")
-            If Not String.IsNullOrEmpty(stepRaw) AndAlso Not stepRaw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(stepRaw) AndAlso Not stepRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 If stepRaw <> "0|0|0|0" Then
 
                     Dim p = stepRaw.Split("|"c)
@@ -15584,7 +15628,7 @@ Namespace Reaper
                 For Each probe In probeValues
                     Dim probeRaw = utility.CallReaperBridge(
                         $"GET_FX_PARAM_FORMATTED_AT|{_trackIndex}|{_fxIndex}|{_paramIndex}|{probe.ToString("G", Ic)}")
-                    If Not String.IsNullOrEmpty(probeRaw) AndAlso Not probeRaw.StartsWith("ERROR") Then
+                    If Not String.IsNullOrEmpty(probeRaw) AndAlso Not probeRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                         distinctFmt.Add(probeRaw.Trim())
                     End If
                 Next
@@ -15735,7 +15779,7 @@ Namespace Reaper
             utility.CallReaperBridge($"NAVIGATE_FX_PRESET|{_trackIndex}|{_fxIndex}|{move}")
             ' ── Recharger le nom du preset après navigation ────────────────────
             Dim raw = utility.CallReaperBridge($"GET_FX_PRESET|{_trackIndex}|{_fxIndex}")
-            If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR") Then
+            If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                 Dim new_preset = raw
                 If _preset <> new_preset Then
                     _preset = new_preset
@@ -15751,7 +15795,7 @@ Namespace Reaper
         Public Sub Refresh()
             ' ── GET_FX_ALL_INFO : 1 appel ─────────────────────────────────────
             Dim infoRaw = utility.CallReaperBridge($"GET_FX_ALL_INFO|{_trackIndex}|{_fxIndex}")
-            If String.IsNullOrEmpty(infoRaw) OrElse infoRaw.StartsWith("ERROR") Then Return
+            If String.IsNullOrEmpty(infoRaw) OrElse infoRaw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
 
             Dim info = infoRaw.Split("|"c)
             If info.Length < 4 Then Return
@@ -15761,7 +15805,7 @@ Namespace Reaper
             ' ── GUID du FX ────────────────────────────────────────────────────
             If String.IsNullOrEmpty(_guid) Then
                 Dim guidRaw = utility.CallReaperBridge($"GET_FX_GUID|{_trackIndex}|{_fxIndex}")
-                If Not String.IsNullOrEmpty(guidRaw) AndAlso Not guidRaw.StartsWith("ERROR") Then
+                If Not String.IsNullOrEmpty(guidRaw) AndAlso Not guidRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     _guid = guidRaw
                 End If
             End If
@@ -15796,7 +15840,7 @@ Namespace Reaper
             Next
 
             'Dim paramsRaw = utility.CallReaperBridge($"GET_FX_ALL_PARAMS|{_trackIndex}|{_fxIndex}")
-            'If String.IsNullOrEmpty(paramsRaw) OrElse paramsRaw.StartsWith("ERROR") Then Return
+            'If String.IsNullOrEmpty(paramsRaw) OrElse paramsRaw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
 
             'Dim p = paramsRaw.Split("|"c)
             'For i = 0 To _params.Count - 1
@@ -15868,7 +15912,7 @@ Namespace Reaper
         ''' </summary>
         Public Sub Refresh()
             Dim raw = utility.CallReaperBridge($"GET_FX_COUNT|{_trackIndex}")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
 
             Dim newCount As Integer = 0
             If Not Integer.TryParse(raw, newCount) Then Return
@@ -16523,7 +16567,7 @@ Namespace Reaper
         ''' </summary>
         Public Sub RefreshInfo()
             Dim raw = utility.CallReaperBridge("GET_PROJECT_INFO")
-            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR") Then Return
+            If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
             Dim p = raw.Split("|"c)
             If p.Length < 6 Then Return
 
@@ -16562,7 +16606,7 @@ Namespace Reaper
         ''' </summary>
         Private Function GetCountTrack() As Integer
             Dim countRaw = utility.CallReaperBridge("COUNT_TRACKS")
-            If String.IsNullOrEmpty(countRaw) OrElse countRaw.StartsWith("ERROR") Then Return 0
+            If String.IsNullOrEmpty(countRaw) OrElse countRaw.StartsWith("ERROR", StringComparison.Ordinal) Then Return 0
             Dim n As Integer = 0
             Integer.TryParse(countRaw, n)
             Return n

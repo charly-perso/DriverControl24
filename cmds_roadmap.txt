@@ -1,0 +1,414 @@
+C24desk_OnButtonReleased ChannelStrip_1 SwitchActive_1
+C24desk_OnButtonReleased Assignment Esc_Cancel
+C24desk_OnButtonReleased Assignment Assign
+C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 1
+C24desk_OnButtonReleased Sends Send_A_F
+C24desk_OnButtonReleased Sends Send_B_G
+
+
+
+
+C24desk_OnButtonReleased Assignment Assign
+C24desk_OnButtonReleased Inserts Inserts_Param
+C24desk_OnButtonReleased Automation Auto_Send_Level
+C24desk_OnButtonReleased Assignment Esc_Cancel
+C24desk_OnButtonReleased DisplayMisc Auto_Select
+C24desk_OnButtonReleased Assignment Output
+C24desk_OnButtonReleased Assignment Input
+C24desk_OnButtonReleased Utility Master_Faders
+C24desk_OnButtonReleased ChannelStrip_1 SendPanMode_1
+C24desk_OnButtonReleased ChannelStrip_1 InsertMode_1
+C24desk_OnButtonReleased ZoomPreset Preset_1
+C24desk_OnButtonReleased Utility Shuttle
+C24desk_OnButtonReleased Numpad Num_Div
+C24desk_OnButtonReleased Numpad Num_9
+C24desk_OnButtonReleased Numpad Num_Enter
+C24desk_OnButtonReleased Transport Fwd
+C24desk_OnButtonReleased Transport Rew
+C24desk_OnButtonReleased Save Save
+C24desk_OnButtonReleased Utility Esc_Cancel_2
+C24desk_OnButtonReleased EditTools Tools_Select
+C24desk_OnButtonReleased Navigation Down
+C24desk_OnButtonReleased Transport Pre_Roll
+C24desk_OnButtonReleased EditTools Tools_Grab
+C24desk_OnButtonReleased EditMode Spot
+C24desk_OnButtonReleased EditFonction Repeat
+C24desk_OnButtonReleased DisplayMisc Show_Values
+C24desk_OnButtonReleased Utility Scrub
+C24desk_OnButtonReleased Save Undo
+C24desk_OnButtonReleased Utility Shuttle
+C24desk_OnButtonReleased Groups Suspend
+C24desk_OnButtonReleased Transport Fw
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased ChannelStrip_1 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased EditTools Tools_Midi
+
+C24desk_OnButtonPressed Modifiers Ctl_Clutch 
+
+
+C24desk_GetFaderValue ChannelStrip_1 Fader_1
+
+C24desk_OnButtonReleased Bank Bank_Right
+C24desk_OnButtonReleased Bank Bank_Left
+
+C24desk_GetButtonStatus ChannelStrip_1 InsertMode_1
+C24desk_GetButtonStatus Inserts Inserts_Param
+C24desk_GetButtonStatus Automation Auto_Fader
+C24desk_GetButtonStatus Assignment Esc_Cancel
+C24desk_GetButtonStatus DisplayMisc Auto_Select
+C24desk_GetButtonStatus ZoomPreset Preset_1
+C24desk_GetButtonStatus Save Undo
+C24desk_GetButtonStatus EditTools Tools_Grab
+C24desk_GetButtonStatus Transport Pre_Roll
+C24desk_GetButtonStatus Utility Scrub
+C24desk_GetButtonStatus Save Undo
+C24desk_GetButtonStatus Groups Suspend
+C24desk_GetButtonStatus Transport
+C24desk_GetButtonStatus EditTools Tools_Midi
+
+
+C24desk_OnButtonReleased ChannelStrip_1 InsertMode_1
+C24desk_OnButtonReleased ChannelStrip_1 SwitchActive_1
+C24desk_OnButtonReleased ChannelStrip_2 SwitchActive_2
+C24desk_OnButtonReleased Inserts Inserts_Param
+
+C24desk_OnButtonReleased ChannelStrip_2 EqMode_2
+
+C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 1
+C24desk_OnVpotRotate ChannelStrip_2 Vpot_2 1
+
+C24desk_OnVpotRotate JogWheel JogWheel 1
+
+
+JS: 4-Band EQ
+VST: ReaEQ
+
+C24desk_OnButtonReleased ChannelBarScroll Cbs_Left
+C24desk_OnButtonReleased ChannelBarScroll Cbs_Right
+
+C24desk_OnButtonReleased ChannelBarScroll Cbs_Left
+C24desk_OnButtonReleased ChannelBarScroll Cbs_Right
+
+
+C24desk_OnButtonReleased DisplayMisc Vel_Sens_Encoders
+C24desk_OnButtonReleased Sends Flip
+
+C24desk_OnButtonReleased Automation Auto_Fader
+
+C24desk_OnFaderVolChange ChannelStrip_1 Fader_1 0
+C24desk_OnButtonReleased ChannelStrip_1 AutoMode_1
+C24desk_OnButtonReleased ChannelStrip_1 DynMode_1
+
+'Automation
+C24desk_OnButtonReleased Sends Send_A_F
+
+C24desk_OnButtonReleased Automation Auto_Mute
+
+C24desk_OnButtonReleased ChannelStrip_1 Mute_1
+C24desk_OnButtonReleased ChannelStrip_1 Solo_1
+C24desk_OnButtonReleased ChannelStrip_4 SwitchActive_4
+C24desk_OnButtonReleased Solo SoloSafe
+
+[ChannelStrip_1]  - 17 composant(s)
+      Fader_1  (C24_Fader)
+      FaderTouch_1  (C24_Button)
+      ScribbleStrip_1  (C24_ScribbleStrip)
+      Vpot_1  (C24_Vpot)
+      VueMeter_1  (C24_VueMeter)
+      RecArm_1  (C24_LedButton)
+      Solo_1  (C24_LedButton)
+      Mute_1  (C24_LedButton)
+      Select_1  (C24_LedButton)
+      SwitchActive_1  (C24_LedButton)
+      LedSwitchActive_1  (C24_LedButton)
+      AutoMode_1  (C24_Button)
+      AutoModeLed_1  (C24_AutoModeLed)
+      SendPanMode_1  (C24_LedButton)
+      EqMode_1  (C24_LedButton)
+      DynMode_1  (C24_LedButton)
+      InsertMode_1  (C24_LedButton)
+
+  [ChannelStrip_2]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_3]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_4]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_5]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_6]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_7]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_8]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_9]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_10]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_11]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_12]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_13]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_14]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_15]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_16]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_17]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_18]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_19]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_20]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_21]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_22]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_23]  (17 composant(s) - voir ChannelStrip_1)
+  [ChannelStrip_24]  (17 composant(s) - voir ChannelStrip_1)
+  [Solo]  - 2 composant(s)
+      SoloSafe  (C24_LedButton)
+      SoloClear  (C24_LedButton)
+
+  [ChannelSettings]  - 8 composant(s)
+      Copy_Settings  (C24_LedButton)
+      Specify_Settings  (C24_LedButton)
+      Edit_Byp  (C24_LedButton)
+      Paste_Setting  (C24_LedButton)
+      Ins_Byp  (C24_LedButton)
+      Apply_To_All_Channels  (C24_LedButton)
+      Apply_To_All_Selected_Channels  (C24_LedButton)
+      Default  (C24_LedButton)
+
+  [Automation]  - 16 composant(s)
+      Auto_Write  (C24_LedButton)
+      Auto_Fader  (C24_LedButton)
+      Auto_Touch  (C24_LedButton)
+      Auto_Pan  (C24_LedButton)
+      Auto_Latch  (C24_LedButton)
+      Auto_Mute  (C24_LedButton)
+      Auto_Trim  (C24_LedButton)
+      Auto_Send_Level  (C24_LedButton)
+      Auto_Read  (C24_LedButton)
+      Auto_Send_Mute  (C24_LedButton)
+      Auto_Off  (C24_LedButton)
+      Auto_Plug_In  (C24_LedButton)
+      Auto_Suspend  (C24_LedButton)
+      Write_Auto_To_End  (C24_LedButton)
+      Write_Auto_To_Start  (C24_LedButton)
+      Write_Auto_To_All  (C24_LedButton)
+
+  [Modifiers]  - 4 composant(s)
+      Shift  (C24_LedButton)
+      Opt  (C24_LedButton)
+      Ctl_Clutch  (C24_LedButton)
+      Ctrl  (C24_LedButton)
+
+  [MonitorSection]  - 5 composant(s)
+      Ms_Input  (C24_LedButton)
+      Ms_Pre_Fader  (C24_LedButton)
+      Ms_Post_Fader  (C24_LedButton)
+      Ms_Channel  (C24_LedButton)
+      Ms_Clear_Peaks  (C24_LedButton)
+
+  [FunctionKeys]  - 10 composant(s)
+      F1  (C24_LedButton)
+      F2  (C24_LedButton)
+      F3  (C24_LedButton)
+      F4  (C24_LedButton)
+      F5  (C24_LedButton)
+      F6  (C24_LedButton)
+      F7  (C24_LedButton)
+      F8  (C24_LedButton)
+      F9  (C24_LedButton)
+      F10  (C24_LedButton)
+
+  [DisplayMisc]  - 10 composant(s)
+      Rec_Safe  (C24_LedButton)
+      Master_Rec  (C24_LedButton)
+      Show_Values  (C24_LedButton)
+      Show_Group  (C24_LedButton)
+      Show_Channel_Names  (C24_LedButton)
+      Show_Info  (C24_LedButton)
+      Vel_Sens_Encoders  (C24_LedButton)
+      Auto_Select  (C24_LedButton)
+      Pre_Post  (C24_LedButton)
+      Send_Mute  (C24_LedButton)
+
+  [Inserts]  - 4 composant(s)
+      Master_Bypass  (C24_LedButton)
+      Plugin_Safe  (C24_LedButton)
+      Compare  (C24_LedButton)
+      Inserts_Param  (C24_LedButton)
+
+  [Monitor]  - 2 composant(s)
+      Monitor  (C24_LedButton)
+      Remote_Mic_Pre  (C24_LedButton)
+
+  [Assignment]  - 4 composant(s)
+      Assign  (C24_LedButton)
+      Input  (C24_LedButton)
+      Esc_Cancel  (C24_LedButton)
+      Output  (C24_LedButton)
+
+  [Sends]  - 6 composant(s)
+      Flip  (C24_LedButton)
+      Send_A_F  (C24_LedButton)
+      Send_B_G  (C24_LedButton)
+      Send_C_H  (C24_LedButton)
+      Send_D_I  (C24_LedButton)
+      Send_E_J  (C24_LedButton)
+
+  [Pans]  - 6 composant(s)
+      Pan_L_C_R  (C24_LedButton)
+      Pan_Rear  (C24_LedButton)
+      Pan_F_R  (C24_LedButton)
+      Pan_Cent  (C24_LedButton)
+      Pan_Lfe  (C24_LedButton)
+      Pan_Left_Right  (C24_LedButton)
+
+  [ChannelBarScroll]  - 4 composant(s)
+      Cbs_Left  (C24_LedButton)
+      Cbs_Right  (C24_LedButton)
+      Sb1_ScribbleStrip  (C24_ScribbleStrip)
+      Sb2_ScribbleStrip  (C24_ScribbleStrip)
+
+  [Groups]  - 5 composant(s)
+      Create  (C24_LedButton)
+      Enable  (C24_LedButton)
+      Edit  (C24_LedButton)
+      Delete  (C24_LedButton)
+      Suspend  (C24_LedButton)
+
+  [EditFonction]  - 8 composant(s)
+      Cut  (C24_LedButton)
+      Copy  (C24_LedButton)
+      Paste  (C24_LedButton)
+      Edit_Delete  (C24_LedButton)
+      Separate  (C24_LedButton)
+      Capture  (C24_LedButton)
+      Duplicate  (C24_LedButton)
+      Repeat  (C24_LedButton)
+
+  [ZoomPreset]  - 5 composant(s)
+      Preset_1  (C24_LedButton)
+      Preset_2  (C24_LedButton)
+      Preset_3  (C24_LedButton)
+      Preset_4  (C24_LedButton)
+      Preset_5  (C24_LedButton)
+
+  [EditMode]  - 4 composant(s)
+      Shuffle  (C24_LedButton)
+      Slip  (C24_LedButton)
+      Spot  (C24_LedButton)
+      Grid  (C24_LedButton)
+
+  [Window]  - 8 composant(s)
+      W_Mix  (C24_LedButton)
+      W_Status  (C24_LedButton)
+      W_Plugin  (C24_LedButton)
+      W_Pan  (C24_LedButton)
+      W_Edit  (C24_LedButton)
+      W_Trans  (C24_LedButton)
+      W_Mem_Loc  (C24_LedButton)
+      W_Alt  (C24_LedButton)
+
+  [EditTools]  - 9 composant(s)
+      Tools_Trim  (C24_LedButton)
+      Tools_Select  (C24_LedButton)
+      Tools_Grab  (C24_LedButton)
+      Tools_Pencil  (C24_LedButton)
+      Tools_Midi  (C24_LedButton)
+      Tools_Smart  (C24_LedButton)
+      Tools_Link_Edit  (C24_LedButton)
+      Tools_Auto_To_Cur  (C24_LedButton)
+      Tools_Auto_To_All  (C24_LedButton)
+
+  [Navigation]  - 7 composant(s)
+      Nav  (C24_LedButton)
+      Zoom  (C24_LedButton)
+      Sel_Adj  (C24_LedButton)
+      Up  (C24_LedButton)
+      Previous  (C24_LedButton)
+      Next  (C24_LedButton)
+      Down  (C24_LedButton)
+
+  [Transport]  - 18 composant(s)
+      Loop_Play  (C24_LedButton)
+      Loop_Rec  (C24_LedButton)
+      Audition  (C24_LedButton)
+      Pre_Roll  (C24_LedButton)
+      In  (C24_LedButton)
+      Out  (C24_LedButton)
+      Post_Roll  (C24_LedButton)
+      Online  (C24_LedButton)
+      Goto_Start  (C24_LedButton)
+      Goto_End  (C24_LedButton)
+      Ext_Trans  (C24_LedButton)
+      Quick_Punch  (C24_LedButton)
+      Talk_Back  (C24_LedButton)
+      Rew  (C24_LedButton)
+      Fwd  (C24_LedButton)
+      Stop  (C24_LedButton)
+      Play  (C24_LedButton)
+      Rec  (C24_LedButton)
+
+  [Save]  - 2 composant(s)
+      Save  (C24_LedButton)
+      Undo  (C24_LedButton)
+
+  [Numpad]  - 18 composant(s)
+      Num_Clr  (C24_Button)
+      Num_Egal  (C24_Button)
+      Num_Div  (C24_Button)
+      Num_Mult  (C24_Button)
+      Num_7  (C24_Button)
+      Num_8  (C24_Button)
+      Num_9  (C24_Button)
+      Num_Sous  (C24_Button)
+      Num_4  (C24_Button)
+      Num_5  (C24_Button)
+      Num_6  (C24_Button)
+      Num_Add  (C24_Button)
+      Num_1  (C24_Button)
+      Num_2  (C24_Button)
+      Num_3  (C24_Button)
+      Num_0  (C24_Button)
+      Num_Point  (C24_Button)
+      Num_Enter  (C24_Button)
+
+  [Utility]  - 4 composant(s)
+      Master_Faders  (C24_LedButton)
+      Esc_Cancel_2  (C24_LedButton)
+      Scrub  (C24_LedButton)
+      Shuttle  (C24_LedButton)
+
+  [Counter]  - 1 composant(s)
+      Counter_Mode  (C24_LedButton)
+
+  [Clock]  - 1 composant(s)
+      Clock  (C24_Clock)
+
+  [JogWheel]  - 1 composant(s)
+      JogWheel  (C24_JogWheel)
+
+  [Bank]  - 3 composant(s)
+      Bank_Left  (C24_Button)
+      Nudge  (C24_LedButton)
+      Bank_Right  (C24_Button)
+
+  [VueMeterMasters]  - 1 composant(s)
+      VueMeterMaster1  (C24_VueMeter)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

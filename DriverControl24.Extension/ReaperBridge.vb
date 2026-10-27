@@ -95,7 +95,9 @@ Public Class ReaperBridge
         BridgeLog($"autoStart={autoStart} VSDebug={VSDebug}")
         If autoStart Then
             ' ── Bridge pipe on-demand (1 requête par connexion) ───────────────
-            Task.Run(Function() StartPipeServerAsync())
+            For i = 1 To BridgeServerInstances
+                Task.Run(Function() StartPipeServerAsync())
+            Next
 
             ' ── Poll pipe multi-instances : 1 connexion persistante par monitor
             ' N instances simultanées autorisées (TransportMonitor, TrackMonitor…)
@@ -224,30 +226,29 @@ Public Class ReaperBridge
     End Function
 
 
+    Private Const BridgeServerInstances As Integer = 4
+
     Private Shared Async Function StartPipeServerAsync() As Task
         While True
             Dim hasError = False
             Try
                 Using pipe As New System.IO.Pipes.NamedPipeServerStream(
-                        "c24_reaper_bridge",
-                        IO.Pipes.PipeDirection.InOut,
-                        1,
-                        IO.Pipes.PipeTransmissionMode.Byte)
+                    "c24_reaper_bridge",
+                    IO.Pipes.PipeDirection.InOut,
+                    BridgeServerInstances,
+                    IO.Pipes.PipeTransmissionMode.Byte)
 
-                    BridgeLog("bridge: serveur créé, attente de connexion")
                     Await pipe.WaitForConnectionAsync()
-                    BridgeLog("bridge: client connecté")
 
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
 
                     Dim request = Await reader.ReadLineAsync()
-                    If request Is Nothing Then
-                        BridgeLog("bridge: client déconnecté sans requête")
-                    Else
+                    While request IsNot Nothing AndAlso pipe.IsConnected
                         Dim response = ProcessRequest("bridge", request)
                         Await writer.WriteLineAsync(response)
-                    End If
+                        request = Await reader.ReadLineAsync()
+                    End While
                 End Using
             Catch ex As Exception
                 hasError = True
@@ -259,7 +260,6 @@ Public Class ReaperBridge
             End If
         End While
     End Function
-
     ''' <summary>
     ''' Lit une ligne (jusqu'à LF) depuis le flux, en UTF-8, avec un buffer emprunté à ArrayPool.
     ''' Retourne Nothing si le flux est fermé avant tout octet reçu.

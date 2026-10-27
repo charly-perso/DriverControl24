@@ -7908,61 +7908,95 @@ Public Class C24ReaperController
         Return True
     End Function
     Sub MoveEditCursor(direction As Control24.Commands.Direction, velocity As Integer, SnapToGridAL As C24ActionLinker, Optional SelectionNotAllowed As Boolean = False)
-
-        Reaper.utility.Main_OnCommand(GetMoveCursorCommandID(direction, velocity, SnapToGridAL))
-        Dim CurPos = Reaper.utility.GetCursorPosition
         If SelectionNotAllowed = False AndAlso Ctl Then
-            If CurPos <= CtlPoint Then
-                If LastCurPos >= CtlPoint Then
-                    Reaper.utility.SetCursorPosition(CtlPoint)
-                    Reaper.utility.Main_OnCommand(40626)
-                    Reaper.utility.SetCursorPosition(CurPos)
-                    Reaper.utility.Main_OnCommand(40625)
-                Else
-                    Reaper.utility.Main_OnCommand(40625)
-                End If
+            SetMoveCursorCommandID(direction, velocity, SnapToGridAL, True)
 
-            End If
-            If CurPos >= CtlPoint Then
-                If LastCurPos <= CtlPoint Then
-                    Reaper.utility.SetCursorPosition(CtlPoint)
-                    Reaper.utility.Main_OnCommand(40625)
-                    Reaper.utility.SetCursorPosition(CurPos)
-                    Reaper.utility.Main_OnCommand(40626)
-                Else
-                    Reaper.utility.Main_OnCommand(40626)
-                End If
-
-            End If
-
+        Else
+            SetMoveCursorCommandID(direction, velocity, SnapToGridAL, False)
         End If
-            LastCurPos = CurPos
+
+
+        'Dim CurPos = Reaper.utility.GetCursorPosition
+        'If SelectionNotAllowed = False AndAlso Ctl Then
+        'If CurPos <= CtlPoint Then
+        '    If LastCurPos >= CtlPoint Then
+        '        Reaper.utility.SetCursorPosition(CtlPoint)
+        '        Reaper.utility.Main_OnCommand(40626)
+        '        Reaper.utility.SetCursorPosition(CurPos)
+        '        Reaper.utility.Main_OnCommand(40625)
+        '    Else
+        '        Reaper.utility.Main_OnCommand(40625)
+        '    End If
+
+        'End If
+        'If CurPos >= CtlPoint Then
+        '    If LastCurPos <= CtlPoint Then
+        '        Reaper.utility.SetCursorPosition(CtlPoint)
+        '        Reaper.utility.Main_OnCommand(40625)
+        '        Reaper.utility.SetCursorPosition(CurPos)
+        '        Reaper.utility.Main_OnCommand(40626)
+        '    Else
+        '        Reaper.utility.Main_OnCommand(40626)
+        '    End If
+
+        'End If
+        'Reaper.utility.Main_OnCommand(40626)
+        'End If
+        'LastCurPos = CurPos
     End Sub
-    Function GetMoveCursorCommandID(direction As Control24.Commands.Direction, velocity As Integer, SnapToGridAL As C24ActionLinker) As Integer
+    Sub SetMoveCursorCommandID(direction As Control24.Commands.Direction, velocity As Integer, SnapToGridAL As C24ActionLinker, Selection As Boolean)
         If direction = Direction.Left Then
             If SnapToGridAL.State Then
-                Return 40646
-            Else
-                If velocity > 2 Then
-                    Return 41666
-                Else
-                    Return 40104
+                Reaper.utility.Main_OnCommand(40646)
+                If Selection Then
+                    Dim CurPos = Reaper.utility.GetCursorPosition
+                    If CurPos >= CtlPoint Then
+                        Reaper.utility.Main_OnCommand(40626)
+                    Else
+                        Reaper.utility.Main_OnCommand(40625)
+                    End If
                 End If
+
+
+            Else
+                If Selection Then
+                    Reaper.utility.Main_OnCommand(40102)
+                Else
+                    If velocity > 2 Then
+                        Reaper.utility.Main_OnCommand(41666)
+                    Else
+                        Reaper.utility.Main_OnCommand(40104)
+                    End If
+                End If
+
             End If
 
         Else
             If SnapToGridAL.State Then
-                Return 40647
-            Else
-                If velocity > 2 Then
-                    Return 41667
-                Else
-                    Return 40105
+                Reaper.utility.Main_OnCommand(40647)
+                If Selection Then
+                    Dim CurPos = Reaper.utility.GetCursorPosition
+                    If CurPos >= CtlPoint Then
+                        Reaper.utility.Main_OnCommand(40625)
+                    Else
+                        Reaper.utility.Main_OnCommand(40626)
+                    End If
                 End If
+            Else
+                If Selection Then
+                    Reaper.utility.Main_OnCommand(40103)
+                Else
+                    If velocity > 2 Then
+                        Reaper.utility.Main_OnCommand(41667)
+                    Else
+                        Reaper.utility.Main_OnCommand(40105)
+                    End If
+                End If
+
             End If
         End If
 
-    End Function
+    End Sub
 #End Region
 
 #Region "Reaper Action"
