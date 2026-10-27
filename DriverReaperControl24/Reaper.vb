@@ -6331,9 +6331,12 @@ Namespace Reaper
             ''' Reconnecte automatiquement si la connexion est perdue.
             ''' À appeler depuis le thread de timing (ex: toutes les 50 ms).
             ''' </summary>
-            Public Sub Poll()
+            ''' <returns>True si au moins une valeur (état projet, lecture, position) a changé.</returns>
+            Public Function Poll() As Boolean
+                Dim changed As Boolean = False
+
                 If Not IsConnected Then
-                    If Not Connect() Then Return
+                    If Not Connect() Then Return False
                 End If
 
                 Dim raw As String
@@ -6342,24 +6345,24 @@ Namespace Reaper
                     raw = utility.ReadLineBytes(_pipe)
                 Catch
                     Disconnect()
-                    Return
+                    Return False
                 End Try
 
                 If raw Is Nothing Then
                     Disconnect()
-                    Return
+                    Return False
                 End If
                 If raw.Length = 0 OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
-                    Return
+                    Return False
                 End If
 
                 Dim sep1 As Integer = raw.IndexOf("|"c)
                 If sep1 < 0 Then
-                    Return
+                    Return False
                 End If
                 Dim sep2 As Integer = raw.IndexOf("|"c, sep1 + 1)
                 If sep2 < 0 Then
-                    Return
+                    Return False
                 End If
                 Dim sep3 As Integer = raw.IndexOf("|"c, sep2 + 1)
                 Dim posEnd As Integer = raw.Length
@@ -6372,6 +6375,7 @@ Namespace Reaper
                 Integer.TryParse(raw.Substring(0, sep1), NumberStyles.Integer, Ic, new_stateCount)
                 If _lastStateCount <> new_stateCount Then
                     _lastStateCount = new_stateCount
+                    changed = True
                     RaiseEvent On_ProjectStateChange(_lastStateCount)
                 End If
 
@@ -6380,6 +6384,7 @@ Namespace Reaper
                 Integer.TryParse(raw.Substring(sep1 + 1, sep2 - sep1 - 1), NumberStyles.Integer, Ic, new_playState)
                 If _lastPlayState <> new_playState Then
                     _lastPlayState = new_playState
+                    changed = True
                     RaiseEvent On_PlayStateChange(_lastPlayState)
                 End If
 
@@ -6388,9 +6393,12 @@ Namespace Reaper
                 Double.TryParse(raw.Substring(sep2 + 1, posEnd - sep2 - 1), NumberStyles.Any, Ic, new_playPos)
                 If _lastPlayPos <> new_playPos Then
                     _lastPlayPos = new_playPos
+                    changed = True
                     RaiseEvent On_PlayPositionChange(_lastPlayPos)
                 End If
-            End Sub
+
+                Return changed
+            End Function
             Public Sub Log_Poll()
                 If Not IsConnected Then
                     Dim ok = Connect()
@@ -6506,7 +6514,14 @@ Namespace Reaper
             Private _interval As Integer = 50
             Private ReadOnly _lock As New Object()
 
-            ' ── Plus de _ioLock ni de Request() — le hub est un bus d'événements pur ──
+            ' ── Attente adaptative ────────────────────────────────────────────────
+            ' Intervalle nominal tant que l'état change ; au repos (aucun changement
+            ' pendant IdlePollsBeforeSlowdown polls) l'intervalle est porté à IdleInterval.
+            Private Const IdlePollsBeforeSlowdown As Integer = 20
+            Private Const IdleInterval As Integer = 100
+            Private ReadOnly _stopEvent As New ManualResetEventSlim(False)
+
+            ' ── Plus de _ioLock
             Public Event On_ProjectStateChange(stateCount As Integer)
             Public Event On_PlayStateChange(playState As Integer)
             Public Event On_PlayPositionChange(playPos As Double)
@@ -6538,6 +6553,7 @@ Namespace Reaper
             Public Sub Start()
                 SyncLock _lock
                     If IsRunning Then Return
+                    _stopEvent.Reset()
                     Threading.Volatile.Write(_isRunning, True)
                     _thread = New Thread(AddressOf PollLoop) With {
                         .Name = "ReaperPollHub",
@@ -6550,6 +6566,7 @@ Namespace Reaper
 
             Public Sub [Stop]()
                 Threading.Volatile.Write(_isRunning, False)
+                _stopEvent.Set()
                 _pipe.Disconnect()
             End Sub
 
@@ -6562,10 +6579,26 @@ Namespace Reaper
                 AddHandler _pipe.On_PlayPositionChange,
                     Sub(pp As Double) RaiseEvent On_PlayPositionChange(pp)
 
+                Dim idlePolls As Integer = 0
+
                 While Threading.Volatile.Read(_isRunning)
                     ' ── Pipe exclusif au hub → aucun lock nécessaire ──────────
-                    _pipe.Poll()
-                    Thread.Sleep(_interval)
+                    Dim changed As Boolean = _pipe.Poll()
+
+                    If changed Then
+                        idlePolls = 0
+                    ElseIf idlePolls < IdlePollsBeforeSlowdown Then
+                        idlePolls += 1
+                    End If
+
+                    ' ── Attente adaptative : nominale si actif, ralentie au repos ──
+                    Dim waitMs As Integer = _interval
+                    If idlePolls >= IdlePollsBeforeSlowdown Then
+                        waitMs = Math.Max(_interval, IdleInterval)
+                    End If
+
+                    ' Interruptible : Stop() réveille immédiatement la boucle
+                    _stopEvent.Wait(waitMs)
                 End While
             End Sub
 

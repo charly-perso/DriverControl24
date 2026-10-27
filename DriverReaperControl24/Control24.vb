@@ -2383,7 +2383,9 @@ Namespace Control24
             Private _ComputerMacAddr As Byte()
             Private _PacketManager As Packet.PacketManager
             Private _ReceivedC24PacketQueue As ConcurrentQueue(Of Packet.C24_Packet)
+            Private ReadOnly _ReceivedPacketEvent As New AutoResetEvent(False)
             Private _AllCmdBytesQueue As ConcurrentQueue(Of List(Of Byte()))
+            Private ReadOnly _AllCmdBytesEvent As New AutoResetEvent(False)
             Private _BlinkState As Boolean = False
             Private _InstantQueueTimeout As Integer = 5
 
@@ -3948,6 +3950,15 @@ Namespace Control24
                 End Get
             End Property
 
+            ''' <summary>
+            ''' Ajoute un paquet reçu à la file de traitement et réveille <see cref="ReceivedC24PacketLoop"/>.
+            ''' </summary>
+            ''' <param name="packet">Paquet C24 reçu.</param>
+            Public Sub EnqueueReceivedC24Packet(packet As Packet.C24_Packet)
+                _ReceivedC24PacketQueue.Enqueue(packet)
+                _ReceivedPacketEvent.Set()
+            End Sub
+
             ReadOnly Property PacketCapture As NativePcapAdapter
                 Get
                     Return _packetCapture
@@ -4844,7 +4855,7 @@ Namespace Control24
                         Next
 
                     Next
-                    _AllCmdBytesQueue.Enqueue(SendCmdBytes)
+                    EnqueueAllCmdBytes(SendCmdBytes)
                     Thread.Sleep(TimingQueueTimeout)
                 End While
             End Sub
@@ -4859,7 +4870,7 @@ Namespace Control24
                     Dim SendCmdBytes = DrainLatestCmds()
 
                     If SendCmdBytes.Count > 0 Then
-                        _AllCmdBytesQueue.Enqueue(SendCmdBytes)
+                        EnqueueAllCmdBytes(SendCmdBytes)
                     Else
                         Thread.Sleep(InstantQueueTimeout)
                     End If
@@ -4883,9 +4894,19 @@ Namespace Control24
                     If allCmds.Count > 0 Then
                         _PacketManager.SendCmdBytes(allCmds)
                     Else
-                        Thread.Sleep(1)
+                        ' ── Attente bloquante jusqu'à l'arrivée d'un batch (timeout = réévaluation de IsRunning) ──
+                        _AllCmdBytesEvent.WaitOne(50)
                     End If
                 End While
+            End Sub
+
+            ''' <summary>
+            ''' Ajoute un batch de commandes à la file d'envoi et réveille <see cref="SendingAllCmdBytesQueueLoop"/>.
+            ''' </summary>
+            ''' <param name="cmdBatch">Batch de commandes à envoyer.</param>
+            Private Sub EnqueueAllCmdBytes(cmdBatch As List(Of Byte()))
+                _AllCmdBytesQueue.Enqueue(cmdBatch)
+                _AllCmdBytesEvent.Set()
             End Sub
 
 
@@ -4900,7 +4921,10 @@ Namespace Control24
                             hasReceived = True   ' ✅
                         End If
                     End While
-                    If Not hasReceived Then Thread.Sleep(1)   ' ✅ évite le spin à 100% CPU
+                    If Not hasReceived Then
+                        ' ── Attente bloquante jusqu'à l'arrivée d'un paquet (timeout = réévaluation de IsRunning) ──
+                        _ReceivedPacketEvent.WaitOne(50)
+                    End If
                 End While
             End Sub
 
@@ -6282,6 +6306,8 @@ Namespace Control24
             Private Pending_C24_Packet As C24_Packet = Nothing
             Private _AckC24_Packet As AckC24_Packet = Nothing
             Private _AckEvent As New AutoResetEvent(False)   ' ← signal d'ACK reçu
+            Private _PacketAvailableEvent As New AutoResetEvent(False)   ' ← signal : nouveau paquet en file
+            Private Const IdleWaitTimeoutMs As Integer = 50   ' ← réévaluation périodique de Desk.IsRunning
             Private _PendingPacketCounter As Integer = 0   ' ✅ counter du paquet EN ATTENTE d'ACK
 
 
@@ -6436,7 +6462,8 @@ Namespace Control24
                             Retry_Counter = 0
                         End If
                     Else
-                        Thread.Sleep(0)
+                        ' ── Rien à faire : attente bloquante (0 % CPU) jusqu'à l'arrivée d'un paquet ──
+                        _PacketAvailableEvent.WaitOne(IdleWaitTimeoutMs)
                     End If
                 End While
             End Sub
@@ -6446,7 +6473,7 @@ Namespace Control24
                 Dim cmdType As Byte = ReceivedBytes(28)
 
                 If cmdType = CByte(Packet.CmdType.Command) AndAlso _AckC24_Packet IsNot Nothing Then
-                    _Desk.ReceivedC24PacketQueue.Enqueue(New C24_Packet(ReceivedBytes))
+                    _Desk.EnqueueReceivedC24Packet(New C24_Packet(ReceivedBytes))
 
                 ElseIf cmdType = CByte(Packet.CmdType.Ack) Then
                     Dim receivedCounter = CInt(ByteManager.BytesLEToUInt32(ReceivedBytes.AsSpan(22, 4).ToArray()))
@@ -6485,7 +6512,7 @@ Namespace Control24
                     Send_Ack_C24Packet(_AckC24_Packet.Get_Ack(ReceivedBytes, 18))
 
                     'Envois de toutes les commandes vers la queue qui va gérer le parsing et l'envois vers les components  
-                    _Desk.ReceivedC24PacketQueue.Enqueue(_Received_C24Packet)
+                    _Desk.EnqueueReceivedC24Packet(_Received_C24Packet)
 
 
                     'Broadcast --> init sequence
@@ -6552,6 +6579,7 @@ Namespace Control24
                 Cmd_C24Packet.C24Header.SendCounter = ByteManager.UInt32ToBytesLErev(counter)
                 Cmd_C24Packet.RebuildPacket()
                 _Pending_C24_Packets.Enqueue(Cmd_C24Packet)
+                _PacketAvailableEvent.Set()
             End Sub
 
 
