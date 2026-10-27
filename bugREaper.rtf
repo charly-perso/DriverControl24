@@ -1,0 +1,997 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 -------------------------------------\
+Translated Report (Full Report Below)\
+-------------------------------------\
+\
+Process:               REAPER [8113]\
+Path:                  /Applications/REAPER.app/Contents/MacOS/REAPER\
+Identifier:            com.cockos.reaper\
+Version:               7.82.0_3385784u (7.82.0_3385784u)\
+Code Type:             X86-64 (Native)\
+Parent Process:        launchd [1]\
+User ID:               502\
+\
+Date/Time:             2026-10-27 23:02:48.6330 +0100\
+OS Version:            macOS 14.7.5 (23H527)\
+Report Version:        12\
+Bridge OS Version:     9.4 (22P4248)\
+Anonymous UUID:        A63DAE3E-E129-D910-A73D-F912559301D8\
+\
+Sleep/Wake UUID:       FEC2305E-DB3D-4A64-8BC8-22BA24099898\
+\
+Time Awake Since Boot: 34000 seconds\
+Time Since Wake:       2961 seconds\
+\
+System Integrity Protection: enabled\
+\
+Crashed Thread:        17  .NET TP Worker\
+\
+Exception Type:        EXC_CRASH (SIGABRT)\
+Exception Codes:       0x0000000000000000, 0x0000000000000000\
+\
+Termination Reason:    Namespace LIBSYSTEM, Code 2 Application Triggered Fault\
+\
+Application Specific Information:\
+assertion failure: "!view->_hasCachedVisibleRect" -> %lld\
+\
+\
+Thread 0:: reaper Dispatch queue: com.apple.main-thread\
+0   libsystem_kernel.dylib        	    0x7ff818676002 semaphore_timedwait_trap + 10\
+1   SkyLight                      	    0x7ff81e0cdafd SLSTransactionWait + 203\
+2   SkyLight                      	    0x7ff81e01dabf SLSConnectionSynchronizeSLSCATransaction + 41\
+3   SkyLight                      	    0x7ff81deefb84 run_query + 139\
+4   AppKit                        	    0x7ff81caffa98 -[_NSCGSWindowOrdering _windowsWithOptions:onSpaces:xorSpacesMatching:forConnectionID:] + 386\
+5   AppKit                        	    0x7ff81bdfe5d1 -[NSApplication enumerateWindowsWithOptions:usingBlock:] + 400\
+6   AppKit                        	    0x7ff81bf9db6e -[NSApplication(NSScripting) _orderedWindowsWithPanels:] + 277\
+7   REAPER                        	       0x10468639b WindowFromPoint(POINT) + 43\
+8   REAPER                        	       0x104727118 UpdateTCPInfoblocks(int, MediaTrack*) + 56\
+9   REAPER                        	       0x104a69686 runMiscTimers() + 1286\
+10  REAPER                        	       0x104829889 MainProc(HWND__*, unsigned int, unsigned long, long) + 5513\
+11  REAPER                        	       0x104656efc SwellDialogDefaultWindowProc(HWND__*, unsigned int, unsigned long, long) + 444\
+12  Foundation                    	    0x7ff819784764 __NSFireTimer + 67\
+13  CoreFoundation                	    0x7ff8187ae33c __CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__ + 20\
+14  CoreFoundation                	    0x7ff8187adeea __CFRunLoopDoTimer + 785\
+15  CoreFoundation                	    0x7ff8187adb26 __CFRunLoopDoTimers + 285\
+16  CoreFoundation                	    0x7ff818791e02 __CFRunLoopRun + 2104\
+17  CoreFoundation                	    0x7ff818791002 CFRunLoopRunSpecific + 557\
+18  HIToolbox                     	    0x7ff8231b3a09 RunCurrentEventLoopInMode + 292\
+19  HIToolbox                     	    0x7ff8231b3816 ReceiveNextEventCommon + 665\
+20  HIToolbox                     	    0x7ff8231b3561 _BlockUntilNextEventMatchingListInModeWithFilter + 66\
+21  AppKit                        	    0x7ff81be04161 _DPSNextEvent + 880\
+22  AppKit                        	    0x7ff81c718ae0 -[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 1273\
+23  AppKit                        	    0x7ff81bdf5575 -[NSApplication run] + 603\
+24  AppKit                        	    0x7ff81bdc94e3 NSApplicationMain + 816\
+25  dyld                          	    0x7ff81832a345 start + 1909\
+\
+Thread 1:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 2:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 3:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 4:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 5:: com.apple.NSEventThread\
+0   libsystem_kernel.dylib        	    0x7ff81867606e mach_msg2_trap + 10\
+1   libsystem_kernel.dylib        	    0x7ff818684858 mach_msg2_internal + 84\
+2   libsystem_kernel.dylib        	    0x7ff81867d158 mach_msg_overwrite + 653\
+3   libsystem_kernel.dylib        	    0x7ff81867635d mach_msg + 19\
+4   CoreFoundation                	    0x7ff8187930b5 __CFRunLoopServiceMachPort + 143\
+5   CoreFoundation                	    0x7ff818791b25 __CFRunLoopRun + 1371\
+6   CoreFoundation                	    0x7ff818791002 CFRunLoopRunSpecific + 557\
+7   AppKit                        	    0x7ff81bf6228c _NSEventThread + 122\
+8   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 6:\
+0   libsystem_kernel.dylib        	    0x7ff81867606e mach_msg2_trap + 10\
+1   libsystem_kernel.dylib        	    0x7ff818684858 mach_msg2_internal + 84\
+2   libsystem_kernel.dylib        	    0x7ff81867d158 mach_msg_overwrite + 653\
+3   libsystem_kernel.dylib        	    0x7ff81867635d mach_msg + 19\
+4   CoreMIDI                      	    0x7ff833620e52 XServerMachPort::ReceiveMessage(int&, void*, int&) + 98\
+5   CoreMIDI                      	    0x7ff8336308ba MIDIProcess::MIDIInPortThread::Run() + 104\
+6   CoreMIDI                      	    0x7ff83362ded6 CADeprecated::XThread::RunHelper(void*) + 10\
+7   CoreMIDI                      	    0x7ff83362f903 CADeprecated::CAPThread::Entry(CADeprecated::CAPThread*) + 77\
+8   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 7:: caulk.messenger.shared:17\
+0   libsystem_kernel.dylib        	    0x7ff818675fea semaphore_wait_trap + 10\
+1   caulk                         	    0x7ff822ed0ba8 caulk::semaphore::timed_wait(double) + 150\
+2   caulk                         	    0x7ff822ed0ac4 caulk::concurrent::details::worker_thread::run() + 30\
+3   caulk                         	    0x7ff822ed07e8 void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*) + 41\
+4   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+5   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 8:: caulk.messenger.shared:high\
+0   libsystem_kernel.dylib        	    0x7ff818675fea semaphore_wait_trap + 10\
+1   caulk                         	    0x7ff822ed0ba8 caulk::semaphore::timed_wait(double) + 150\
+2   caulk                         	    0x7ff822ed0ac4 caulk::concurrent::details::worker_thread::run() + 30\
+3   caulk                         	    0x7ff822ed07e8 void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*) + 41\
+4   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+5   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 9:: */video\
+0   libsystem_kernel.dylib        	    0x7ff818678ae6 __semwait_signal + 10\
+1   libsystem_c.dylib             	    0x7ff81856ba61 nanosleep + 199\
+2   libsystem_c.dylib             	    0x7ff81856b994 usleep + 53\
+3   reaper_video.dylib            	       0x10b783a88 videoDecodeThread(void*) + 1229\
+4   REAPER                        	       0x10468d119 __threadproc(void*) + 25\
+5   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+6   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 10:: .NET Finalizer\
+0   libsystem_kernel.dylib        	    0x7ff818678c1a __psynch_cvwait + 10\
+1   libsystem_pthread.dylib       	    0x7ff8186b6724 _pthread_cond_wait + 1260\
+2   reaper_c24bridge.dylib        	       0x10bded762 UnixEvent::Wait(unsigned int) + 194 (PalUnix.cpp:347)\
+3   reaper_c24bridge.dylib        	       0x10bda34e6 RhpWaitForFinalizerRequest + 134 (FinalizerHelpers.cpp:197)\
+4   reaper_c24bridge.dylib        	       0x10bea4f61 S_P_CoreLib_System_Runtime___Finalizer__ProcessFinalizers + 97 (__Finalizer.cs:27)\
+5   reaper_c24bridge.dylib        	       0x10bda3385 FinalizerStart(void*) + 85 (FinalizerHelpers.cpp:80)\
+6   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+7   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 11:: PeakPipeServer\
+0   libsystem_kernel.dylib        	    0x7ff818680dd2 __recvmsg_nocancel + 10\
+1   reaper_c24bridge.dylib        	       0x10bd9492d SystemNative_ReceiveMessage + 285 (pal_networking.c:1600)\
+2   reaper_c24bridge.dylib        	       0x10be326b8 System_Net_Sockets_Interop_Sys__ReceiveMessage + 120 (LibraryImports.g.cs:1429)\
+3   reaper_c24bridge.dylib        	       0x10be3ba80 System_Net_Sockets_System_Net_Sockets_SocketPal__SysReceive_0 + 96 (SocketPal.Unix.cs:167)\
+4   reaper_c24bridge.dylib        	       0x10be3cc0c System_Net_Sockets_System_Net_Sockets_SocketPal__TryCompleteReceiveFrom_1 + 92 (SocketPal.Unix.cs:870)\
+5   reaper_c24bridge.dylib        	       0x10be39d77 System_Net_Sockets_System_Net_Sockets_SocketAsyncContext__ReceiveFrom_0 + 247 (SocketAsyncContext.Unix.cs:1644)\
+6   reaper_c24bridge.dylib        	       0x10be34b4b System_Net_Sockets_System_Net_Sockets_Socket__Receive_6 + 171 (Socket.cs:1587)\
+7   reaper_c24bridge.dylib        	       0x10be34a61 System_Net_Sockets_System_Net_Sockets_Socket__Receive_5 + 17 (Socket.cs:1573)\
+8   reaper_c24bridge.dylib        	       0x10be2e695 System_IO_Pipes_System_IO_Pipes_PipeStream__ReadCore + 69 (PipeStream.Unix.cs:272)\
+9   reaper_c24bridge.dylib        	       0x10be9bc58 S_P_CoreLib_System_IO_StreamReader__ReadBuffer + 56 (StreamReader.cs:611)\
+10  reaper_c24bridge.dylib        	       0x10be9bd7f S_P_CoreLib_System_IO_StreamReader__ReadLine + 95 (StreamReader.cs:800)\
+11  reaper_c24bridge.dylib        	       0x10befb5ac reaper_c24bridge_ReaperEntry__RunPeakPipeServer + 524 (ReaperEntry.cs:385)\
+12  reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+13  reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+14  libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 12:: .NET Sockets\
+0   libsystem_kernel.dylib        	    0x7ff81867ad4e kevent + 10\
+1   reaper_c24bridge.dylib        	       0x10bd95cd5 WaitForSocketEventsInner + 31 (pal_networking.c:3370) [inlined]\
+2   reaper_c24bridge.dylib        	       0x10bd95cd5 SystemNative_WaitForSocketEvents + 85 (pal_networking.c:3523)\
+3   reaper_c24bridge.dylib        	       0x10be38e18 System_Net_Sockets_System_Net_Sockets_SocketAsyncEngine__EventLoop + 216 (SocketAsyncEngine.Unix.cs:219)\
+4   reaper_c24bridge.dylib        	       0x10be79398 S_P_CoreLib_System_Threading_Thread__StartThread + 312 (Thread.NativeAot.cs:459)\
+5   reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+6   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 13:: .NET TP Gate\
+0   libsystem_kernel.dylib        	    0x7ff818678c1a __psynch_cvwait + 10\
+1   libsystem_pthread.dylib       	    0x7ff8186b6724 _pthread_cond_wait + 1260\
+2   reaper_c24bridge.dylib        	       0x10bd9749e SystemNative_LowLevelMonitor_TimedWait + 78 (pal_threading.c:175)\
+3   reaper_c24bridge.dylib        	       0x10bec5012 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait + 274 (WaitSubsystem.ThreadWaitInfo.Unix.cs:334)\
+4   reaper_c24bridge.dylib        	       0x10bec56ca S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait + 122 (WaitSubsystem.WaitableObject.Unix.cs:320)\
+5   reaper_c24bridge.dylib        	       0x10be81bcc S_P_CoreLib_System_Threading_WaitHandle__WaitOneNoCheck + 236 (WaitHandle.cs:144)\
+6   reaper_c24bridge.dylib        	       0x10bec20ff S_P_CoreLib_System_Threading_PortableThreadPool_GateThread__GateThreadStart + 415 (PortableThreadPool.GateThread.cs:70)\
+7   reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+8   reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 14:\
+0   libsystem_kernel.dylib        	    0x7ff818678ae6 __semwait_signal + 10\
+1   libsystem_c.dylib             	    0x7ff81856ba61 nanosleep + 199\
+2   libsystem_c.dylib             	    0x7ff81856b994 usleep + 53\
+3   reacast.vst.dylib             	       0x1311d815b VSTEffectClass::threadProc(void*) + 91\
+4   REAPER                        	       0x10468d119 __threadproc(void*) + 25\
+5   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+6   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 15:: .NET TP Worker\
+0   libsystem_kernel.dylib        	    0x7ff818678c1a __psynch_cvwait + 10\
+1   libsystem_pthread.dylib       	    0x7ff8186b6724 _pthread_cond_wait + 1260\
+2   reaper_c24bridge.dylib        	       0x10bd9749e SystemNative_LowLevelMonitor_TimedWait + 78 (pal_threading.c:175)\
+3   reaper_c24bridge.dylib        	       0x10bec5012 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait + 274 (WaitSubsystem.ThreadWaitInfo.Unix.cs:334)\
+4   reaper_c24bridge.dylib        	       0x10bec56ca S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait + 122 (WaitSubsystem.WaitableObject.Unix.cs:320)\
+5   reaper_c24bridge.dylib        	       0x10be79e44 S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal + 132 (LowLevelLifoSemaphore.cs:160)\
+6   reaper_c24bridge.dylib        	       0x10bec4238 S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart + 408 (PortableThreadPool.WorkerThread.cs:116)\
+7   reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+8   reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 16:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 17 Crashed:: .NET TP Worker\
+0   libsystem_kernel.dylib        	    0x7ff818680682 __abort_with_payload + 10\
+1   libsystem_kernel.dylib        	    0x7ff81869f80e abort_with_payload_wrapper_internal + 82\
+2   libsystem_kernel.dylib        	    0x7ff81869f840 abort_with_payload + 9\
+3   libsystem_c.dylib             	    0x7ff8185a2231 _os_crash_msg + 98\
+4   AppKit                        	    0x7ff81be248be NSViewHierarchyInvalidateVisibleRect + 690\
+5   AppKit                        	    0x7ff81be3a949 -[NSView setFrameOrigin:] + 674\
+6   AppKit                        	    0x7ff81c075cbf -[NSThemeDocumentButton setFrameOrigin:ignoreRentry:] + 66\
+7   AppKit                        	    0x7ff81be398c2 -[NSThemeFrame _updateButtonPositions] + 461\
+8   AppKit                        	    0x7ff81be37f14 -[NSThemeFrame _tileTitlebarAndRedisplay:] + 82\
+9   AppKit                        	    0x7ff81be494ea -[NSTitledFrame _titleDidChange] + 158\
+10  AppKit                        	    0x7ff81c979cb6 -[NSTitledFrame setTitle:subtitle:] + 698\
+11  AppKit                        	    0x7ff81be491ae -[NSThemeFrame setTitle:] + 50\
+12  AppKit                        	    0x7ff81c4d89e5 -[NSFrameView _updateTitleProperties:animated:] + 53\
+13  AppKit                        	    0x7ff81c96aa50 -[NSThemeFrame _updateTitleProperties:animated:] + 186\
+14  CoreFoundation                	    0x7ff818788600 __CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__ + 137\
+15  CoreFoundation                	    0x7ff818819026 ___CFXRegistrationPost_block_invoke + 88\
+16  CoreFoundation                	    0x7ff818818f70 _CFXRegistrationPost + 532\
+17  CoreFoundation                	    0x7ff818757f1b _CFXNotificationPost + 682\
+18  Foundation                    	    0x7ff8196f080e -[NSNotificationCenter postNotificationName:object:userInfo:] + 82\
+19  AppKit                        	    0x7ff81c6d21c2 -[NSWindowTitleController _propertiesChanged:] + 147\
+20  AppKit                        	    0x7ff81bfc0d42 -[NSWindow _setDocumentEdited:] + 125\
+21  REAPER                        	       0x10468bbd3 SWELL_SetWindowRepre(HWND__*, char const*, bool) + 259\
+22  REAPER                        	       0x10482693f SetCaption() + 1551\
+23  REAPER                        	       0x1042135cb Undo_OnStateChange(ReaProject*, char const*, int) + 11435\
+24  REAPER                        	       0x10404b612 Main_OnCommandEx2(int, int, ReaProject*) + 194\
+25  REAPER                        	       0x10404a550 Main_OnCommand(int, int) + 32\
+26  reaper_c24bridge.dylib        	       0x10bf35df2 <PInvokeDelegateWrapper>DriverControl24_Extension_DriverControl24_Extension_ReaperAPI_Main_OnCommandDel__<ForwardNativeFunctionWrapper>DriverControl24_Extension_DriverControl24_Extension_ReaperAPI_Main_OnCommandDel + 50\
+27  reaper_c24bridge.dylib        	       0x10be19da9 DriverControl24_Extension_DriverControl24_Extension_ReaperBridge__HandleRequest + 36265 (ReaperBridge.vb:2997)\
+28  reaper_c24bridge.dylib        	       0x10be10e2d DriverControl24_Extension_DriverControl24_Extension_ReaperBridge__ProcessRequest + 29 (ReaperBridge.vb:262)\
+29  reaper_c24bridge.dylib        	       0x10be22c98 DriverControl24_Extension_DriverControl24_Extension_ReaperBridge_VB_StateMachine_29_StartPipeServerAsync__MoveNext + 1208 (ReaperBridge.vb:304)\
+30  reaper_c24bridge.dylib        	       0x10be7b139 S_P_CoreLib_System_Threading_ExecutionContext__RunInternal + 137 (ExecutionContext.cs:179)\
+31  reaper_c24bridge.dylib        	       0x10bf0da83 S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<S_P_CoreLib_System_Threading_Tasks_VoidTaskResult__DriverControl24_Extension_DriverControl24_Extension_ReaperBridge_VB_StateMachine_29_StartPipeServerAsync>__MoveNext_0 + 67 (AsyncTaskMethodBuilderT.cs:356)\
+32  reaper_c24bridge.dylib        	       0x10be87302 S_P_CoreLib_System_Threading_Tasks_AwaitTaskContinuation__RunOrScheduleAction_0 + 82 (TaskContinuation.cs:795)\
+33  reaper_c24bridge.dylib        	       0x10be85b0f S_P_CoreLib_System_Threading_Tasks_Task__RunContinuations + 79 (Task.cs:3474)\
+34  reaper_c24bridge.dylib        	       0x10bf1a6fe S_P_CoreLib_System_Threading_Tasks_Task_1<System___Canon>__TrySetResult + 142 (Future.cs:385)\
+35  reaper_c24bridge.dylib        	       0x10bec86f3 S_P_CoreLib_System_IO_StreamReader__ReadLineAsyncInternal_d__63__MoveNext + 2131 (StreamReader.cs:985)\
+36  reaper_c24bridge.dylib        	       0x10be7b139 S_P_CoreLib_System_Threading_ExecutionContext__RunInternal + 137 (ExecutionContext.cs:179)\
+37  reaper_c24bridge.dylib        	       0x10bf20a37 S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<System___Canon__S_P_CoreLib_System_IO_StreamReader__ReadLineAsyncInternal_d__63>__MoveNext_0 + 87 (AsyncTaskMethodBuilderT.cs:356)\
+38  reaper_c24bridge.dylib        	       0x10be87302 S_P_CoreLib_System_Threading_Tasks_AwaitTaskContinuation__RunOrScheduleAction_0 + 82 (TaskContinuation.cs:795)\
+39  reaper_c24bridge.dylib        	       0x10be85b0f S_P_CoreLib_System_Threading_Tasks_Task__RunContinuations + 79 (Task.cs:3474)\
+40  reaper_c24bridge.dylib        	       0x10bf06676 S_P_CoreLib_System_Threading_Tasks_Task_1<Int32>__TrySetResult + 134 (Future.cs:385)\
+41  reaper_c24bridge.dylib        	       0x10bec7e20 S_P_CoreLib_System_IO_StreamReader__ReadBufferAsync_d__72__MoveNext + 1088 (StreamReader.cs:1396)\
+42  reaper_c24bridge.dylib        	       0x10be7b139 S_P_CoreLib_System_Threading_ExecutionContext__RunInternal + 137 (ExecutionContext.cs:179)\
+43  reaper_c24bridge.dylib        	       0x10bf08003 S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<Int32__S_P_CoreLib_System_IO_StreamReader__ReadBufferAsync_d__72>__MoveNext_0 + 67 (AsyncTaskMethodBuilderT.cs:356)\
+44  reaper_c24bridge.dylib        	       0x10be87302 S_P_CoreLib_System_Threading_Tasks_AwaitTaskContinuation__RunOrScheduleAction_0 + 82 (TaskContinuation.cs:795)\
+45  reaper_c24bridge.dylib        	       0x10be85b0f S_P_CoreLib_System_Threading_Tasks_Task__RunContinuations + 79 (Task.cs:3474)\
+46  reaper_c24bridge.dylib        	       0x10bf06676 S_P_CoreLib_System_Threading_Tasks_Task_1<Int32>__TrySetResult + 134 (Future.cs:385)\
+47  reaper_c24bridge.dylib        	       0x10be2ed28 System_IO_Pipes_System_IO_Pipes_PipeStream__ReadAsyncCore_d__82__MoveNext + 440 (PipeStream.Unix.cs:313)\
+48  reaper_c24bridge.dylib        	       0x10be7b139 S_P_CoreLib_System_Threading_ExecutionContext__RunInternal + 137 (ExecutionContext.cs:179)\
+49  reaper_c24bridge.dylib        	       0x10bf07c43 S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<Int32__System_IO_Pipes_System_IO_Pipes_PipeStream__ReadAsyncCore_d__82>__MoveNext_0 + 67 (AsyncTaskMethodBuilderT.cs:356)\
+50  reaper_c24bridge.dylib        	       0x10be38f8c System_Net_Sockets_System_Net_Sockets_SocketAsyncEngine__System_Threading_IThreadPoolWorkItem_Execute + 172 (SocketAsyncEngine.Unix.cs:279)\
+51  reaper_c24bridge.dylib        	       0x10be802c3 S_P_CoreLib_System_Threading_ThreadPoolWorkQueue__Dispatch + 643 (ThreadPoolWorkQueue.cs:1051)\
+52  reaper_c24bridge.dylib        	       0x10bec4207 S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart + 359 (PortableThreadPool.WorkerThread.cs:118)\
+53  reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+54  reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+55  libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 18:\
+0   libsystem_kernel.dylib        	    0x7ff818678ae6 __semwait_signal + 10\
+1   libsystem_c.dylib             	    0x7ff81856ba61 nanosleep + 199\
+2   libsystem_c.dylib             	    0x7ff81856b994 usleep + 53\
+3   ReWire                        	       0x12f8e58f1 0x12f8dc000 + 39153\
+4   ReWire                        	       0x12f925f56 0x12f8dc000 + 302934\
+5   libsystem_pthread.dylib       	    0x7ff8186b618b _pthread_start + 99\
+6   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 19:: .NET TP Worker\
+0   libsystem_kernel.dylib        	    0x7ff818678c1a __psynch_cvwait + 10\
+1   libsystem_pthread.dylib       	    0x7ff8186b6724 _pthread_cond_wait + 1260\
+2   reaper_c24bridge.dylib        	       0x10bd9749e SystemNative_LowLevelMonitor_TimedWait + 78 (pal_threading.c:175)\
+3   reaper_c24bridge.dylib        	       0x10bec5012 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait + 274 (WaitSubsystem.ThreadWaitInfo.Unix.cs:334)\
+4   reaper_c24bridge.dylib        	       0x10bec56ca S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait + 122 (WaitSubsystem.WaitableObject.Unix.cs:320)\
+5   reaper_c24bridge.dylib        	       0x10be79e44 S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal + 132 (LowLevelLifoSemaphore.cs:160)\
+6   reaper_c24bridge.dylib        	       0x10bec4238 S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart + 408 (PortableThreadPool.WorkerThread.cs:116)\
+7   reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+8   reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 20:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 21:\
+0   libsystem_pthread.dylib       	    0x7ff8186b1ac0 start_wqthread + 0\
+\
+Thread 22:: .NET TP Worker\
+0   libsystem_kernel.dylib        	    0x7ff818678c1a __psynch_cvwait + 10\
+1   libsystem_pthread.dylib       	    0x7ff8186b6724 _pthread_cond_wait + 1260\
+2   reaper_c24bridge.dylib        	       0x10bd9749e SystemNative_LowLevelMonitor_TimedWait + 78 (pal_threading.c:175)\
+3   reaper_c24bridge.dylib        	       0x10bec5012 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait + 274 (WaitSubsystem.ThreadWaitInfo.Unix.cs:334)\
+4   reaper_c24bridge.dylib        	       0x10bec56ca S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait + 122 (WaitSubsystem.WaitableObject.Unix.cs:320)\
+5   reaper_c24bridge.dylib        	       0x10be79e44 S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal + 132 (LowLevelLifoSemaphore.cs:160)\
+6   reaper_c24bridge.dylib        	       0x10bec4238 S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart + 408 (PortableThreadPool.WorkerThread.cs:116)\
+7   reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+8   reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+Thread 23:: .NET TP Worker\
+0   libsystem_kernel.dylib        	    0x7ff818678c1a __psynch_cvwait + 10\
+1   libsystem_pthread.dylib       	    0x7ff8186b6724 _pthread_cond_wait + 1260\
+2   reaper_c24bridge.dylib        	       0x10bd9749e SystemNative_LowLevelMonitor_TimedWait + 78 (pal_threading.c:175)\
+3   reaper_c24bridge.dylib        	       0x10bec5012 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait + 274 (WaitSubsystem.ThreadWaitInfo.Unix.cs:334)\
+4   reaper_c24bridge.dylib        	       0x10bec56ca S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait + 122 (WaitSubsystem.WaitableObject.Unix.cs:320)\
+5   reaper_c24bridge.dylib        	       0x10be79e44 S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal + 132 (LowLevelLifoSemaphore.cs:160)\
+6   reaper_c24bridge.dylib        	       0x10bec4238 S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart + 408 (PortableThreadPool.WorkerThread.cs:116)\
+7   reaper_c24bridge.dylib        	       0x10be79371 S_P_CoreLib_System_Threading_Thread__StartThread + 273 (Thread.NativeAot.cs:459)\
+8   reaper_c24bridge.dylib        	       0x10be79709 ThreadEntryPoint + 25 (Thread.NativeAot.Unix.cs:121)\
+9   libsystem_pthread.dylib       	    0x7ff8186b1ae3 thread_start + 15\
+\
+\
+Thread 17 crashed with X86 Thread State (64-bit):\
+  rax: 0x0000000002000209  rbx: 0x0000000000000002  rcx: 0x000070000a0715c8  rdx: 0x0000000000000000\
+  rdi: 0x0000000000000012  rsi: 0x0000000000000002  rbp: 0x000070000a071610  rsp: 0x000070000a0715c8\
+   r8: 0x000070000a0716b0   r9: 0x0000000000000000  r10: 0x0000000000000000  r11: 0x0000000000000246\
+  r12: 0x0000000000000000  r13: 0x0000000000000000  r14: 0x0000000000000012  r15: 0x0000000000000000\
+  rip: 0x00007ff818680682  rfl: 0x0000000000000246  cr2: 0x0000000000000000\
+  \
+Logical CPU:     0\
+Error Code:      0x02000209 \
+Trap Number:     133\
+\
+\
+Binary Images:\
+       0x12f8dc000 -        0x12f947fff se.propellerheads.rewire.library (1.8.7 build 145) <b284579f-660f-3550-8327-64dbedc9a218> /Library/Application Support/Propellerhead Software/*/ReWire.bundle/Contents/MacOS/ReWire\
+       0x13373f000 -        0x133741fff com.apple.icloud.drive.fileprovider.override (1.0) <ace2a780-2ebe-36a6-b39f-892217a4d253> /System/Library/Frameworks/FileProvider.framework/OverrideBundles/iCloudDriveFileProviderOverride.bundle/Contents/MacOS/iCloudDriveFileProviderOverride\
+       0x1337a0000 -        0x1337bbfff com.apple.findersync.fileprovideroverride.FinderSyncCollaborationFileProviderOverride (14.6) <14b7bd5a-3beb-39e0-ae86-f75977b19d1e> /System/Library/Frameworks/FileProvider.framework/OverrideBundles/FinderSyncCollaborationFileProviderOverride.bundle/Contents/MacOS/FinderSyncCollaborationFileProviderOverride\
+       0x131851000 -        0x131855fff com.apple.FileProviderOverride (1835.140.3.700.1) <105b8da7-57e8-3248-9f90-49b06410a30d> /System/Library/Frameworks/FileProvider.framework/OverrideBundles/FileProviderOverride.bundle/Contents/MacOS/FileProviderOverride\
+       0x131233000 -        0x131246fff reacontrolMIDI.vst.dylib (*) <24d572c8-67df-3baa-b8ac-b571f69db3ae> /Applications/REAPER.app/Contents/Plugins/FX/reacontrolMIDI.vst.dylib\
+       0x131271000 -        0x13127cfff readelay.vst.dylib (*) <651669ae-bf21-3138-9987-635a9e6e0106> /Applications/REAPER.app/Contents/Plugins/FX/readelay.vst.dylib\
+       0x1311ca000 -        0x1311ddfff reacast.vst.dylib (*) <19073a40-3e7d-3381-86fa-f8139735c85b> /Applications/REAPER.app/Contents/Plugins/FX/reacast.vst.dylib\
+       0x13120b000 -        0x13121efff reaeq.vst.dylib (*) <2e5ba0e8-7eff-3828-a6c7-ab0fd045af73> /Applications/REAPER.app/Contents/Plugins/FX/reaeq.vst.dylib\
+       0x10b5aa000 -        0x10b5b9fff realimit.vst.dylib (*) <025f0554-1ba5-3fba-9ad5-d6b6d3552f1a> /Applications/REAPER.app/Contents/Plugins/FX/realimit.vst.dylib\
+       0x10b320000 -        0x10b32ffff reacomp.vst.dylib (*) <82eebc95-c920-3964-b555-8be05050fc4f> /Applications/REAPER.app/Contents/Plugins/FX/reacomp.vst.dylib\
+       0x10b90e000 -        0x10b92dfff reaverb.vst.dylib (*) <6c2cadd6-6d6a-3d83-acaf-325328a1d5d1> /Applications/REAPER.app/Contents/Plugins/FX/reaverb.vst.dylib\
+       0x10bd8e000 -        0x10c08ffff reaper_c24bridge.dylib (*) <0bbee41d-90eb-362a-9b24-a7f88fa83817> /Users/USER/Library/Application Support/REAPER/*/reaper_c24bridge.dylib\
+       0x10b0ca000 -        0x10b0ccfff reaper_c24events.dylib (*) <de9190e1-236d-3d88-8a24-97c7e891aa00> /Users/USER/Library/Application Support/REAPER/*/reaper_c24events.dylib\
+       0x10c2ca000 -        0x10c805fff FFmpeg.dylib (*) <b885049b-459b-f8d7-e896-1b2cb24b22c0> /Applications/REAPER.app/Contents/Plugins/FFmpeg.dylib\
+       0x10b38a000 -        0x10b391fff reap_osx_modern.dylib (*) <554fed03-e843-337a-bdb1-2795c58e1cc2> /Applications/REAPER.app/Contents/Plugins/reap_osx_modern.dylib\
+       0x10b76a000 -        0x10b879fff reaper_video.dylib (*) <514dfd7a-6a2d-335d-9a65-2deecf59e5d9> /Applications/REAPER.app/Contents/Plugins/reaper_video.dylib\
+       0x10b54a000 -        0x10b585fff reaper_csurf.dylib (*) <6e986a4d-a131-34c5-8572-d1833d881ed4> /Applications/REAPER.app/Contents/Plugins/reaper_csurf.dylib\
+       0x10b955000 -        0x10ba00fff reaper_ogg.dylib (*) <69932e21-40d8-38e5-8cfa-3321dbbca6c5> /Applications/REAPER.app/Contents/Plugins/reaper_ogg.dylib\
+       0x10b36e000 -        0x10b379fff reaper_cd.dylib (*) <1c128a03-b1ab-30bb-9e76-1970b02cec2e> /Applications/REAPER.app/Contents/Plugins/reaper_cd.dylib\
+       0x10b4da000 -        0x10b525fff reaper_explorer.dylib (*) <6d94fbe8-a8c7-3bda-ac2d-9a68623ab788> /Applications/REAPER.app/Contents/Plugins/reaper_explorer.dylib\
+       0x10b352000 -        0x10b35dfff reaper_ddp.dylib (*) <b6d4f225-6d5f-3ad2-ad88-d9eef850a9c1> /Applications/REAPER.app/Contents/Plugins/reaper_ddp.dylib\
+       0x10b22c000 -        0x10b237fff reaper_rex.dylib (*) <fb31093e-3856-3cca-8c2b-724c436f5e43> /Applications/REAPER.app/Contents/Plugins/reaper_rex.dylib\
+       0x10b3aa000 -        0x10b3ddfff reaper_flac.dylib (*) <c36be334-1e1a-3fcd-b6b0-1e864a10a6b5> /Applications/REAPER.app/Contents/Plugins/reaper_flac.dylib\
+       0x10b19c000 -        0x10b20ffff reaper_opus.dylib (*) <599c5e56-2ca5-347d-9b62-a2906c58c65f> /Applications/REAPER.app/Contents/Plugins/reaper_opus.dylib\
+       0x10b2c3000 -        0x10b2f6fff reaper_wavpack.dylib (*) <b845cbf5-b802-3eae-8d1f-800028346665> /Applications/REAPER.app/Contents/Plugins/reaper_wavpack.dylib\
+       0x10b5d2000 -        0x10b71dfff reaper_midi.dylib (*) <8f1ea9d4-56e2-3119-8bcc-ee9f95d45eb3> /Applications/REAPER.app/Contents/Plugins/reaper_midi.dylib\
+       0x10b258000 -        0x10b2a3fff libmp3lame.dylib (*) <c1480562-3088-02cc-c915-3a27bbd64f39> /Applications/REAPER.app/Contents/Plugins/libmp3lame.dylib\
+       0x10b064000 -        0x10b08bfff reaper_mp3dec.dylib (*) <ebd316e5-993c-3580-9d36-87aa5cb91cbc> /Applications/REAPER.app/Contents/Plugins/reaper_mp3dec.dylib\
+       0x10b0db000 -        0x10b0fefff reaper_wave.dylib (*) <3fb72d31-91f6-3ae6-ad4f-f2a4ca835434> /Applications/REAPER.app/Contents/Plugins/reaper_wave.dylib\
+       0x10b11c000 -        0x10b173fff jsfx.dylib (*) <709b0b10-943b-390a-9d2a-4e9bf65a0271> /Applications/REAPER.app/Contents/Plugins/jsfx.dylib\
+       0x10af94000 -        0x10afaffff rubberband.dylib (*) <ce72970a-992a-3e47-8379-0b094b1a3c51> /Applications/REAPER.app/Contents/Plugins/rubberband.dylib\
+       0x1053e7000 -        0x1053eefff soundtouch.dylib (*) <2a57b5f3-1256-34c7-b78a-32b26f6f5d4e> /Applications/REAPER.app/Contents/Plugins/soundtouch.dylib\
+       0x10afcf000 -        0x10b00afff elastique3.dylib (*) <d0d01f45-be01-3981-a808-3d4e79778738> /Applications/REAPER.app/Contents/Plugins/elastique3.dylib\
+       0x10515b000 -        0x105167fff libobjc-trampolines.dylib (*) <99e4446c-8ce5-3bb4-8fdf-118e287e76d1> /usr/lib/libobjc-trampolines.dylib\
+       0x103fb6000 -        0x104bedfff com.cockos.reaper (7.82.0_3385784u) <6ccb2dfe-3dd4-33dd-ae46-6ec13b621fb1> /Applications/REAPER.app/Contents/MacOS/REAPER\
+    0x7ff818675000 -     0x7ff8186afff7 libsystem_kernel.dylib (*) <57ed0098-f11e-37e6-b552-a96f3183030c> /usr/lib/system/libsystem_kernel.dylib\
+    0x7ff81dd91000 -     0x7ff81e1f3ffe com.apple.SkyLight (1.600.0) <76842020-8f16-3d88-b395-e3982a09bff1> /System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight\
+    0x7ff81bdc5000 -     0x7ff81d1f5ff7 com.apple.AppKit (6.9) <6de54ea6-c38a-3960-b9e6-540ec5285497> /System/Library/Frameworks/AppKit.framework/Versions/C/AppKit\
+    0x7ff8196e8000 -     0x7ff81a31effb com.apple.Foundation (6.9) <54dfdb59-c8d1-3ac4-a710-b6e4c8c194c6> /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation\
+    0x7ff818717000 -     0x7ff818bb1ffc com.apple.CoreFoundation (6.9) <fedaf68c-f484-3fca-8866-a9e7e46ce7b6> /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation\
+    0x7ff823185000 -     0x7ff82341fff3 com.apple.HIToolbox (2.1.1) <5f06f268-b51f-31fc-9dfc-ab1eced819c9> /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox\
+    0x7ff818324000 -     0x7ff8183b4a87 dyld (*) <9772e867-e2b9-3633-9b7e-fcd8de0eaea4> /usr/lib/dyld\
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???\
+    0x7ff8186b0000 -     0x7ff8186bbff7 libsystem_pthread.dylib (*) <79ecab15-71f1-3d6a-8a96-0623e622205f> /usr/lib/system/libsystem_pthread.dylib\
+    0x7ff8335ef000 -     0x7ff83367aff5 com.apple.audio.midi.CoreMIDI (2.0) <3afc3ace-85e4-32c0-827f-bf3a64d97b80> /System/Library/Frameworks/CoreMIDI.framework/Versions/A/CoreMIDI\
+    0x7ff822ecf000 -     0x7ff822ef4ff7 com.apple.audio.caulk (1.0) <753d87c1-28f1-3b2a-97be-277296e2e48f> /System/Library/PrivateFrameworks/caulk.framework/Versions/A/caulk\
+    0x7ff81855c000 -     0x7ff8185e3ff7 libsystem_c.dylib (*) <17b641ba-925c-39a9-aa43-ab3b0bcdfe01> /usr/lib/system/libsystem_c.dylib\
+\
+External Modification Summary:\
+  Calls made by other processes targeting this process:\
+    task_for_pid: 0\
+    thread_create: 0\
+    thread_set_state: 0\
+  Calls made by this process:\
+    task_for_pid: 0\
+    thread_create: 0\
+    thread_set_state: 0\
+  Calls made by all processes on this machine:\
+    task_for_pid: 0\
+    thread_create: 0\
+    thread_set_state: 0\
+\
+VM Region Summary:\
+ReadOnly portion of Libraries: Total=854.2M resident=0K(0%) swapped_out_or_unallocated=854.2M(100%)\
+Writable regions: Total=677.6M written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=677.6M(100%)\
+\
+                                VIRTUAL   REGION \
+REGION TYPE                        SIZE    COUNT (non-coalesced) \
+===========                     =======  ======= \
+Accelerate framework               256K        2 \
+Activity Tracing                   256K        1 \
+CG image                           128K       12 \
+ColorSync                          256K       32 \
+CoreAnimation                     1152K      106 \
+CoreGraphics                        32K        5 \
+CoreImage                            4K        1 \
+CoreUI image data                 3088K       26 \
+Foundation                          44K        2 \
+Image IO                            16K        4 \
+Kernel Alloc Once                    8K        1 \
+MALLOC                           641.1M      336 \
+MALLOC guard page                   32K        8 \
+MALLOC_LARGE (reserved)           2560K        3         reserved VM address space (unallocated)\
+Mach message                       120K        6 \
+STACK GUARD                       56.1M       24 \
+Stack                             26.4M       24 \
+VM_ALLOCATE                      521.4M       76 \
+__CTF                               824        1 \
+__DATA                            36.9M      591 \
+__DATA_CONST                      37.6M      359 \
+__DATA_DIRTY                      1588K      197 \
+__FONT_DATA                        2352        1 \
+__LINKEDIT                       184.2M       36 \
+__OBJC_RO                         71.9M        1 \
+__OBJC_RW                         2201K        2 \
+__TEXT                           669.9M      606 \
+mapped file                      112.7M       41 \
+shared memory                     1320K       23 \
+===========                     =======  ======= \
+TOTAL                              2.3G     2527 \
+TOTAL, minus reserved VM space     2.3G     2527 \
+\
+\
+\
+-----------\
+Full Report\
+-----------\
+\
+\{"app_name":"REAPER","timestamp":"2026-10-27 23:02:51.00 +0100","app_version":"7.82.0_3385784u","slice_uuid":"6ccb2dfe-3dd4-33dd-ae46-6ec13b621fb1","build_version":"7.82.0_3385784u","platform":1,"bundleID":"com.cockos.reaper","share_with_app_devs":0,"is_first_party":0,"bug_type":"309","os_version":"macOS 14.7.5 (23H527)","roots_installed":0,"name":"REAPER","incident_id":"07A707BF-3EEB-4D24-8060-B50A67BC99FD"\}\
+\{\
+  "uptime" : 34000,\
+  "procRole" : "Background",\
+  "version" : 2,\
+  "userID" : 502,\
+  "deployVersion" : 210,\
+  "modelCode" : "MacBookAir8,2",\
+  "coalitionID" : 405,\
+  "osVersion" : \{\
+    "train" : "macOS 14.7.5",\
+    "build" : "23H527",\
+    "releaseType" : "User"\
+  \},\
+  "captureTime" : "2026-10-27 23:02:48.6330 +0100",\
+  "codeSigningMonitor" : 0,\
+  "incident" : "07A707BF-3EEB-4D24-8060-B50A67BC99FD",\
+  "pid" : 8113,\
+  "cpuType" : "X86-64",\
+  "roots_installed" : 0,\
+  "bug_type" : "309",\
+  "procLaunch" : "2026-10-27 23:00:26.8864 +0100",\
+  "procStartAbsTime" : 34585089597221,\
+  "procExitAbsTime" : 34726683294327,\
+  "procName" : "REAPER",\
+  "procPath" : "\\/Applications\\/REAPER.app\\/Contents\\/MacOS\\/REAPER",\
+  "bundleInfo" : \{"CFBundleShortVersionString":"7.82.0_3385784u","CFBundleVersion":"7.82.0_3385784u","CFBundleIdentifier":"com.cockos.reaper"\},\
+  "storeInfo" : \{"deviceIdentifierForVendor":"4890B0BA-BB97-50DA-BC42-A64E3D1B3FA6","thirdParty":true\},\
+  "parentProc" : "launchd",\
+  "parentPid" : 1,\
+  "coalitionName" : "com.cockos.reaper",\
+  "crashReporterKey" : "A63DAE3E-E129-D910-A73D-F912559301D8",\
+  "codeSigningID" : "com.cockos.reaper",\
+  "codeSigningTeamID" : "Y3T58622SG",\
+  "codeSigningFlags" : 570491653,\
+  "codeSigningValidationCategory" : 6,\
+  "codeSigningTrustLevel" : 4294967295,\
+  "wakeTime" : 2961,\
+  "bridgeVersion" : \{"build":"22P4248","train":"9.4"\},\
+  "sleepWakeUUID" : "FEC2305E-DB3D-4A64-8BC8-22BA24099898",\
+  "sip" : "enabled",\
+  "exception" : \{"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGABRT"\},\
+  "termination" : \{"flags":518,"code":2,"namespace":"LIBSYSTEM","indicator":"Application Triggered Fault"\},\
+  "asi" : \{"libsystem_c.dylib":["assertion failure: \\"!view->_hasCachedVisibleRect\\" -> %lld"]\},\
+  "extMods" : \{"caller":\{"thread_create":0,"thread_set_state":0,"task_for_pid":0\},"system":\{"thread_create":0,"thread_set_state":0,"task_for_pid":0\},"targeted":\{"thread_create":0,"thread_set_state":0,"task_for_pid":0\},"warnings":0\},\
+  "faultingThread" : 17,\
+  "threads" : [\{"threadState":\{"r13":\{"value":105553179331968\},"rax":\{"value":14\},"rflags":\{"value":518\},"cpu":\{"value":0\},"r14":\{"value":105553178237016\},"rsi":\{"value":2147483648000000000\},"r8":\{"value":399050\},"cr2":\{"value":0\},"rdx":\{"value":500000000\},"r10":\{"value":140703538044930,"symbolLocation":10,"symbol":"semaphore_timedwait_trap"\},"r9":\{"value":18446744069414584320\},"r15":\{"value":105553178237012\},"rbx":\{"value":105553178236944\},"trap":\{"value":133\},"err":\{"value":16777254\},"r11":\{"value":518\},"rip":\{"value":140703538044930\},"rbp":\{"value":140701986974752\},"rsp":\{"value":140701986974696\},"r12":\{"value":105553172972544\},"rcx":\{"value":140701986974696\},"flavor":"x86_THREAD_STATE","rdi":\{"value":182263\}\},"id":399050,"name":"reaper","queue":"com.apple.main-thread","frames":[\{"imageOffset":4098,"symbol":"semaphore_timedwait_trap","symbolLocation":10,"imageIndex":35\},\{"imageOffset":3394301,"symbol":"SLSTransactionWait","symbolLocation":203,"imageIndex":36\},\{"imageOffset":2673343,"symbol":"SLSConnectionSynchronizeSLSCATransaction","symbolLocation":41,"imageIndex":36\},\{"imageOffset":1436548,"symbol":"run_query","symbolLocation":139,"imageIndex":36\},\{"imageOffset":13871768,"symbol":"-[_NSCGSWindowOrdering _windowsWithOptions:onSpaces:xorSpacesMatching:forConnectionID:]","symbolLocation":386,"imageIndex":37\},\{"imageOffset":234961,"symbol":"-[NSApplication enumerateWindowsWithOptions:usingBlock:]","symbolLocation":400,"imageIndex":37\},\{"imageOffset":1936238,"symbol":"-[NSApplication(NSScripting) _orderedWindowsWithPanels:]","symbolLocation":277,"imageIndex":37\},\{"imageOffset":7144347,"symbol":"WindowFromPoint(POINT)","symbolLocation":43,"imageIndex":34\},\{"imageOffset":7803160,"symbol":"UpdateTCPInfoblocks(int, MediaTrack*)","symbolLocation":56,"imageIndex":34\},\{"imageOffset":11220614,"symbol":"runMiscTimers()","symbolLocation":1286,"imageIndex":34\},\{"imageOffset":8861833,"symbol":"MainProc(HWND__*, unsigned int, unsigned long, long)","symbolLocation":5513,"imageIndex":34\},\{"imageOffset":6950652,"symbol":"SwellDialogDefaultWindowProc(HWND__*, unsigned int, unsigned long, long)","symbolLocation":444,"imageIndex":34\},\{"imageOffset":640868,"symbol":"__NSFireTimer","symbolLocation":67,"imageIndex":38\},\{"imageOffset":619324,"symbol":"__CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__","symbolLocation":20,"imageIndex":39\},\{"imageOffset":618218,"symbol":"__CFRunLoopDoTimer","symbolLocation":785,"imageIndex":39\},\{"imageOffset":617254,"symbol":"__CFRunLoopDoTimers","symbolLocation":285,"imageIndex":39\},\{"imageOffset":503298,"symbol":"__CFRunLoopRun","symbolLocation":2104,"imageIndex":39\},\{"imageOffset":499714,"symbol":"CFRunLoopRunSpecific","symbolLocation":557,"imageIndex":39\},\{"imageOffset":190985,"symbol":"RunCurrentEventLoopInMode","symbolLocation":292,"imageIndex":40\},\{"imageOffset":190486,"symbol":"ReceiveNextEventCommon","symbolLocation":665,"imageIndex":40\},\{"imageOffset":189793,"symbol":"_BlockUntilNextEventMatchingListInModeWithFilter","symbolLocation":66,"imageIndex":40\},\{"imageOffset":258401,"symbol":"_DPSNextEvent","symbolLocation":880,"imageIndex":37\},\{"imageOffset":9779936,"symbol":"-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]","symbolLocation":1273,"imageIndex":37\},\{"imageOffset":198005,"symbol":"-[NSApplication run]","symbolLocation":603,"imageIndex":37\},\{"imageOffset":17635,"symbol":"NSApplicationMain","symbolLocation":816,"imageIndex":37\},\{"imageOffset":25413,"symbol":"start","symbolLocation":1909,"imageIndex":41\}]\},\{"id":399060,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":33554800\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":1\},"rsi":\{"value":4867\},"r8":\{"value":409604\},"cr2":\{"value":0\},"rdx":\{"value":123145453228032\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":123145453751160\},"rbx":\{"value":123145453752320\},"trap":\{"value":133\},"err":\{"value":33554800\},"r11":\{"value":582\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145453752320\},"r12":\{"value":5193733\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145453752320\}\}\},\{"id":399062,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":33554800\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":1\},"rsi":\{"value":19971\},"r8":\{"value":409604\},"cr2":\{"value":0\},"rdx":\{"value":123145454301184\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":123145454824312\},"rbx":\{"value":123145454825472\},"trap":\{"value":133\},"err":\{"value":33554800\},"r11":\{"value":582\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145454825472\},"r12":\{"value":5193733\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145454825472\}\}\},\{"id":399063,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":33554800\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":1\},"rsi":\{"value":17155\},"r8":\{"value":409604\},"cr2":\{"value":0\},"rdx":\{"value":123145455374336\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":123145455897464\},"rbx":\{"value":123145455898624\},"trap":\{"value":133\},"err":\{"value":33554800\},"r11":\{"value":582\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145455898624\},"r12":\{"value":5193733\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145455898624\}\}\},\{"id":399064,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":33554800\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":1\},"rsi":\{"value":154627\},"r8":\{"value":409604\},"cr2":\{"value":0\},"rdx":\{"value":123145454837760\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":123145455360896\},"rbx":\{"value":123145455362048\},"trap":\{"value":133\},"err":\{"value":33554800\},"r11":\{"value":582\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145455362048\},"r12":\{"value":1982472\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145455362048\}\}\},\{"id":399085,"name":"com.apple.NSEventThread","threadState":\{"r13":\{"value":21592279046\},"rax":\{"value":268451845\},"rflags":\{"value":518\},"cpu":\{"value":0\},"r14":\{"value":2\},"rsi":\{"value":21592279046\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":8589934592\},"r10":\{"value":270492745334784\},"r9":\{"value":270492745334784\},"r15":\{"value":270492745334784\},"rbx":\{"value":123145456431200\},"trap":\{"value":133\},"err":\{"value":16777263\},"r11":\{"value":518\},"rip":\{"value":140703538045038\},"rbp":\{"value":123145456431040\},"rsp":\{"value":123145456430936\},"r12":\{"value":4294967295\},"rcx":\{"value":123145456430936\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145456431200\}\},"frames":[\{"imageOffset":4206,"symbol":"mach_msg2_trap","symbolLocation":10,"imageIndex":35\},\{"imageOffset":63576,"symbol":"mach_msg2_internal","symbolLocation":84,"imageIndex":35\},\{"imageOffset":33112,"symbol":"mach_msg_overwrite","symbolLocation":653,"imageIndex":35\},\{"imageOffset":4957,"symbol":"mach_msg","symbolLocation":19,"imageIndex":35\},\{"imageOffset":508085,"symbol":"__CFRunLoopServiceMachPort","symbolLocation":143,"imageIndex":39\},\{"imageOffset":502565,"symbol":"__CFRunLoopRun","symbolLocation":1371,"imageIndex":39\},\{"imageOffset":499714,"symbol":"CFRunLoopRunSpecific","symbolLocation":557,"imageIndex":39\},\{"imageOffset":1692300,"symbol":"_NSEventThread","symbolLocation":122,"imageIndex":37\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399092,"frames":[\{"imageOffset":4206,"symbol":"mach_msg2_trap","symbolLocation":10,"imageIndex":35\},\{"imageOffset":63576,"symbol":"mach_msg2_internal","symbolLocation":84,"imageIndex":35\},\{"imageOffset":33112,"symbol":"mach_msg_overwrite","symbolLocation":653,"imageIndex":35\},\{"imageOffset":4957,"symbol":"mach_msg","symbolLocation":19,"imageIndex":35\},\{"imageOffset":204370,"symbol":"XServerMachPort::ReceiveMessage(int&, void*, int&)","symbolLocation":98,"imageIndex":44\},\{"imageOffset":268474,"symbol":"MIDIProcess::MIDIInPortThread::Run()","symbolLocation":104,"imageIndex":44\},\{"imageOffset":257750,"symbol":"CADeprecated::XThread::RunHelper(void*)","symbolLocation":10,"imageIndex":44\},\{"imageOffset":264451,"symbol":"CADeprecated::CAPThread::Entry(CADeprecated::CAPThread*)","symbolLocation":77,"imageIndex":44\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}],"threadState":\{"r13":\{"value":17179869186\},"rax":\{"value":268451845\},"rflags":\{"value":514\},"cpu":\{"value":0\},"r14":\{"value":100\},"rsi":\{"value":17179869186\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":0\},"r10":\{"value":252900559290368\},"r9":\{"value":252900559290368\},"r15":\{"value":252900559290368\},"rbx":\{"value":123145456970232\},"trap":\{"value":133\},"err":\{"value":16777263\},"r11":\{"value":514\},"rip":\{"value":140703538045038\},"rbp":\{"value":123145456969872\},"rsp":\{"value":123145456969768\},"r12":\{"value":0\},"rcx":\{"value":123145456969768\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145456970232\}\}\},\{"id":399116,"name":"caulk.messenger.shared:17","threadState":\{"r13":\{"value":0\},"rax":\{"value":14\},"rflags":\{"value":515\},"cpu":\{"value":0\},"r14":\{"value":105553153053600\},"rsi":\{"value":105553142033024\},"r8":\{"value":105553142033024\},"cr2":\{"value":0\},"rdx":\{"value":10\},"r10":\{"value":0\},"r9":\{"value":25\},"r15":\{"value":0\},"rbx":\{"value":105553153053441\},"trap":\{"value":133\},"err":\{"value":16777252\},"r11":\{"value":515\},"rip":\{"value":140703538044906\},"rbp":\{"value":123145457508208\},"rsp":\{"value":123145457508168\},"r12":\{"value":0\},"rcx":\{"value":123145457508168\},"flavor":"x86_THREAD_STATE","rdi":\{"value":59987\}\},"frames":[\{"imageOffset":4074,"symbol":"semaphore_wait_trap","symbolLocation":10,"imageIndex":35\},\{"imageOffset":7080,"symbol":"caulk::semaphore::timed_wait(double)","symbolLocation":150,"imageIndex":45\},\{"imageOffset":6852,"symbol":"caulk::concurrent::details::worker_thread::run()","symbolLocation":30,"imageIndex":45\},\{"imageOffset":6120,"symbol":"void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*)","symbolLocation":41,"imageIndex":45\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399117,"name":"caulk.messenger.shared:high","threadState":\{"r13":\{"value":0\},"rax":\{"value":14\},"rflags":\{"value":515\},"cpu":\{"value":0\},"r14":\{"value":105553153083872\},"rsi":\{"value":105553141789824\},"r8":\{"value":105553141789824\},"cr2":\{"value":0\},"rdx":\{"value":12\},"r10":\{"value":0\},"r9":\{"value":27\},"r15":\{"value":0\},"rbx":\{"value":105553153083649\},"trap":\{"value":133\},"err":\{"value":16777252\},"r11":\{"value":515\},"rip":\{"value":140703538044906\},"rbp":\{"value":123145458044784\},"rsp":\{"value":123145458044744\},"r12":\{"value":0\},"rcx":\{"value":123145458044744\},"flavor":"x86_THREAD_STATE","rdi":\{"value":48139\}\},"frames":[\{"imageOffset":4074,"symbol":"semaphore_wait_trap","symbolLocation":10,"imageIndex":35\},\{"imageOffset":7080,"symbol":"caulk::semaphore::timed_wait(double)","symbolLocation":150,"imageIndex":45\},\{"imageOffset":6852,"symbol":"caulk::concurrent::details::worker_thread::run()","symbolLocation":30,"imageIndex":45\},\{"imageOffset":6120,"symbol":"void* caulk::thread_proxy<std::__1::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::__1::tuple<caulk::concurrent::details::worker_thread*>>>(void*)","symbolLocation":41,"imageIndex":45\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399183,"name":"*\\/video","threadState":\{"r13":\{"value":0\},"rax":\{"value":4\},"rflags":\{"value":583\},"cpu":\{"value":0\},"r14":\{"value":123145463410384\},"rsi":\{"value":0\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":1\},"r10":\{"value":1\},"r9":\{"value":50000000\},"r15":\{"value":0\},"rbx":\{"value":0\},"trap":\{"value":133\},"err":\{"value":33554766\},"r11":\{"value":582\},"rip":\{"value":140703538055910\},"rbp":\{"value":123145463410368\},"rsp":\{"value":123145463410312\},"r12":\{"value":0\},"rcx":\{"value":123145463410312\},"flavor":"x86_THREAD_STATE","rdi":\{"value":7939\}\},"frames":[\{"imageOffset":15078,"symbol":"__semwait_signal","symbolLocation":10,"imageIndex":35\},\{"imageOffset":64097,"symbol":"nanosleep","symbolLocation":199,"imageIndex":46\},\{"imageOffset":63892,"symbol":"usleep","symbolLocation":53,"imageIndex":46\},\{"imageOffset":105096,"symbol":"videoDecodeThread(void*)","symbolLocation":1229,"imageIndex":15\},\{"imageOffset":7172377,"symbol":"__threadproc(void*)","symbolLocation":25,"imageIndex":34\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399200,"name":".NET Finalizer","threadState":\{"r13":\{"value":29691108924416\},"rax":\{"value":260\},"rflags":\{"value":663\},"cpu":\{"value":0\},"r14":\{"value":7168\},"rsi":\{"value":29691108924416\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":6912\},"r10":\{"value":0\},"r9":\{"value":160\},"r15":\{"value":6912\},"rbx":\{"value":22\},"trap":\{"value":133\},"err":\{"value":33554737\},"r11":\{"value":663\},"rip":\{"value":140703538056218\},"rbp":\{"value":123145463946864\},"rsp":\{"value":123145463946712\},"r12":\{"value":0\},"rcx":\{"value":123145463946712\},"flavor":"x86_THREAD_STATE","rdi":\{"value":105553173104128\}\},"frames":[\{"imageOffset":15386,"symbol":"__psynch_cvwait","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26404,"symbol":"_pthread_cond_wait","symbolLocation":1260,"imageIndex":43\},\{"imageOffset":391010,"sourceLine":347,"sourceFile":"PalUnix.cpp","symbol":"UnixEvent::Wait(unsigned int)","imageIndex":11,"symbolLocation":194\},\{"imageOffset":87270,"sourceLine":197,"sourceFile":"FinalizerHelpers.cpp","symbol":"RhpWaitForFinalizerRequest","imageIndex":11,"symbolLocation":134\},\{"imageOffset":1142625,"sourceLine":27,"sourceFile":"__Finalizer.cs","symbol":"S_P_CoreLib_System_Runtime___Finalizer__ProcessFinalizers","imageIndex":11,"symbolLocation":97\},\{"imageOffset":86917,"sourceLine":80,"sourceFile":"FinalizerHelpers.cpp","symbol":"FinalizerStart(void*)","imageIndex":11,"symbolLocation":85\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399201,"name":"PeakPipeServer","threadState":\{"r13":\{"value":123145465531392\},"rax":\{"value":4\},"rflags":\{"value":583\},"cpu":\{"value":0\},"r14":\{"value":0\},"rsi":\{"value":123145465531128\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":0\},"r10":\{"value":123145465531464\},"r9":\{"value":0\},"r15":\{"value":1\},"rbx":\{"value":26\},"trap":\{"value":133\},"err":\{"value":33554833\},"r11":\{"value":582\},"rip":\{"value":140703538089426\},"rbp":\{"value":123145465531232\},"rsp":\{"value":123145465531112\},"r12":\{"value":123145465531128\},"rcx":\{"value":123145465531112\},"flavor":"x86_THREAD_STATE","rdi":\{"value":26\}\},"frames":[\{"imageOffset":48594,"symbol":"__recvmsg_nocancel","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26925,"sourceLine":1600,"sourceFile":"pal_networking.c","symbol":"SystemNative_ReceiveMessage","imageIndex":11,"symbolLocation":285\},\{"imageOffset":673464,"sourceLine":1429,"sourceFile":"LibraryImports.g.cs","symbol":"System_Net_Sockets_Interop_Sys__ReceiveMessage","imageIndex":11,"symbolLocation":120\},\{"imageOffset":711296,"sourceLine":167,"sourceFile":"SocketPal.Unix.cs","symbol":"System_Net_Sockets_System_Net_Sockets_SocketPal__SysReceive_0","imageIndex":11,"symbolLocation":96\},\{"imageOffset":715788,"sourceLine":870,"sourceFile":"SocketPal.Unix.cs","symbol":"System_Net_Sockets_System_Net_Sockets_SocketPal__TryCompleteReceiveFrom_1","imageIndex":11,"symbolLocation":92\},\{"imageOffset":703863,"sourceLine":1644,"sourceFile":"SocketAsyncContext.Unix.cs","symbol":"System_Net_Sockets_System_Net_Sockets_SocketAsyncContext__ReceiveFrom_0","imageIndex":11,"symbolLocation":247\},\{"imageOffset":682827,"sourceLine":1587,"sourceFile":"Socket.cs","symbol":"System_Net_Sockets_System_Net_Sockets_Socket__Receive_6","imageIndex":11,"symbolLocation":171\},\{"imageOffset":682593,"sourceLine":1573,"sourceFile":"Socket.cs","symbol":"System_Net_Sockets_System_Net_Sockets_Socket__Receive_5","imageIndex":11,"symbolLocation":17\},\{"imageOffset":657045,"sourceLine":272,"sourceFile":"PipeStream.Unix.cs","symbol":"System_IO_Pipes_System_IO_Pipes_PipeStream__ReadCore","imageIndex":11,"symbolLocation":69\},\{"imageOffset":1104984,"sourceLine":611,"sourceFile":"StreamReader.cs","symbol":"S_P_CoreLib_System_IO_StreamReader__ReadBuffer","imageIndex":11,"symbolLocation":56\},\{"imageOffset":1105279,"sourceLine":800,"sourceFile":"StreamReader.cs","symbol":"S_P_CoreLib_System_IO_StreamReader__ReadLine","imageIndex":11,"symbolLocation":95\},\{"imageOffset":1496492,"sourceLine":385,"sourceFile":"ReaperEntry.cs","symbol":"reaper_c24bridge_ReaperEntry__RunPeakPipeServer","imageIndex":11,"symbolLocation":524\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399202,"name":".NET Sockets","threadState":\{"r13":\{"value":4505763584\},"rax":\{"value":4\},"rflags":\{"value":583\},"cpu":\{"value":0\},"r14":\{"value":140481761754112\},"rsi":\{"value":0\},"r8":\{"value":1024\},"cr2":\{"value":0\},"rdx":\{"value":0\},"r10":\{"value":140481761754112\},"r9":\{"value":0\},"r15":\{"value":4505804976\},"rbx":\{"value":123145467117312\},"trap":\{"value":133\},"err":\{"value":33554795\},"r11":\{"value":582\},"rip":\{"value":140703538064718\},"rbp":\{"value":123145467117216\},"rsp":\{"value":123145467117176\},"r12":\{"value":8\},"rcx":\{"value":123145467117176\},"flavor":"x86_THREAD_STATE","rdi":\{"value":8\}\},"frames":[\{"imageOffset":23886,"symbol":"kevent","symbolLocation":10,"imageIndex":35\},\{"symbol":"WaitForSocketEventsInner","inline":true,"imageIndex":11,"imageOffset":31957,"symbolLocation":31,"sourceLine":3370,"sourceFile":"pal_networking.c"\},\{"imageOffset":31957,"sourceLine":3523,"sourceFile":"pal_networking.c","symbol":"SystemNative_WaitForSocketEvents","imageIndex":11,"symbolLocation":85\},\{"imageOffset":699928,"sourceLine":219,"sourceFile":"SocketAsyncEngine.Unix.cs","symbol":"System_Net_Sockets_System_Net_Sockets_SocketAsyncEngine__EventLoop","imageIndex":11,"symbolLocation":216\},\{"imageOffset":963480,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":312\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399204,"name":".NET TP Gate","threadState":\{"r13":\{"value":193518341501184\},"rax":\{"value":260\},"rflags":\{"value":663\},"cpu":\{"value":0\},"r14":\{"value":45312\},"rsi":\{"value":193518341501184\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":2304\},"r10":\{"value":0\},"r9":\{"value":160\},"r15":\{"value":2304\},"rbx":\{"value":22\},"trap":\{"value":133\},"err":\{"value":33554737\},"r11":\{"value":663\},"rip":\{"value":140703538056218\},"rbp":\{"value":123145468976416\},"rsp":\{"value":123145468976264\},"r12":\{"value":500000000\},"rcx":\{"value":123145468976264\},"flavor":"x86_THREAD_STATE","rdi":\{"value":105553170105168\}\},"frames":[\{"imageOffset":15386,"symbol":"__psynch_cvwait","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26404,"symbol":"_pthread_cond_wait","symbolLocation":1260,"imageIndex":43\},\{"imageOffset":38046,"sourceLine":175,"sourceFile":"pal_threading.c","symbol":"SystemNative_LowLevelMonitor_TimedWait","imageIndex":11,"symbolLocation":78\},\{"imageOffset":1273874,"sourceLine":334,"sourceFile":"WaitSubsystem.ThreadWaitInfo.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait","imageIndex":11,"symbolLocation":274\},\{"imageOffset":1275594,"sourceLine":320,"sourceFile":"WaitSubsystem.WaitableObject.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait","imageIndex":11,"symbolLocation":122\},\{"imageOffset":998348,"sourceLine":144,"sourceFile":"WaitHandle.cs","symbol":"S_P_CoreLib_System_Threading_WaitHandle__WaitOneNoCheck","imageIndex":11,"symbolLocation":236\},\{"imageOffset":1261823,"sourceLine":70,"sourceFile":"PortableThreadPool.GateThread.cs","symbol":"S_P_CoreLib_System_Threading_PortableThreadPool_GateThread__GateThreadStart","imageIndex":11,"symbolLocation":415\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399284,"frames":[\{"imageOffset":15078,"symbol":"__semwait_signal","symbolLocation":10,"imageIndex":35\},\{"imageOffset":64097,"symbol":"nanosleep","symbolLocation":199,"imageIndex":46\},\{"imageOffset":63892,"symbol":"usleep","symbolLocation":53,"imageIndex":46\},\{"imageOffset":57691,"symbol":"VSTEffectClass::threadProc(void*)","symbolLocation":91,"imageIndex":6\},\{"imageOffset":7172377,"symbol":"__threadproc(void*)","symbolLocation":25,"imageIndex":34\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":4\},"rflags":\{"value":583\},"cpu":\{"value":0\},"r14":\{"value":123145474269008\},"rsi":\{"value":0\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":1\},"r10":\{"value":1\},"r9":\{"value":5000000\},"r15":\{"value":0\},"rbx":\{"value":0\},"trap":\{"value":133\},"err":\{"value":33554766\},"r11":\{"value":582\},"rip":\{"value":140703538055910\},"rbp":\{"value":123145474268992\},"rsp":\{"value":123145474268936\},"r12":\{"value":0\},"rcx":\{"value":123145474268936\},"flavor":"x86_THREAD_STATE","rdi":\{"value":7939\}\}\},\{"id":399933,"name":".NET TP Worker","threadState":\{"r13":\{"value":25993558693272064\},"rax":\{"value":260\},"rflags":\{"value":663\},"cpu":\{"value":0\},"r14":\{"value":6052352\},"rsi":\{"value":25993558693272064\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":6052096\},"r10":\{"value":0\},"r9":\{"value":160\},"r15":\{"value":6052096\},"rbx":\{"value":22\},"trap":\{"value":133\},"err":\{"value":33554737\},"r11":\{"value":663\},"rip":\{"value":140703538056218\},"rbp":\{"value":123145462799776\},"rsp":\{"value":123145462799624\},"r12":\{"value":0\},"rcx":\{"value":123145462799624\},"flavor":"x86_THREAD_STATE","rdi":\{"value":105553170015376\}\},"frames":[\{"imageOffset":15386,"symbol":"__psynch_cvwait","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26404,"symbol":"_pthread_cond_wait","symbolLocation":1260,"imageIndex":43\},\{"imageOffset":38046,"sourceLine":175,"sourceFile":"pal_threading.c","symbol":"SystemNative_LowLevelMonitor_TimedWait","imageIndex":11,"symbolLocation":78\},\{"imageOffset":1273874,"sourceLine":334,"sourceFile":"WaitSubsystem.ThreadWaitInfo.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait","imageIndex":11,"symbolLocation":274\},\{"imageOffset":1275594,"sourceLine":320,"sourceFile":"WaitSubsystem.WaitableObject.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait","imageIndex":11,"symbolLocation":122\},\{"imageOffset":966212,"sourceLine":160,"sourceFile":"LowLevelLifoSemaphore.cs","symbol":"S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal","imageIndex":11,"symbolLocation":132\},\{"imageOffset":1270328,"sourceLine":116,"sourceFile":"PortableThreadPool.WorkerThread.cs","symbol":"S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart","imageIndex":11,"symbolLocation":408\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":399934,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":33554800\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":1\},"rsi":\{"value":134435\},"r8":\{"value":409604\},"cr2":\{"value":0\},"rdx":\{"value":123145467129856\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":123145467652984\},"rbx":\{"value":123145467654144\},"trap":\{"value":133\},"err":\{"value":33554800\},"r11":\{"value":582\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145467654144\},"r12":\{"value":5193733\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145467654144\}\}\},\{"triggered":true,"id":400100,"name":".NET TP Worker","threadState":\{"r13":\{"value":0\},"rax":\{"value":33554953\},"rflags":\{"value":582\},"cpu":\{"value":0\},"r14":\{"value":18\},"rsi":\{"value":2\},"r8":\{"value":123145470547632\},"cr2":\{"value":0\},"rdx":\{"value":0\},"r10":\{"value":0\},"r9":\{"value":0\},"r15":\{"value":0\},"rbx":\{"value":2\},"trap":\{"value":133\},"err":\{"value":33554953\},"r11":\{"value":582\},"rip":\{"value":140703538087554,"matchesCrashFrame":1\},"rbp":\{"value":123145470547472\},"rsp":\{"value":123145470547400\},"r12":\{"value":0\},"rcx":\{"value":123145470547400\},"flavor":"x86_THREAD_STATE","rdi":\{"value":18\}\},"frames":[\{"imageOffset":46722,"symbol":"__abort_with_payload","symbolLocation":10,"imageIndex":35\},\{"imageOffset":174094,"symbol":"abort_with_payload_wrapper_internal","symbolLocation":82,"imageIndex":35\},\{"imageOffset":174144,"symbol":"abort_with_payload","symbolLocation":9,"imageIndex":35\},\{"imageOffset":287281,"symbol":"_os_crash_msg","symbolLocation":98,"imageIndex":46\},\{"imageOffset":391358,"symbol":"NSViewHierarchyInvalidateVisibleRect","symbolLocation":690,"imageIndex":37\},\{"imageOffset":481609,"symbol":"-[NSView setFrameOrigin:]","symbolLocation":674,"imageIndex":37\},\{"imageOffset":2821311,"symbol":"-[NSThemeDocumentButton setFrameOrigin:ignoreRentry:]","symbolLocation":66,"imageIndex":37\},\{"imageOffset":477378,"symbol":"-[NSThemeFrame _updateButtonPositions]","symbolLocation":461,"imageIndex":37\},\{"imageOffset":470804,"symbol":"-[NSThemeFrame _tileTitlebarAndRedisplay:]","symbolLocation":82,"imageIndex":37\},\{"imageOffset":541930,"symbol":"-[NSTitledFrame _titleDidChange]","symbolLocation":158,"imageIndex":37\},\{"imageOffset":12274870,"symbol":"-[NSTitledFrame setTitle:subtitle:]","symbolLocation":698,"imageIndex":37\},\{"imageOffset":541102,"symbol":"-[NSThemeFrame setTitle:]","symbolLocation":50,"imageIndex":37\},\{"imageOffset":7420389,"symbol":"-[NSFrameView _updateTitleProperties:animated:]","symbolLocation":53,"imageIndex":37\},\{"imageOffset":12212816,"symbol":"-[NSThemeFrame _updateTitleProperties:animated:]","symbolLocation":186,"imageIndex":37\},\{"imageOffset":464384,"symbol":"__CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__","symbolLocation":137,"imageIndex":39\},\{"imageOffset":1056806,"symbol":"___CFXRegistrationPost_block_invoke","symbolLocation":88,"imageIndex":39\},\{"imageOffset":1056624,"symbol":"_CFXRegistrationPost","symbolLocation":532,"imageIndex":39\},\{"imageOffset":266011,"symbol":"_CFXNotificationPost","symbolLocation":682,"imageIndex":39\},\{"imageOffset":34830,"symbol":"-[NSNotificationCenter postNotificationName:object:userInfo:]","symbolLocation":82,"imageIndex":38\},\{"imageOffset":9490882,"symbol":"-[NSWindowTitleController _propertiesChanged:]","symbolLocation":147,"imageIndex":37\},\{"imageOffset":2080066,"symbol":"-[NSWindow _setDocumentEdited:]","symbolLocation":125,"imageIndex":37\},\{"imageOffset":7166931,"symbol":"SWELL_SetWindowRepre(HWND__*, char const*, bool)","symbolLocation":259,"imageIndex":34\},\{"imageOffset":8849727,"symbol":"SetCaption()","symbolLocation":1551,"imageIndex":34\},\{"imageOffset":2479563,"symbol":"Undo_OnStateChange(ReaProject*, char const*, int)","symbolLocation":11435,"imageIndex":34\},\{"imageOffset":611858,"symbol":"Main_OnCommandEx2(int, int, ReaProject*)","symbolLocation":194,"imageIndex":34\},\{"imageOffset":607568,"symbol":"Main_OnCommand(int, int)","symbolLocation":32,"imageIndex":34\},\{"imageOffset":1736178,"symbol":"<PInvokeDelegateWrapper>DriverControl24_Extension_DriverControl24_Extension_ReaperAPI_Main_OnCommandDel__<ForwardNativeFunctionWrapper>DriverControl24_Extension_DriverControl24_Extension_ReaperAPI_Main_OnCommandDel","symbolLocation":50,"imageIndex":11\},\{"imageOffset":572841,"sourceLine":2997,"sourceFile":"ReaperBridge.vb","symbol":"DriverControl24_Extension_DriverControl24_Extension_ReaperBridge__HandleRequest","imageIndex":11,"symbolLocation":36265\},\{"imageOffset":536109,"sourceLine":262,"sourceFile":"ReaperBridge.vb","symbol":"DriverControl24_Extension_DriverControl24_Extension_ReaperBridge__ProcessRequest","imageIndex":11,"symbolLocation":29\},\{"imageOffset":609432,"sourceLine":304,"sourceFile":"ReaperBridge.vb","symbol":"DriverControl24_Extension_DriverControl24_Extension_ReaperBridge_VB_StateMachine_29_StartPipeServerAsync__MoveNext","imageIndex":11,"symbolLocation":1208\},\{"imageOffset":971065,"sourceLine":179,"sourceFile":"ExecutionContext.cs","symbol":"S_P_CoreLib_System_Threading_ExecutionContext__RunInternal","imageIndex":11,"symbolLocation":137\},\{"imageOffset":1571459,"sourceLine":356,"sourceFile":"AsyncTaskMethodBuilderT.cs","symbol":"S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<S_P_CoreLib_System_Threading_Tasks_VoidTaskResult__DriverControl24_Extension_DriverControl24_Extension_ReaperBridge_VB_StateMachine_29_StartPipeServerAsync>__MoveNext_0","imageIndex":11,"symbolLocation":67\},\{"imageOffset":1020674,"sourceLine":795,"sourceFile":"TaskContinuation.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_AwaitTaskContinuation__RunOrScheduleAction_0","imageIndex":11,"symbolLocation":82\},\{"imageOffset":1014543,"sourceLine":3474,"sourceFile":"Task.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_Task__RunContinuations","imageIndex":11,"symbolLocation":79\},\{"imageOffset":1623806,"sourceLine":385,"sourceFile":"Future.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_Task_1<System___Canon>__TrySetResult","imageIndex":11,"symbolLocation":142\},\{"imageOffset":1287923,"sourceLine":985,"sourceFile":"StreamReader.cs","symbol":"S_P_CoreLib_System_IO_StreamReader__ReadLineAsyncInternal_d__63__MoveNext","imageIndex":11,"symbolLocation":2131\},\{"imageOffset":971065,"sourceLine":179,"sourceFile":"ExecutionContext.cs","symbol":"S_P_CoreLib_System_Threading_ExecutionContext__RunInternal","imageIndex":11,"symbolLocation":137\},\{"imageOffset":1649207,"sourceLine":356,"sourceFile":"AsyncTaskMethodBuilderT.cs","symbol":"S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<System___Canon__S_P_CoreLib_System_IO_StreamReader__ReadLineAsyncInternal_d__63>__MoveNext_0","imageIndex":11,"symbolLocation":87\},\{"imageOffset":1020674,"sourceLine":795,"sourceFile":"TaskContinuation.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_AwaitTaskContinuation__RunOrScheduleAction_0","imageIndex":11,"symbolLocation":82\},\{"imageOffset":1014543,"sourceLine":3474,"sourceFile":"Task.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_Task__RunContinuations","imageIndex":11,"symbolLocation":79\},\{"imageOffset":1541750,"sourceLine":385,"sourceFile":"Future.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_Task_1<Int32>__TrySetResult","imageIndex":11,"symbolLocation":134\},\{"imageOffset":1285664,"sourceLine":1396,"sourceFile":"StreamReader.cs","symbol":"S_P_CoreLib_System_IO_StreamReader__ReadBufferAsync_d__72__MoveNext","imageIndex":11,"symbolLocation":1088\},\{"imageOffset":971065,"sourceLine":179,"sourceFile":"ExecutionContext.cs","symbol":"S_P_CoreLib_System_Threading_ExecutionContext__RunInternal","imageIndex":11,"symbolLocation":137\},\{"imageOffset":1548291,"sourceLine":356,"sourceFile":"AsyncTaskMethodBuilderT.cs","symbol":"S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<Int32__S_P_CoreLib_System_IO_StreamReader__ReadBufferAsync_d__72>__MoveNext_0","imageIndex":11,"symbolLocation":67\},\{"imageOffset":1020674,"sourceLine":795,"sourceFile":"TaskContinuation.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_AwaitTaskContinuation__RunOrScheduleAction_0","imageIndex":11,"symbolLocation":82\},\{"imageOffset":1014543,"sourceLine":3474,"sourceFile":"Task.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_Task__RunContinuations","imageIndex":11,"symbolLocation":79\},\{"imageOffset":1541750,"sourceLine":385,"sourceFile":"Future.cs","symbol":"S_P_CoreLib_System_Threading_Tasks_Task_1<Int32>__TrySetResult","imageIndex":11,"symbolLocation":134\},\{"imageOffset":658728,"sourceLine":313,"sourceFile":"PipeStream.Unix.cs","symbol":"System_IO_Pipes_System_IO_Pipes_PipeStream__ReadAsyncCore_d__82__MoveNext","imageIndex":11,"symbolLocation":440\},\{"imageOffset":971065,"sourceLine":179,"sourceFile":"ExecutionContext.cs","symbol":"S_P_CoreLib_System_Threading_ExecutionContext__RunInternal","imageIndex":11,"symbolLocation":137\},\{"imageOffset":1547331,"sourceLine":356,"sourceFile":"AsyncTaskMethodBuilderT.cs","symbol":"S_P_CoreLib_System_Runtime_CompilerServices_AsyncTaskMethodBuilder_1_AsyncStateMachineBox_1<Int32__System_IO_Pipes_System_IO_Pipes_PipeStream__ReadAsyncCore_d__82>__MoveNext_0","imageIndex":11,"symbolLocation":67\},\{"imageOffset":700300,"sourceLine":279,"sourceFile":"SocketAsyncEngine.Unix.cs","symbol":"System_Net_Sockets_System_Net_Sockets_SocketAsyncEngine__System_Threading_IThreadPoolWorkItem_Execute","imageIndex":11,"symbolLocation":172\},\{"imageOffset":991939,"sourceLine":1051,"sourceFile":"ThreadPoolWorkQueue.cs","symbol":"S_P_CoreLib_System_Threading_ThreadPoolWorkQueue__Dispatch","imageIndex":11,"symbolLocation":643\},\{"imageOffset":1270279,"sourceLine":118,"sourceFile":"PortableThreadPool.WorkerThread.cs","symbol":"S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart","imageIndex":11,"symbolLocation":359\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":400102,"frames":[\{"imageOffset":15078,"symbol":"__semwait_signal","symbolLocation":10,"imageIndex":35\},\{"imageOffset":64097,"symbol":"nanosleep","symbolLocation":199,"imageIndex":46\},\{"imageOffset":63892,"symbol":"usleep","symbolLocation":53,"imageIndex":46\},\{"imageOffset":39153,"imageIndex":0\},\{"imageOffset":302934,"imageIndex":0\},\{"imageOffset":24971,"symbol":"_pthread_start","symbolLocation":99,"imageIndex":43\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":4\},"rflags":\{"value":583\},"cpu":\{"value":0\},"r14":\{"value":123145454288704\},"rsi":\{"value":0\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":1\},"r10":\{"value":1\},"r9":\{"value":15000000\},"r15":\{"value":0\},"rbx":\{"value":0\},"trap":\{"value":133\},"err":\{"value":33554766\},"r11":\{"value":582\},"rip":\{"value":140703538055910\},"rbp":\{"value":123145454288688\},"rsp":\{"value":123145454288632\},"r12":\{"value":0\},"rcx":\{"value":123145454288632\},"flavor":"x86_THREAD_STATE","rdi":\{"value":7939\}\}\},\{"id":400554,"name":".NET TP Worker","threadState":\{"r13":\{"value":17321710482983680\},"rax":\{"value":260\},"rflags":\{"value":663\},"cpu":\{"value":0\},"r14":\{"value":4033280\},"rsi":\{"value":17321710482983680\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":4033024\},"r10":\{"value":0\},"r9":\{"value":160\},"r15":\{"value":4033024\},"rbx":\{"value":22\},"trap":\{"value":133\},"err":\{"value":33554737\},"r11":\{"value":663\},"rip":\{"value":140703538056218\},"rbp":\{"value":123145472146848\},"rsp":\{"value":123145472146696\},"r12":\{"value":0\},"rcx":\{"value":123145472146696\},"flavor":"x86_THREAD_STATE","rdi":\{"value":105553170029744\}\},"frames":[\{"imageOffset":15386,"symbol":"__psynch_cvwait","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26404,"symbol":"_pthread_cond_wait","symbolLocation":1260,"imageIndex":43\},\{"imageOffset":38046,"sourceLine":175,"sourceFile":"pal_threading.c","symbol":"SystemNative_LowLevelMonitor_TimedWait","imageIndex":11,"symbolLocation":78\},\{"imageOffset":1273874,"sourceLine":334,"sourceFile":"WaitSubsystem.ThreadWaitInfo.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait","imageIndex":11,"symbolLocation":274\},\{"imageOffset":1275594,"sourceLine":320,"sourceFile":"WaitSubsystem.WaitableObject.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait","imageIndex":11,"symbolLocation":122\},\{"imageOffset":966212,"sourceLine":160,"sourceFile":"LowLevelLifoSemaphore.cs","symbol":"S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal","imageIndex":11,"symbolLocation":132\},\{"imageOffset":1270328,"sourceLine":116,"sourceFile":"PortableThreadPool.WorkerThread.cs","symbol":"S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart","imageIndex":11,"symbolLocation":408\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":400563,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":0\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":0\},"rsi":\{"value":0\},"r8":\{"value":278532\},"cr2":\{"value":0\},"rdx":\{"value":123145472159744\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":0\},"rbx":\{"value":0\},"trap":\{"value":0\},"err":\{"value":0\},"r11":\{"value":0\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145472684032\},"r12":\{"value":0\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145472684032\}\}\},\{"id":400564,"frames":[\{"imageOffset":6848,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":43\}],"threadState":\{"r13":\{"value":0\},"rax":\{"value":0\},"rflags":\{"value":512\},"cpu":\{"value":0\},"r14":\{"value":0\},"rsi":\{"value":0\},"r8":\{"value":278532\},"cr2":\{"value":0\},"rdx":\{"value":123145467666432\},"r10":\{"value":0\},"r9":\{"value":18446744073709551615\},"r15":\{"value":0\},"rbx":\{"value":0\},"trap":\{"value":0\},"err":\{"value":0\},"r11":\{"value":0\},"rip":\{"value":140703538289344\},"rbp":\{"value":0\},"rsp":\{"value":123145468190720\},"r12":\{"value":0\},"rcx":\{"value":0\},"flavor":"x86_THREAD_STATE","rdi":\{"value":123145468190720\}\}\},\{"id":400579,"name":".NET TP Worker","threadState":\{"r13":\{"value":26466348693325824\},"rax":\{"value":260\},"rflags":\{"value":663\},"cpu":\{"value":0\},"r14":\{"value":6162432\},"rsi":\{"value":26466348693325824\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":6162176\},"r10":\{"value":0\},"r9":\{"value":160\},"r15":\{"value":6162176\},"rbx":\{"value":22\},"trap":\{"value":133\},"err":\{"value":33554737\},"r11":\{"value":663\},"rip":\{"value":140703538056218\},"rbp":\{"value":123145475853728\},"rsp":\{"value":123145475853576\},"r12":\{"value":0\},"rcx":\{"value":123145475853576\},"flavor":"x86_THREAD_STATE","rdi":\{"value":105553170031984\}\},"frames":[\{"imageOffset":15386,"symbol":"__psynch_cvwait","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26404,"symbol":"_pthread_cond_wait","symbolLocation":1260,"imageIndex":43\},\{"imageOffset":38046,"sourceLine":175,"sourceFile":"pal_threading.c","symbol":"SystemNative_LowLevelMonitor_TimedWait","imageIndex":11,"symbolLocation":78\},\{"imageOffset":1273874,"sourceLine":334,"sourceFile":"WaitSubsystem.ThreadWaitInfo.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait","imageIndex":11,"symbolLocation":274\},\{"imageOffset":1275594,"sourceLine":320,"sourceFile":"WaitSubsystem.WaitableObject.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait","imageIndex":11,"symbolLocation":122\},\{"imageOffset":966212,"sourceLine":160,"sourceFile":"LowLevelLifoSemaphore.cs","symbol":"S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal","imageIndex":11,"symbolLocation":132\},\{"imageOffset":1270328,"sourceLine":116,"sourceFile":"PortableThreadPool.WorkerThread.cs","symbol":"S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart","imageIndex":11,"symbolLocation":408\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\},\{"id":400623,"name":".NET TP Worker","threadState":\{"r13":\{"value":23989148995369728\},"rax":\{"value":260\},"rflags":\{"value":663\},"cpu":\{"value":0\},"r14":\{"value":5585664\},"rsi":\{"value":23989148995369728\},"r8":\{"value":0\},"cr2":\{"value":0\},"rdx":\{"value":5585408\},"r10":\{"value":0\},"r9":\{"value":160\},"r15":\{"value":5585408\},"rbx":\{"value":22\},"trap":\{"value":133\},"err":\{"value":33554737\},"r11":\{"value":663\},"rip":\{"value":140703538056218\},"rbp":\{"value":123145479024032\},"rsp":\{"value":123145479023880\},"r12":\{"value":0\},"rcx":\{"value":123145479023880\},"flavor":"x86_THREAD_STATE","rdi":\{"value":105553170027056\}\},"frames":[\{"imageOffset":15386,"symbol":"__psynch_cvwait","symbolLocation":10,"imageIndex":35\},\{"imageOffset":26404,"symbol":"_pthread_cond_wait","symbolLocation":1260,"imageIndex":43\},\{"imageOffset":38046,"sourceLine":175,"sourceFile":"pal_threading.c","symbol":"SystemNative_LowLevelMonitor_TimedWait","imageIndex":11,"symbolLocation":78\},\{"imageOffset":1273874,"sourceLine":334,"sourceFile":"WaitSubsystem.ThreadWaitInfo.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait","imageIndex":11,"symbolLocation":274\},\{"imageOffset":1275594,"sourceLine":320,"sourceFile":"WaitSubsystem.WaitableObject.Unix.cs","symbol":"S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait","imageIndex":11,"symbolLocation":122\},\{"imageOffset":966212,"sourceLine":160,"sourceFile":"LowLevelLifoSemaphore.cs","symbol":"S_P_CoreLib_System_Threading_LowLevelLifoSemaphore__WaitForSignal","imageIndex":11,"symbolLocation":132\},\{"imageOffset":1270328,"sourceLine":116,"sourceFile":"PortableThreadPool.WorkerThread.cs","symbol":"S_P_CoreLib_System_Threading_PortableThreadPool_WorkerThread__WorkerThreadStart","imageIndex":11,"symbolLocation":408\},\{"imageOffset":963441,"sourceLine":459,"sourceFile":"Thread.NativeAot.cs","symbol":"S_P_CoreLib_System_Threading_Thread__StartThread","imageIndex":11,"symbolLocation":273\},\{"imageOffset":964361,"sourceLine":121,"sourceFile":"Thread.NativeAot.Unix.cs","symbol":"ThreadEntryPoint","imageIndex":11,"symbolLocation":25\},\{"imageOffset":6883,"symbol":"thread_start","symbolLocation":15,"imageIndex":43\}]\}],\
+  "usedImages" : [\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5092786176,\
+    "CFBundleShortVersionString" : "1.8.7 build 145",\
+    "CFBundleIdentifier" : "se.propellerheads.rewire.library",\
+    "size" : 442368,\
+    "uuid" : "b284579f-660f-3550-8327-64dbedc9a218",\
+    "path" : "\\/Library\\/Application Support\\/Propellerhead Software\\/*\\/ReWire.bundle\\/Contents\\/MacOS\\/ReWire",\
+    "name" : "ReWire",\
+    "CFBundleVersion" : "1.8.7"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5158203392,\
+    "CFBundleShortVersionString" : "1.0",\
+    "CFBundleIdentifier" : "com.apple.icloud.drive.fileprovider.override",\
+    "size" : 12288,\
+    "uuid" : "ace2a780-2ebe-36a6-b39f-892217a4d253",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/FileProvider.framework\\/OverrideBundles\\/iCloudDriveFileProviderOverride.bundle\\/Contents\\/MacOS\\/iCloudDriveFileProviderOverride",\
+    "name" : "iCloudDriveFileProviderOverride",\
+    "CFBundleVersion" : "2720.140.11"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5158600704,\
+    "CFBundleShortVersionString" : "14.6",\
+    "CFBundleIdentifier" : "com.apple.findersync.fileprovideroverride.FinderSyncCollaborationFileProviderOverride",\
+    "size" : 114688,\
+    "uuid" : "14b7bd5a-3beb-39e0-ae86-f75977b19d1e",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/FileProvider.framework\\/OverrideBundles\\/FinderSyncCollaborationFileProviderOverride.bundle\\/Contents\\/MacOS\\/FinderSyncCollaborationFileProviderOverride",\
+    "name" : "FinderSyncCollaborationFileProviderOverride",\
+    "CFBundleVersion" : "1632.6.3"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5125771264,\
+    "CFBundleShortVersionString" : "1835.140.3.700.1",\
+    "CFBundleIdentifier" : "com.apple.FileProviderOverride",\
+    "size" : 20480,\
+    "uuid" : "105b8da7-57e8-3248-9f90-49b06410a30d",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/FileProvider.framework\\/OverrideBundles\\/FileProviderOverride.bundle\\/Contents\\/MacOS\\/FileProviderOverride",\
+    "name" : "FileProviderOverride",\
+    "CFBundleVersion" : "1835.140.3.700.1"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5119356928,\
+    "size" : 81920,\
+    "uuid" : "24d572c8-67df-3baa-b8ac-b571f69db3ae",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/reacontrolMIDI.vst.dylib",\
+    "name" : "reacontrolMIDI.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5119610880,\
+    "size" : 49152,\
+    "uuid" : "651669ae-bf21-3138-9987-635a9e6e0106",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/readelay.vst.dylib",\
+    "name" : "readelay.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5118926848,\
+    "size" : 81920,\
+    "uuid" : "19073a40-3e7d-3381-86fa-f8139735c85b",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/reacast.vst.dylib",\
+    "name" : "reacast.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 5119193088,\
+    "size" : 81920,\
+    "uuid" : "2e5ba0e8-7eff-3828-a6c7-ab0fd045af73",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/reaeq.vst.dylib",\
+    "name" : "reaeq.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4485455872,\
+    "size" : 65536,\
+    "uuid" : "025f0554-1ba5-3fba-9ad5-d6b6d3552f1a",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/realimit.vst.dylib",\
+    "name" : "realimit.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4482793472,\
+    "size" : 65536,\
+    "uuid" : "82eebc95-c920-3964-b555-8be05050fc4f",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/reacomp.vst.dylib",\
+    "name" : "reacomp.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4489011200,\
+    "size" : 131072,\
+    "uuid" : "6c2cadd6-6d6a-3d83-acaf-325328a1d5d1",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FX\\/reaverb.vst.dylib",\
+    "name" : "reaverb.vst.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4493729792,\
+    "size" : 3153920,\
+    "uuid" : "0bbee41d-90eb-362a-9b24-a7f88fa83817",\
+    "path" : "\\/Users\\/USER\\/Library\\/Application Support\\/REAPER\\/*\\/reaper_c24bridge.dylib",\
+    "name" : "reaper_c24bridge.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4480344064,\
+    "size" : 12288,\
+    "uuid" : "de9190e1-236d-3d88-8a24-97c7e891aa00",\
+    "path" : "\\/Users\\/USER\\/Library\\/Application Support\\/REAPER\\/*\\/reaper_c24events.dylib",\
+    "name" : "reaper_c24events.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4499218432,\
+    "size" : 5488640,\
+    "uuid" : "b885049b-459b-f8d7-e896-1b2cb24b22c0",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/FFmpeg.dylib",\
+    "name" : "FFmpeg.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4483227648,\
+    "size" : 32768,\
+    "uuid" : "554fed03-e843-337a-bdb1-2795c58e1cc2",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reap_osx_modern.dylib",\
+    "name" : "reap_osx_modern.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4487290880,\
+    "size" : 1114112,\
+    "uuid" : "514dfd7a-6a2d-335d-9a65-2deecf59e5d9",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_video.dylib",\
+    "name" : "reaper_video.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4485062656,\
+    "size" : 245760,\
+    "uuid" : "6e986a4d-a131-34c5-8572-d1833d881ed4",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_csurf.dylib",\
+    "name" : "reaper_csurf.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4489302016,\
+    "size" : 704512,\
+    "uuid" : "69932e21-40d8-38e5-8cfa-3321dbbca6c5",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_ogg.dylib",\
+    "name" : "reaper_ogg.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4483112960,\
+    "size" : 49152,\
+    "uuid" : "1c128a03-b1ab-30bb-9e76-1970b02cec2e",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_cd.dylib",\
+    "name" : "reaper_cd.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4484603904,\
+    "size" : 311296,\
+    "uuid" : "6d94fbe8-a8c7-3bda-ac2d-9a68623ab788",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_explorer.dylib",\
+    "name" : "reaper_explorer.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4482998272,\
+    "size" : 49152,\
+    "uuid" : "b6d4f225-6d5f-3ad2-ad88-d9eef850a9c1",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_ddp.dylib",\
+    "name" : "reaper_ddp.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4481794048,\
+    "size" : 49152,\
+    "uuid" : "fb31093e-3856-3cca-8c2b-724c436f5e43",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_rex.dylib",\
+    "name" : "reaper_rex.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4483358720,\
+    "size" : 212992,\
+    "uuid" : "c36be334-1e1a-3fcd-b6b0-1e864a10a6b5",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_flac.dylib",\
+    "name" : "reaper_flac.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4481204224,\
+    "size" : 475136,\
+    "uuid" : "599c5e56-2ca5-347d-9b62-a2906c58c65f",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_opus.dylib",\
+    "name" : "reaper_opus.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4482412544,\
+    "size" : 212992,\
+    "uuid" : "b845cbf5-b802-3eae-8d1f-800028346665",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_wavpack.dylib",\
+    "name" : "reaper_wavpack.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4485619712,\
+    "size" : 1359872,\
+    "uuid" : "8f1ea9d4-56e2-3119-8bcc-ee9f95d45eb3",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_midi.dylib",\
+    "name" : "reaper_midi.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4481974272,\
+    "size" : 311296,\
+    "uuid" : "c1480562-3088-02cc-c915-3a27bbd64f39",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/libmp3lame.dylib",\
+    "name" : "libmp3lame.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4479926272,\
+    "size" : 163840,\
+    "uuid" : "ebd316e5-993c-3580-9d36-87aa5cb91cbc",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_mp3dec.dylib",\
+    "name" : "reaper_mp3dec.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4480413696,\
+    "size" : 147456,\
+    "uuid" : "3fb72d31-91f6-3ae6-ad4f-f2a4ca835434",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/reaper_wave.dylib",\
+    "name" : "reaper_wave.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4480679936,\
+    "size" : 360448,\
+    "uuid" : "709b0b10-943b-390a-9d2a-4e9bf65a0271",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/jsfx.dylib",\
+    "name" : "jsfx.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4479074304,\
+    "size" : 114688,\
+    "uuid" : "ce72970a-992a-3e47-8379-0b094b1a3c51",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/rubberband.dylib",\
+    "name" : "rubberband.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4382945280,\
+    "size" : 32768,\
+    "uuid" : "2a57b5f3-1256-34c7-b78a-32b26f6f5d4e",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/soundtouch.dylib",\
+    "name" : "soundtouch.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4479315968,\
+    "size" : 245760,\
+    "uuid" : "d0d01f45-be01-3981-a808-3d4e79778738",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/Plugins\\/elastique3.dylib",\
+    "name" : "elastique3.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64h",\
+    "base" : 4380274688,\
+    "size" : 53248,\
+    "uuid" : "99e4446c-8ce5-3bb4-8fdf-118e287e76d1",\
+    "path" : "\\/usr\\/lib\\/libobjc-trampolines.dylib",\
+    "name" : "libobjc-trampolines.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 4361773056,\
+    "CFBundleShortVersionString" : "7.82.0_3385784u",\
+    "CFBundleIdentifier" : "com.cockos.reaper",\
+    "size" : 12812288,\
+    "uuid" : "6ccb2dfe-3dd4-33dd-ae46-6ec13b621fb1",\
+    "path" : "\\/Applications\\/REAPER.app\\/Contents\\/MacOS\\/REAPER",\
+    "name" : "REAPER",\
+    "CFBundleVersion" : "7.82.0_3385784u"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703538040832,\
+    "size" : 241656,\
+    "uuid" : "57ed0098-f11e-37e6-b552-a96f3183030c",\
+    "path" : "\\/usr\\/lib\\/system\\/libsystem_kernel.dylib",\
+    "name" : "libsystem_kernel.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703629381632,\
+    "CFBundleShortVersionString" : "1.600.0",\
+    "CFBundleIdentifier" : "com.apple.SkyLight",\
+    "size" : 4599807,\
+    "uuid" : "76842020-8f16-3d88-b395-e3982a09bff1",\
+    "path" : "\\/System\\/Library\\/PrivateFrameworks\\/SkyLight.framework\\/Versions\\/A\\/SkyLight",\
+    "name" : "SkyLight"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703596040192,\
+    "CFBundleShortVersionString" : "6.9",\
+    "CFBundleIdentifier" : "com.apple.AppKit",\
+    "size" : 21172216,\
+    "uuid" : "6de54ea6-c38a-3960-b9e6-540ec5285497",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/AppKit.framework\\/Versions\\/C\\/AppKit",\
+    "name" : "AppKit",\
+    "CFBundleVersion" : "2487.70.105.1"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703555289088,\
+    "CFBundleShortVersionString" : "6.9",\
+    "CFBundleIdentifier" : "com.apple.Foundation",\
+    "size" : 12808188,\
+    "uuid" : "54dfdb59-c8d1-3ac4-a710-b6e4c8c194c6",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/Foundation.framework\\/Versions\\/C\\/Foundation",\
+    "name" : "Foundation",\
+    "CFBundleVersion" : "2602.0.902"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64h",\
+    "base" : 140703538704384,\
+    "CFBundleShortVersionString" : "6.9",\
+    "CFBundleIdentifier" : "com.apple.CoreFoundation",\
+    "size" : 4829181,\
+    "uuid" : "fedaf68c-f484-3fca-8866-a9e7e46ce7b6",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/CoreFoundation.framework\\/Versions\\/A\\/CoreFoundation",\
+    "name" : "CoreFoundation",\
+    "CFBundleVersion" : "2602.0.902"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703717412864,\
+    "CFBundleShortVersionString" : "2.1.1",\
+    "CFBundleIdentifier" : "com.apple.HIToolbox",\
+    "size" : 2732020,\
+    "uuid" : "5f06f268-b51f-31fc-9dfc-ab1eced819c9",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/Carbon.framework\\/Versions\\/A\\/Frameworks\\/HIToolbox.framework\\/Versions\\/A\\/HIToolbox",\
+    "name" : "HIToolbox"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703534563328,\
+    "size" : 592520,\
+    "uuid" : "9772e867-e2b9-3633-9b7e-fcd8de0eaea4",\
+    "path" : "\\/usr\\/lib\\/dyld",\
+    "name" : "dyld"\
+  \},\
+  \{\
+    "size" : 0,\
+    "source" : "A",\
+    "base" : 0,\
+    "uuid" : "00000000-0000-0000-0000-000000000000"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703538282496,\
+    "size" : 49144,\
+    "uuid" : "79ecab15-71f1-3d6a-8a96-0623e622205f",\
+    "path" : "\\/usr\\/lib\\/system\\/libsystem_pthread.dylib",\
+    "name" : "libsystem_pthread.dylib"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703990476800,\
+    "CFBundleShortVersionString" : "2.0",\
+    "CFBundleIdentifier" : "com.apple.audio.midi.CoreMIDI",\
+    "size" : 573430,\
+    "uuid" : "3afc3ace-85e4-32c0-827f-bf3a64d97b80",\
+    "path" : "\\/System\\/Library\\/Frameworks\\/CoreMIDI.framework\\/Versions\\/A\\/CoreMIDI",\
+    "name" : "CoreMIDI",\
+    "CFBundleVersion" : "88"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703714570240,\
+    "CFBundleShortVersionString" : "1.0",\
+    "CFBundleIdentifier" : "com.apple.audio.caulk",\
+    "size" : 155640,\
+    "uuid" : "753d87c1-28f1-3b2a-97be-277296e2e48f",\
+    "path" : "\\/System\\/Library\\/PrivateFrameworks\\/caulk.framework\\/Versions\\/A\\/caulk",\
+    "name" : "caulk"\
+  \},\
+  \{\
+    "source" : "P",\
+    "arch" : "x86_64",\
+    "base" : 140703536889856,\
+    "size" : 557048,\
+    "uuid" : "17b641ba-925c-39a9-aa43-ab3b0bcdfe01",\
+    "path" : "\\/usr\\/lib\\/system\\/libsystem_c.dylib",\
+    "name" : "libsystem_c.dylib"\
+  \}\
+],\
+  "sharedCache" : \{\
+  "base" : 140703533867008,\
+  "size" : 25769803776,\
+  "uuid" : "4130a2ba-6fb5-3f0f-be91-97e2e87b184e"\
+\},\
+  "vmSummary" : "ReadOnly portion of Libraries: Total=854.2M resident=0K(0%) swapped_out_or_unallocated=854.2M(100%)\\nWritable regions: Total=677.6M written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=677.6M(100%)\\n\\n                                VIRTUAL   REGION \\nREGION TYPE                        SIZE    COUNT (non-coalesced) \\n===========                     =======  ======= \\nAccelerate framework               256K        2 \\nActivity Tracing                   256K        1 \\nCG image                           128K       12 \\nColorSync                          256K       32 \\nCoreAnimation                     1152K      106 \\nCoreGraphics                        32K        5 \\nCoreImage                            4K        1 \\nCoreUI image data                 3088K       26 \\nFoundation                          44K        2 \\nImage IO                            16K        4 \\nKernel Alloc Once                    8K        1 \\nMALLOC                           641.1M      336 \\nMALLOC guard page                   32K        8 \\nMALLOC_LARGE (reserved)           2560K        3         reserved VM address space (unallocated)\\nMach message                       120K        6 \\nSTACK GUARD                       56.1M       24 \\nStack                             26.4M       24 \\nVM_ALLOCATE                      521.4M       76 \\n__CTF                               824        1 \\n__DATA                            36.9M      591 \\n__DATA_CONST                      37.6M      359 \\n__DATA_DIRTY                      1588K      197 \\n__FONT_DATA                        2352        1 \\n__LINKEDIT                       184.2M       36 \\n__OBJC_RO                         71.9M        1 \\n__OBJC_RW                         2201K        2 \\n__TEXT                           669.9M      606 \\nmapped file                      112.7M       41 \\nshared memory                     1320K       23 \\n===========                     =======  ======= \\nTOTAL                              2.3G     2527 \\nTOTAL, minus reserved VM space     2.3G     2527 \\n",\
+  "legacyInfo" : \{\
+  "threadTriggered" : \{\
+    "name" : ".NET TP Worker"\
+  \}\
+\},\
+  "logWritingSignature" : "d138bdacc27bcf65b9f440227f80f3d462d5a7e7",\
+  "trialInfo" : \{\
+  "rollouts" : [\
+    \{\
+      "rolloutId" : "62745b8e85854550ad70b6e4",\
+      "factorPackIds" : \{\
+\
+      \},\
+      "deploymentId" : 240000073\
+    \},\
+    \{\
+      "rolloutId" : "6434420a89ec2e0a7a38bf5a",\
+      "factorPackIds" : \{\
+\
+      \},\
+      "deploymentId" : 240000011\
+    \}\
+  ],\
+  "experiments" : [\
+\
+  ]\
+\}\
+\}\
+\
+Model: MacBookAir8,2, BootROM 2075.101.2.0.0 (iBridge: 22.16.14248.0.0,0), 2 processors, Dual-Core Intel Core i5, 1,6 GHz, 16 GB, SMC \
+Graphics: Intel UHD Graphics 617, Intel UHD Graphics 617, Built-In\
+Display: Color LCD, 2560 x 1600 Retina, Main, MirrorOff, Online\
+Memory Module: BANK 0/DIMM0, 8 GB, LPDDR3, 2133 MHz, 0x80AD, 0x483943434E4E4E4641474D4C4C522D4E5644\
+Memory Module: BANK 1/DIMM0, 8 GB, LPDDR3, 2133 MHz, 0x80AD, 0x483943434E4E4E4641474D4C4C522D4E5644\
+AirPort: spairport_wireless_card_type_wifi (0x14E4, 0x843), wl0: Jul  8 2023 17:49:51 version 9.30.503.0.32.5.87 FWID 01-e74b9cb0\
+AirPort: \
+Bluetooth: Version (null), 0 services, 0 devices, 0 incoming serial ports\
+Network Service: USB 10/100/1000 LAN, Ethernet, en5\
+Network Service: Wi-Fi, AirPort, en0\
+USB Device: USB3.0 Hub\
+USB Device: USB3.0 Hub\
+USB Device: USB 10/100/1000 LAN\
+USB Device: USB30Bus\
+USB Device: USB2.0 Hub\
+USB Device: USB2.0 Hub\
+USB Device: USB 2.0 BILLBOARD\
+USB Device: T2Bus\
+USB Device: Apple Internal Keyboard / Trackpad\
+USB Device: Headset\
+USB Device: Ambient Light Sensor\
+USB Device: FaceTime HD Camera (Built-in)\
+USB Device: Apple T2 Controller\
+Thunderbolt Bus: MacBook Air, Apple Inc., 47.5\
+}
