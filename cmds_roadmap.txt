@@ -45,7 +45,7 @@ C24desk_OnButtonReleased
 C24desk_OnButtonReleased ChannelStrip_1 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
-C24desk_OnButtonReleased 
+C24desk_OnButtonReleased ChannelSettings Edit_Byp
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
@@ -60,6 +60,8 @@ C24desk_GetFaderValue ChannelStrip_1 Fader_1
 C24desk_OnButtonReleased Bank Bank_Right
 C24desk_OnButtonReleased Bank Bank_Left
 
+C24desk_GetButtonStatus ChannelStrip_1 EqMode_1
+C24desk_GetButtonStatus ChannelStrip_1 DynMode_1
 C24desk_GetButtonStatus ChannelStrip_1 InsertMode_1
 C24desk_GetButtonStatus Inserts Inserts_Param
 C24desk_GetButtonStatus Automation Auto_Fader

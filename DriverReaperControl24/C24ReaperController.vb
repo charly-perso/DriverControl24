@@ -1284,7 +1284,7 @@ Public Class C24ReaperController
                 End If
 
 
-
+                c24Trk.EqMode.IsBlinking = False
                 If EqDynBypassMode Then
                     Dim _FXBypassStatus = _ReaperTracksManager.IsTrackEqFxBypassed(reaperTrk.TrackIndex)
                     Select Case _FXBypassStatus
@@ -1306,14 +1306,16 @@ Public Class C24ReaperController
 
                             If c24Trk.EqMode.IsBlinking Then
                                 'Bypass tout
-                                _ReaperTracksManager.SetTrackEqFxBypassed(reaperTrk.TrackIndex, True)
-
+                                _ReaperTracksManager.SetTrackEqFxActive(reaperTrk.TrackIndex, False)
+                                c24Trk.EqMode.IsBlinking = False
                             ElseIf c24Trk.EqMode.Led Then
                                 'Bypass rien
-                                _ReaperTracksManager.SetTrackEqFxBypassed(reaperTrk.TrackIndex, False)
+                                _ReaperTracksManager.SetTrackEqFxActive(reaperTrk.TrackIndex, True)
+                                c24Trk.EqMode.IsBlinking = False
                             Else
                                 'Bypass tout
-                                _ReaperTracksManager.SetTrackEqFxBypassed(reaperTrk.TrackIndex, True)
+                                _ReaperTracksManager.SetTrackEqFxActive(reaperTrk.TrackIndex, False)
+                                c24Trk.EqMode.Led = True
                             End If
 
                         Else
@@ -1345,7 +1347,7 @@ Public Class C24ReaperController
                 h.EqBtnH = eqBtnH
                 AddHandler c24Trk.EqMode.OnButtonReleased, eqBtnH
 
-
+                c24Trk.DynMode.IsBlinking = False
                 If EqDynBypassMode Then
                     Dim _FXBypassStatus = _ReaperTracksManager.IsTrackDynFxBypassed(reaperTrk.TrackIndex)
                     Select Case _FXBypassStatus
@@ -1367,14 +1369,16 @@ Public Class C24ReaperController
                         If EqDynBypassMode Then
                             If c24Trk.DynMode.IsBlinking Then
                                 'Bypass tout
-                                _ReaperTracksManager.SetTrackDynFxBypassed(reaperTrk.TrackIndex, True)
-
+                                _ReaperTracksManager.SetTrackDynFxActive(reaperTrk.TrackIndex, False)
+                                c24Trk.DynMode.IsBlinking = False
                             ElseIf c24Trk.DynMode.Led Then
                                 'Bypass rien
-                                _ReaperTracksManager.SetTrackDynFxBypassed(reaperTrk.TrackIndex, False)
+                                _ReaperTracksManager.SetTrackDynFxActive(reaperTrk.TrackIndex, True)
+                                c24Trk.DynMode.IsBlinking = False
                             Else
                                 'Bypass tout
-                                _ReaperTracksManager.SetTrackDynFxBypassed(reaperTrk.TrackIndex, True)
+                                _ReaperTracksManager.SetTrackDynFxActive(reaperTrk.TrackIndex, False)
+                                c24Trk.DynMode.Led = True
                             End If
                         Else
                             Dim TrkIndex = _ReaperTracksManager.GetAbsoluteTrackIndex(trackNb - 1)
@@ -1404,7 +1408,7 @@ Public Class C24ReaperController
                 h.DynBtnH = dynBtnH
                 AddHandler c24Trk.DynMode.OnButtonReleased, dynBtnH
 
-
+                c24Trk.InsertMode.IsBlinking = False
                 If InsertBypassMode Then
                     Dim _FXBypassStatus = _ReaperTracksManager.IsTrackGenericFxBypassed(reaperTrk.TrackIndex)
                     Select Case _FXBypassStatus
@@ -1426,14 +1430,16 @@ Public Class C24ReaperController
                         If InsertBypassMode Then
                             If c24Trk.InsertMode.IsBlinking Then
                                 'Bypass tout
-                                _ReaperTracksManager.SetTrackGenericFxBypassed(reaperTrk.TrackIndex, True)
-
+                                _ReaperTracksManager.SetTrackGenericFxActive(reaperTrk.TrackIndex, False)
+                                c24Trk.InsertMode.IsBlinking = False
                             ElseIf c24Trk.InsertMode.Led Then
                                 'Bypass rien
-                                _ReaperTracksManager.SetTrackGenericFxBypassed(reaperTrk.TrackIndex, False)
+                                _ReaperTracksManager.SetTrackGenericFxActive(reaperTrk.TrackIndex, True)
+                                c24Trk.InsertMode.IsBlinking = False
                             Else
                                 'Bypass tout
-                                _ReaperTracksManager.SetTrackGenericFxBypassed(reaperTrk.TrackIndex, True)
+                                _ReaperTracksManager.SetTrackGenericFxActive(reaperTrk.TrackIndex, False)
+                                c24Trk.InsertMode.Led = True
                             End If
                         Else
                             If c24Trk.InsertMode.IsBlinking Then

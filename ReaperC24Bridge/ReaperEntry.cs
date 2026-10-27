@@ -428,9 +428,7 @@ public static unsafe class ReaperEntry
                 ? ReaperAPI.GetPlayPosition()
                 : ReaperAPI.GetCursorPosition?.Invoke() ?? 0.0;
 
-            string playPos = playPosSeconds.ToString("G", ic);
-
-            // ── Reset des holds à chaque nouvelle seconde entière de lecture ──
+            // ── Reset des holds
             if (playState != 0)
             {
                 long currentSecond = (long)Math.Floor(playPosSeconds);
@@ -460,48 +458,63 @@ public static unsafe class ReaperEntry
                 _lastHoldResetSecond = -1;
             }
 
-            // ── Master ────────────────────────────────────────────────────────
-            string masterL = "0", masterR = "0", masterHoldL = "0", masterHoldR = "0";
-            if (ReaperAPI.GetMasterTrack != null)
+            // ── Réponse : formatage direct dans un buffer emprunté à ArrayPool ──
+            // 5 champs d'en-tête + 4 champs par piste, 26 caractères max par champ + séparateur.
+            int fieldCount = 5 + 4 * (parts.Length - 1);
+            char[] buf = System.Buffers.ArrayPool<char>.Shared.Rent(fieldCount * 27);
+            try
             {
-                var masterTr = ReaperAPI.GetMasterTrack(IntPtr.Zero);
-                if (masterTr != IntPtr.Zero)
+                int pos = 0;
+                AppendDouble(buf, ref pos, playPosSeconds, ic);
+
+                // ── Master ────────────────────────────────────────────────────
+                double masterL = 0, masterR = 0, masterHoldL = 0, masterHoldR = 0;
+                if (ReaperAPI.GetMasterTrack != null)
                 {
-                    masterL = getPeakInfo(masterTr, 0).ToString("G", ic);
-                    masterR = getPeakInfo(masterTr, 1).ToString("G", ic);
-                    masterHoldL = DbToLinear(getPeakHold(masterTr, 0, false)).ToString("G", ic);
-                    masterHoldR = DbToLinear(getPeakHold(masterTr, 1, false)).ToString("G", ic);
+                    var masterTr = ReaperAPI.GetMasterTrack(IntPtr.Zero);
+                    if (masterTr != IntPtr.Zero)
+                    {
+                        masterL = getPeakInfo(masterTr, 0);
+                        masterR = getPeakInfo(masterTr, 1);
+                        masterHoldL = DbToLinear(getPeakHold(masterTr, 0, false));
+                        masterHoldR = DbToLinear(getPeakHold(masterTr, 1, false));
+                    }
                 }
+                AppendDouble(buf, ref pos, masterL, ic);
+                AppendDouble(buf, ref pos, masterR, ic);
+                AppendDouble(buf, ref pos, masterHoldL, ic);
+                AppendDouble(buf, ref pos, masterHoldR, ic);
+
+                // ── Pistes : L | R | HoldL | HoldR ───────────────────────────
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    IntPtr tr = IntPtr.Zero;
+                    if (int.TryParse(parts[i], out int tIdx))
+                    {
+                        tr = ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, tIdx) ?? IntPtr.Zero;
+                    }
+
+                    if (tr == IntPtr.Zero)
+                    {
+                        AppendDouble(buf, ref pos, -1, ic);
+                        AppendDouble(buf, ref pos, -1, ic);
+                        AppendDouble(buf, ref pos, -1, ic);
+                        AppendDouble(buf, ref pos, -1, ic);
+                        continue;
+                    }
+
+                    AppendDouble(buf, ref pos, getPeakInfo(tr, 0), ic);
+                    AppendDouble(buf, ref pos, getPeakInfo(tr, 1), ic);
+                    AppendDouble(buf, ref pos, DbToLinear(getPeakHold(tr, 0, false)), ic);
+                    AppendDouble(buf, ref pos, DbToLinear(getPeakHold(tr, 1, false)), ic);
+                }
+
+                return new string(buf, 0, pos);
             }
-
-            // ── Pistes : L | R | HoldL | HoldR ───────────────────────────────
-            var tokens = new System.Collections.Generic.List<string>
-                { playPos, masterL, masterR, masterHoldL, masterHoldR };
-
-            for (int i = 1; i < parts.Length; i++)
+            finally
             {
-                if (!int.TryParse(parts[i], out int tIdx))
-                {
-                    tokens.Add("-1"); tokens.Add("-1");
-                    tokens.Add("-1"); tokens.Add("-1");
-                    continue;
-                }
-
-                var tr = ReaperAPI.GetTrack?.Invoke(IntPtr.Zero, tIdx) ?? IntPtr.Zero;
-                if (tr == IntPtr.Zero)
-                {
-                    tokens.Add("-1"); tokens.Add("-1");
-                    tokens.Add("-1"); tokens.Add("-1");
-                    continue;
-                }
-
-                tokens.Add(getPeakInfo(tr, 0).ToString("G", ic));
-                tokens.Add(getPeakInfo(tr, 1).ToString("G", ic));
-                tokens.Add(DbToLinear(getPeakHold(tr, 0, false)).ToString("G", ic));
-                tokens.Add(DbToLinear(getPeakHold(tr, 1, false)).ToString("G", ic));
+                System.Buffers.ArrayPool<char>.Shared.Return(buf);
             }
-
-            return string.Join("|", tokens);
         }
         catch (Exception ex)
         {
@@ -518,6 +531,20 @@ public static unsafe class ReaperEntry
     {
         var db = dbScaled * 100.0;
         return db <= -150.0 ? 0.0 : Math.Pow(10.0, db / 20.0);
+    }
+
+    /// <summary>
+    /// Ajoute <paramref name="value"/> (format "G", InvariantCulture) dans <paramref name="buf"/>,
+    /// précédé de '|' sauf pour le premier champ.
+    /// </summary>
+    private static void AppendDouble(char[] buf, ref int pos, double value, IFormatProvider ic)
+    {
+        if (pos > 0)
+        {
+            buf[pos++] = '|';
+        }
+        value.TryFormat(buf.AsSpan(pos), out int written, "G", ic);
+        pos += written;
     }
     // ── GET_PEAKS_STATE ───────────────────────────────────────────────────────
     /// <summary>

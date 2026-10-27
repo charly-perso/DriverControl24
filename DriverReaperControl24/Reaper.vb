@@ -83,7 +83,7 @@ Namespace Reaper
         ''' </summary>
         ''' <param name="stream">Flux de destination.</param>
         ''' <param name="text">Texte à envoyer.</param>
-        Private Sub WriteLineBytes(stream As IO.Stream, text As String)
+        Friend Sub WriteLineBytes(stream As IO.Stream, text As String)
             Dim maxLength As Integer = System.Text.Encoding.UTF8.GetMaxByteCount(text.Length) + 1
             Dim buffer As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(maxLength)
             Try
@@ -102,7 +102,7 @@ Namespace Reaper
         ''' </summary>
         ''' <param name="stream">Flux source.</param>
         ''' <returns>La ligne lue sans CR/LF final.</returns>
-        Private Function ReadLineBytes(stream As IO.Stream) As String
+        Friend Function ReadLineBytes(stream As IO.Stream) As String
             Dim buffer As Byte() = System.Buffers.ArrayPool(Of Byte).Shared.Rent(1024)
             Dim total As Integer = 0
             Try
@@ -1986,6 +1986,80 @@ Namespace Reaper
             Dim v As Double = Double.MinValue
             Double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, v)
             Return v
+        End Function
+
+        ''' <summary>Propriétés d'une enveloppe retournées par <c>GET_ENVELOPE_ALL_INFO</c>.</summary>
+        Public Structure EnvelopeAllInfo
+            ''' <summary>Valeur brute de ACTIVE (Double.MinValue si illisible).</summary>
+            Public Active As Double
+            ''' <summary>Valeur brute de VISIBLE (Double.MinValue si illisible).</summary>
+            Public Visible As Double
+            ''' <summary>Valeur brute de ARM (Double.MinValue si illisible).</summary>
+            Public Armed As Double
+            ''' <summary>Valeur brute de SHOWLANE (Double.MinValue si illisible).</summary>
+            Public ShowLane As Double
+            ''' <summary>I_SEND_IDX 1-based, 0 si pas un envoi (Double.MinValue si illisible).</summary>
+            Public SendIdx As Double
+            ''' <summary>GUID de l'enveloppe (vide si illisible).</summary>
+            Public Guid As String
+            ''' <summary>Nom de l'enveloppe (vide si illisible).</summary>
+            Public Name As String
+        End Structure
+
+        Private _envAllInfoUnsupported As Boolean = False
+
+        Private Function ParseEnvValue(s As String) As Double
+            Dim v As Double = Double.MinValue
+            If Double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, v) = False Then
+                Return Double.MinValue
+            End If
+            Return v
+        End Function
+
+        ''' <summary>
+        ''' Lit toutes les propriétés d'une enveloppe en une requête via
+        ''' <c>GET_ENVELOPE_ALL_INFO</c>.
+        ''' Retourne False si le bridge est indisponible ou ne connaît pas la commande
+        ''' (ancien plugin) : l'appelant doit alors utiliser les requêtes unitaires.
+        ''' Si Reaper répond une erreur métier (enveloppe absente), retourne True avec
+        ''' des valeurs Double.MinValue / vides.
+        ''' </summary>
+        Public Function TryGetEnvelopeAllInfo(trackIndex As Integer,
+                                              envIndex As Integer,
+                                              ByRef info As EnvelopeAllInfo) As Boolean
+            If _envAllInfoUnsupported Then
+                Return False
+            End If
+            Dim raw = CallReaperBridge($"GET_ENVELOPE_ALL_INFO|{trackIndex}|{envIndex}")
+            If String.IsNullOrEmpty(raw) Then
+                Return False
+            End If
+            If raw.StartsWith("ERROR:Unknown", StringComparison.Ordinal) Then
+                _envAllInfoUnsupported = True
+                Return False
+            End If
+            info.Active = Double.MinValue
+            info.Visible = Double.MinValue
+            info.Armed = Double.MinValue
+            info.ShowLane = Double.MinValue
+            info.SendIdx = Double.MinValue
+            info.Guid = String.Empty
+            info.Name = String.Empty
+            If raw.StartsWith("ERROR", StringComparison.Ordinal) Then
+                Return True
+            End If
+            Dim p = raw.Split("|"c, 7)
+            If p.Length < 7 Then
+                Return False
+            End If
+            info.Active = ParseEnvValue(p(0))
+            info.Visible = ParseEnvValue(p(1))
+            info.Armed = ParseEnvValue(p(2))
+            info.ShowLane = ParseEnvValue(p(3))
+            info.SendIdx = ParseEnvValue(p(4))
+            info.Guid = p(5)
+            info.Name = p(6)
+            Return True
         End Function
 
         ''' <summary>
@@ -6174,8 +6248,6 @@ Namespace Reaper
 
             ' ── Pipe ──────────────────────────────────────────────────────────────
             Private _pipe As IO.Pipes.NamedPipeClientStream
-            Private _writer As IO.StreamWriter
-            Private _reader As IO.StreamReader
             Private _disposed As Boolean = False
 
             ' ── Cache état précédent ──────────────────────────────────────────────
@@ -6227,8 +6299,6 @@ Namespace Reaper
                         _pipe = New IO.Pipes.NamedPipeClientStream(
                             ".", "c24_reaper_poll", IO.Pipes.PipeDirection.InOut)
                         _pipe.Connect(500)
-                        _writer = New IO.StreamWriter(_pipe) With {.AutoFlush = True}
-                        _reader = New IO.StreamReader(_pipe)
                         Return True
                     Catch ex As Exception
                         Disconnect()
@@ -6242,8 +6312,6 @@ Namespace Reaper
             ''' </summary>
             Public Sub Disconnect()
                 Try
-                    _writer = Nothing
-                    _reader = Nothing
                     If _pipe IsNot Nothing Then
                         _pipe.Dispose()
                         _pipe = Nothing
@@ -6270,20 +6338,38 @@ Namespace Reaper
 
                 Dim raw As String
                 Try
-                    _writer.WriteLine("POLL_STATE")
-                    raw = _reader.ReadLine()
+                    utility.WriteLineBytes(_pipe, "POLL_STATE")
+                    raw = utility.ReadLineBytes(_pipe)
                 Catch
                     Disconnect()
                     Return
                 End Try
 
-                If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
-                Dim p = raw.Split("|"c)
-                If p.Length < 3 Then Return
+                If raw Is Nothing Then
+                    Disconnect()
+                    Return
+                End If
+                If raw.Length = 0 OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then
+                    Return
+                End If
+
+                Dim sep1 As Integer = raw.IndexOf("|"c)
+                If sep1 < 0 Then
+                    Return
+                End If
+                Dim sep2 As Integer = raw.IndexOf("|"c, sep1 + 1)
+                If sep2 < 0 Then
+                    Return
+                End If
+                Dim sep3 As Integer = raw.IndexOf("|"c, sep2 + 1)
+                Dim posEnd As Integer = raw.Length
+                If sep3 >= 0 Then
+                    posEnd = sep3
+                End If
 
                 ' ── Compteur d'état projet ────────────────────────────────────────
                 Dim new_stateCount As Integer = 0
-                Integer.TryParse(p(0), new_stateCount)
+                Integer.TryParse(raw.Substring(0, sep1), NumberStyles.Integer, Ic, new_stateCount)
                 If _lastStateCount <> new_stateCount Then
                     _lastStateCount = new_stateCount
                     RaiseEvent On_ProjectStateChange(_lastStateCount)
@@ -6291,7 +6377,7 @@ Namespace Reaper
 
                 ' ── État de lecture ───────────────────────────────────────────────
                 Dim new_playState As Integer = 0
-                Integer.TryParse(p(1), new_playState)
+                Integer.TryParse(raw.Substring(sep1 + 1, sep2 - sep1 - 1), NumberStyles.Integer, Ic, new_playState)
                 If _lastPlayState <> new_playState Then
                     _lastPlayState = new_playState
                     RaiseEvent On_PlayStateChange(_lastPlayState)
@@ -6299,7 +6385,7 @@ Namespace Reaper
 
                 ' ── Position de lecture ───────────────────────────────────────────
                 Dim new_playPos As Double = 0
-                Double.TryParse(p(2), NumberStyles.Any, Ic, new_playPos)
+                Double.TryParse(raw.Substring(sep2 + 1, posEnd - sep2 - 1), NumberStyles.Any, Ic, new_playPos)
                 If _lastPlayPos <> new_playPos Then
                     _lastPlayPos = new_playPos
                     RaiseEvent On_PlayPositionChange(_lastPlayPos)
@@ -6314,8 +6400,8 @@ Namespace Reaper
 
                 Dim raw As String
                 Try
-                    _writer.WriteLine("POLL_STATE")
-                    raw = _reader.ReadLine()
+                    utility.WriteLineBytes(_pipe, "POLL_STATE")
+                    raw = utility.ReadLineBytes(_pipe)
                 Catch ex As Exception
                     Console.WriteLine($"[PollPipe] Erreur lecture : {ex.Message}")
                     Disconnect()
@@ -6367,8 +6453,13 @@ Namespace Reaper
                     If Not Connect() Then Return String.Empty
                 End If
                 Try
-                    _writer.WriteLine(query)
-                    Return If(_reader.ReadLine(), String.Empty)
+                    utility.WriteLineBytes(_pipe, query)
+                    Dim response As String = utility.ReadLineBytes(_pipe)
+                    If response Is Nothing Then
+                        Disconnect()
+                        Return String.Empty
+                    End If
+                    Return response
                 Catch
                     Disconnect()
                     Return String.Empty
@@ -7005,7 +7096,7 @@ Namespace Reaper
                     End If
                 Next
 
-                If FxEnabled > 0 AndAlso FxDisabled = 0 Then
+                If FxEnabled >= 0 AndAlso FxDisabled = 0 Then
                     Return FXBypassStatus.NoBypass
                 ElseIf FxEnabled = 0 AndAlso FxDisabled > 0 Then
                     Return FXBypassStatus.AllBypass
@@ -7014,7 +7105,7 @@ Namespace Reaper
                 End If
 
             End Function
-            Public Sub SetTrackEqFxBypassed(trackIndex As Integer, Enable As Boolean)
+            Public Sub SetTrackEqFxActive(trackIndex As Integer, Enable As Boolean)
                 If _sessionConfig Is Nothing Then Exit Sub
                 Dim fxCollection = If(trackIndex = -1, _project.MasterTrackFx, _project.TrackFXList(trackIndex))
                 fxCollection.Refresh()
@@ -7059,7 +7150,7 @@ Namespace Reaper
                     End If
                 Next
 
-                If FxEnabled > 0 AndAlso FxDisabled = 0 Then
+                If FxEnabled >= 0 AndAlso FxDisabled = 0 Then
                     Return FXBypassStatus.NoBypass
                 ElseIf FxEnabled = 0 AndAlso FxDisabled > 0 Then
                     Return FXBypassStatus.AllBypass
@@ -7068,7 +7159,7 @@ Namespace Reaper
                 End If
 
             End Function
-            Public Sub SetTrackDynFxBypassed(trackIndex As Integer, Enable As Boolean)
+            Public Sub SetTrackDynFxActive(trackIndex As Integer, Enable As Boolean)
                 If _sessionConfig Is Nothing Then Exit Sub
                 Dim fxCollection = If(trackIndex = -1, _project.MasterTrackFx, _project.TrackFXList(trackIndex))
                 fxCollection.Refresh()
@@ -7104,6 +7195,9 @@ Namespace Reaper
                 Dim FxEnabled As Integer = 0
                 Dim FxDisabled As Integer = 0
                 For i = 0 To fxCollection.Count - 1
+                    If _sessionConfig.IsEQPlugin(fxCollection(i).Name) OrElse _sessionConfig.IsDynPlugin(fxCollection(i).Name) Then
+                        Continue For
+                    End If
 
                     If fxCollection(i).Enabled Then
                         FxEnabled += 1
@@ -7113,7 +7207,7 @@ Namespace Reaper
 
                 Next
 
-                If FxEnabled > 0 AndAlso FxDisabled = 0 Then
+                If FxEnabled >= 0 AndAlso FxDisabled = 0 Then
                     Return FXBypassStatus.NoBypass
                 ElseIf FxEnabled = 0 AndAlso FxDisabled > 0 Then
                     Return FXBypassStatus.AllBypass
@@ -7122,17 +7216,17 @@ Namespace Reaper
                 End If
 
             End Function
-            Public Sub SetTrackGenericFxBypassed(trackIndex As Integer, Enable As Boolean)
+            Public Sub SetTrackGenericFxActive(trackIndex As Integer, Enable As Boolean)
                 If _sessionConfig Is Nothing Then Exit Sub
                 Dim fxCollection = If(trackIndex = -1, _project.MasterTrackFx, _project.TrackFXList(trackIndex))
                 fxCollection.Refresh()
                 If fxCollection Is Nothing Then Exit Sub
 
                 For i = 0 To fxCollection.Count - 1
-
+                    If _sessionConfig.IsEQPlugin(fxCollection(i).Name) OrElse _sessionConfig.IsDynPlugin(fxCollection(i).Name) Then
+                        Continue For
+                    End If
                     fxCollection(i).Enabled = Enable
-
-
                 Next
 
 
@@ -10094,31 +10188,24 @@ Namespace Reaper
             Public ReadOnly MasterHoldR As Double
 
             ''' <summary>
-            ''' Peaks stéréo linéaires courants par trackIndex.
-            ''' Clé = index 0-based Reaper.
+            ''' Peaks et holds des pistes surveillées, 4 valeurs par piste
+            ''' (PeakL, PeakR, HoldL, HoldR), à l'indice (trackIndex + 1) * 4.
+            ''' Le décalage de 1 permet d'inclure la piste Master (index -1).
             ''' </summary>
-            Public ReadOnly TrackPeaks As IReadOnlyDictionary(Of Integer, (L As Double, R As Double))
-
-            ''' <summary>
-            ''' Peak-holds stéréo linéaires par trackIndex.
-            ''' Clé = index 0-based Reaper.
-            ''' </summary>
-            Public ReadOnly TrackHolds As IReadOnlyDictionary(Of Integer, (L As Double, R As Double))
+            Private ReadOnly _trackData As Double()
 
             Public Sub New(playPosition As Double,
                        masterL As Double,
                        masterR As Double,
                        masterHoldL As Double,
                        masterHoldR As Double,
-                       trackPeaks As IReadOnlyDictionary(Of Integer, (L As Double, R As Double)),
-                       trackHolds As IReadOnlyDictionary(Of Integer, (L As Double, R As Double)))
+                       trackData As Double())
                 Me.PlayPosition = playPosition
                 Me.MasterL = masterL
                 Me.MasterR = masterR
                 Me.MasterHoldL = masterHoldL
                 Me.MasterHoldR = masterHoldR
-                Me.TrackPeaks = trackPeaks
-                Me.TrackHolds = trackHolds
+                Me._trackData = trackData
             End Sub
 
             ''' <summary>Peak de la piste Master en dB (L, R).</summary>
@@ -10137,18 +10224,26 @@ Namespace Reaper
 
             ''' <summary>Peak d'une piste en dB (L, R). Retourne (-150, -150) si absente.</summary>
             Public Function GetTrackPeakDB(trackIndex As Integer) As (L As Double, R As Double)
-                Dim p As (Double, Double) = (0, 0)
-                If TrackPeaks Is Nothing Then Return (utility.SLIDER2DB(0), utility.SLIDER2DB(0))
-                TrackPeaks.TryGetValue(trackIndex, p)
-                Return (utility.SLIDER2DB(p.Item1), utility.SLIDER2DB(p.Item2))
+                Dim l As Double = 0
+                Dim r As Double = 0
+                Dim offset As Integer = (trackIndex + 1) * 4
+                If _trackData IsNot Nothing AndAlso offset >= 0 AndAlso offset + 3 < _trackData.Length Then
+                    l = _trackData(offset)
+                    r = _trackData(offset + 1)
+                End If
+                Return (utility.SLIDER2DB(l), utility.SLIDER2DB(r))
             End Function
 
             ''' <summary>Peak-hold d'une piste en dB (L, R). Retourne (-150, -150) si absente.</summary>
             Public Function GetTrackHoldDB(trackIndex As Integer) As (L As Double, R As Double)
-                Dim h As (Double, Double) = (0, 0)
-                If TrackHolds Is Nothing Then Return (utility.SLIDER2DB(0), utility.SLIDER2DB(0))
-                TrackHolds.TryGetValue(trackIndex, h)
-                Return (utility.SLIDER2DB(h.Item1), utility.SLIDER2DB(h.Item2))
+                Dim l As Double = 0
+                Dim r As Double = 0
+                Dim offset As Integer = (trackIndex + 1) * 4
+                If _trackData IsNot Nothing AndAlso offset >= 0 AndAlso offset + 3 < _trackData.Length Then
+                    l = _trackData(offset + 2)
+                    r = _trackData(offset + 3)
+                End If
+                Return (utility.SLIDER2DB(l), utility.SLIDER2DB(r))
             End Function
 
         End Structure
@@ -10179,7 +10274,41 @@ Namespace Reaper
             ' ── Pistes surveillées : clé = trackIndex, valeur = isSuspended ───
             Private ReadOnly _tracks As New Dictionary(Of Integer, Boolean)
 
+            ' ── Cache de la requête : reconstruit seulement si l'ensemble change ──
+            Private _cacheDirty As Boolean = True
+            Private _activeTracks As Integer() = Array.Empty(Of Integer)()
+            Private _maxSlot As Integer = -1
+            Private _query As String = "GET_PEAKS_STATE|"
+
             Private _disposed As Boolean = False
+
+            ''' <summary>
+            ''' Reconstruit la liste des pistes actives et la requête pipe.
+            ''' À appeler sous <c>_lock</c>.
+            ''' </summary>
+            Private Sub RebuildCache()
+                Dim ic = CultureInfo.InvariantCulture
+                Dim active As New List(Of Integer)(_tracks.Count)
+                Dim maxSlot As Integer = -1
+                For Each kvp In _tracks
+                    If kvp.Value = False Then
+                        active.Add(kvp.Key)
+                        If kvp.Key + 1 > maxSlot Then
+                            maxSlot = kvp.Key + 1
+                        End If
+                    End If
+                Next
+
+                Dim parts(active.Count - 1) As String
+                For i = 0 To active.Count - 1
+                    parts(i) = active(i).ToString(ic)
+                Next
+
+                _activeTracks = active.ToArray()
+                _maxSlot = maxSlot
+                _query = "GET_PEAKS_STATE|" & String.Join("|", parts)
+                _cacheDirty = False
+            End Sub
 
             ' ── Gestion de la collection ──────────────────────────────────────
 
@@ -10195,6 +10324,7 @@ Namespace Reaper
                 SyncLock _lock
                     If Not _tracks.ContainsKey(trackIndex) Then
                         _tracks(trackIndex) = False
+                        _cacheDirty = True
                     End If
                 End SyncLock
             End Sub
@@ -10210,6 +10340,7 @@ Namespace Reaper
             Public Sub UnwatchTrack(trackIndex As Integer)
                 SyncLock _lock
                     _tracks.Remove(trackIndex)
+                    _cacheDirty = True
                 End SyncLock
             End Sub
 
@@ -10217,6 +10348,7 @@ Namespace Reaper
             Public Sub ClearWatched()
                 SyncLock _lock
                     _tracks.Clear()
+                    _cacheDirty = True
                 End SyncLock
             End Sub
 
@@ -10225,6 +10357,7 @@ Namespace Reaper
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
                         _tracks(trackIndex) = True
+                        _cacheDirty = True
                     End If
                 End SyncLock
             End Sub
@@ -10234,6 +10367,7 @@ Namespace Reaper
                 SyncLock _lock
                     If _tracks.ContainsKey(trackIndex) Then
                         _tracks(trackIndex) = False
+                        _cacheDirty = True
                     End If
                 End SyncLock
             End Sub
@@ -10273,20 +10407,19 @@ Namespace Reaper
             ''' <c>playPos|masterL|masterR|masterHoldL|masterHoldR|t0L|t0R|t0HoldL|t0HoldR|…</c>
             ''' </summary>
             Public Function Refresh() As PeakSnapshot
-                Dim tracked As (trackIndex As Integer, isSuspended As Boolean)()
+                Dim activeTracks As Integer()
+                Dim query As String
+                Dim maxSlot As Integer
                 SyncLock _lock
-                    Dim tmp As New List(Of (Integer, Boolean))
-                    For Each kvp In _tracks
-                        tmp.Add((kvp.Key, kvp.Value))
-                    Next
-                    tracked = tmp.ToArray()
+                    If _cacheDirty Then
+                        RebuildCache()
+                    End If
+                    activeTracks = _activeTracks
+                    query = _query
+                    maxSlot = _maxSlot
                 End SyncLock
 
-                Dim activeTracks = tracked.Where(Function(e) Not e.isSuspended).ToArray()
                 Dim ic = CultureInfo.InvariantCulture
-
-                Dim query = "GET_PEAKS_STATE|" & String.Join("|",
-                    activeTracks.Select(Function(e) e.trackIndex.ToString(ic)))
 
                 Dim raw = _pipe.Request(query)
 
@@ -10294,8 +10427,7 @@ Namespace Reaper
                 Dim playPos As Double = -1
                 Dim mL As Double = 0, mR As Double = 0
                 Dim mHoldL As Double = 0, mHoldR As Double = 0
-                Dim peaks As New Dictionary(Of Integer, (L As Double, R As Double))(activeTracks.Length)
-                Dim holds As New Dictionary(Of Integer, (L As Double, R As Double))(activeTracks.Length)
+                Dim trackData(maxSlot * 4 + 3) As Double
 
                 If Not String.IsNullOrEmpty(raw) AndAlso Not raw.StartsWith("ERROR", StringComparison.Ordinal) Then
                     Dim pos As Integer = 0
@@ -10320,19 +10452,23 @@ Namespace Reaper
                             Dim offset = 5 + i * 4
                             If offset + 3 >= fieldCount Then Exit For
 
-                            Dim tIdx = activeTracks(i).trackIndex
+                            Dim slot = activeTracks(i) + 1
                             Dim tL As Double = ReadNextDouble(raw, pos, ic)
                             Dim tR As Double = ReadNextDouble(raw, pos, ic)
                             Dim tHL As Double = ReadNextDouble(raw, pos, ic)
                             Dim tHR As Double = ReadNextDouble(raw, pos, ic)
 
-                            peaks(tIdx) = (tL, tR)
-                            holds(tIdx) = (tHL, tHR)
+                            If slot >= 0 Then
+                                trackData(slot * 4) = tL
+                                trackData(slot * 4 + 1) = tR
+                                trackData(slot * 4 + 2) = tHL
+                                trackData(slot * 4 + 3) = tHR
+                            End If
                         Next
                     End If
                 End If
 
-                Return New PeakSnapshot(playPos, mL, mR, mHoldL, mHoldR, peaks, holds)
+                Return New PeakSnapshot(playPos, mL, mR, mHoldL, mHoldR, trackData)
             End Function
 
             ''' <summary>
@@ -10380,8 +10516,6 @@ Namespace Reaper
             Implements IDisposable
 
             Private _pipe As IO.Pipes.NamedPipeClientStream
-            Private _writer As IO.StreamWriter
-            Private _reader As IO.StreamReader
             Private _disposed As Boolean = False
             Private ReadOnly _connectLock As New Object()
 
@@ -10398,8 +10532,6 @@ Namespace Reaper
                         _pipe = New IO.Pipes.NamedPipeClientStream(
                             ".", "c24_reaper_peaks", IO.Pipes.PipeDirection.InOut)
                         _pipe.Connect(500)
-                        _writer = New IO.StreamWriter(_pipe) With {.AutoFlush = True}
-                        _reader = New IO.StreamReader(_pipe)
                         Return True
                     Catch
                         Disconnect()
@@ -10410,8 +10542,6 @@ Namespace Reaper
 
             Public Sub Disconnect()
                 Try
-                    _writer = Nothing
-                    _reader = Nothing
                     If _pipe IsNot Nothing Then
                         _pipe.Dispose()
                         _pipe = Nothing
@@ -10425,8 +10555,13 @@ Namespace Reaper
                     If Not Connect() Then Return String.Empty
                 End If
                 Try
-                    _writer.WriteLine(query)
-                    Return If(_reader.ReadLine(), String.Empty)
+                    utility.WriteLineBytes(_pipe, query)
+                    Dim response As String = utility.ReadLineBytes(_pipe)
+                    If response Is Nothing Then
+                        Disconnect()
+                        Return String.Empty
+                    End If
+                    Return response
                 Catch
                     Disconnect()
                     Return String.Empty
@@ -13021,6 +13156,7 @@ Namespace Reaper
                     Dim envName = names(i)
                     Dim new_env = CreateEnvelope(i, envName)
                     If new_env IsNot Nothing Then
+                        new_env.SetKnownName(envName)
                         _envelopes.Add(new_env)
                     End If
                 Next
@@ -13704,6 +13840,11 @@ Namespace Reaper
         Private _sendId As Integer = -1
         Private _Suspend_events As Boolean = False
 
+        ' ── Données statiques : lues une seule fois ───────────────────────────
+        Private _nameLoaded As Boolean = False
+        Private _guidLoaded As Boolean = False
+        Private _sendIdLoaded As Boolean = False
+
         ' ── Événements ────────────────────────────────────────────────────────
         Public Event On_ActiveChange(_active As Boolean)
         Public Event On_VisibleChange(_visible As Boolean)
@@ -13713,6 +13854,17 @@ Namespace Reaper
         Public Sub New(trackIndex As Integer, envIndex As Integer)
             _trackIndex = trackIndex
             _envIndex = envIndex
+        End Sub
+
+        ''' <summary>
+        ''' Renseigne le nom déjà lu par <see cref="ReaperTrackEnvelopes"/>
+        ''' pour éviter une requête pipe supplémentaire dans <see cref="Refresh"/>.
+        ''' </summary>
+        Friend Sub SetKnownName(name As String)
+            If String.IsNullOrEmpty(name) = False Then
+                _name = name
+                _nameLoaded = True
+            End If
         End Sub
 
         ' ── Identité (lecture seule) ───────────────────────────────────────────
@@ -13855,13 +14007,83 @@ Namespace Reaper
 
         ' ── Chargement ─────────────────────────────────────────────────────────
 
+        ''' <summary>
+        ''' Charge les propriétés de l'enveloppe en 1 requête (<c>GET_ENVELOPE_ALL_INFO</c>).
+        ''' Repli sur les requêtes unitaires si le plugin ne supporte pas la commande.
+        ''' </summary>
         Public Overridable Sub Refresh()
-            ' ── Chaînes ────────────────────────────────────────────────────────
-            _name = utility.GetEnvelopeName(_trackIndex, _envIndex)
+            Dim info As utility.EnvelopeAllInfo
+            If utility.TryGetEnvelopeAllInfo(_trackIndex, _envIndex, info) Then
+                ApplyAllInfo(info)
+                Return
+            End If
+            RefreshLegacy()
+        End Sub
 
-            _guid = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "GUID:GUID")
+        Private Sub ApplyAllInfo(info As utility.EnvelopeAllInfo)
+            If _nameLoaded = False AndAlso String.IsNullOrEmpty(info.Name) = False Then
+                _name = info.Name
+                _nameLoaded = True
+            End If
 
-            ' ── Active ─────────────────────────────────────────────────────────
+            If _guidLoaded = False AndAlso String.IsNullOrEmpty(info.Guid) = False Then
+                _guid = info.Guid
+                _guidLoaded = True
+            End If
+
+            If info.Active <> Double.MinValue Then
+                Dim b = info.Active <> 0
+                If _active <> b Then
+                    _active = b
+                    If Suspend_events = False Then
+                        RaiseEvent On_ActiveChange(_active)
+                    End If
+                End If
+            End If
+
+            If info.Visible <> Double.MinValue Then
+                Dim b = info.Visible <> 0
+                If _visible <> b Then
+                    _visible = b
+                    If Suspend_events = False Then
+                        RaiseEvent On_VisibleChange(_visible)
+                    End If
+                End If
+            End If
+
+            If info.Armed <> Double.MinValue Then
+                Dim b = info.Armed <> 0
+                If _armed <> b Then
+                    _armed = b
+                    If Suspend_events = False Then
+                        RaiseEvent On_ArmedChange(_armed)
+                    End If
+                End If
+            End If
+
+            If info.ShowLane <> Double.MinValue Then
+                _showLane = info.ShowLane <> 0
+            End If
+
+            If _sendIdLoaded = False AndAlso info.SendIdx <> Double.MinValue Then
+                _sendId = CInt(info.SendIdx - 1)
+                _sendIdLoaded = True
+            End If
+        End Sub
+
+        Private Sub RefreshLegacy()
+            ' ── Chaînes (statiques : lues une seule fois) ──────────────────────
+            If _nameLoaded = False Then
+                _name = utility.GetEnvelopeName(_trackIndex, _envIndex)
+                _nameLoaded = String.IsNullOrEmpty(_name) = False
+            End If
+
+            If _guidLoaded = False Then
+                _guid = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "GUID:GUID")
+                _guidLoaded = String.IsNullOrEmpty(_guid) = False
+            End If
+
+            ' ── Active ─
             Dim v = utility.GetEnvelopePropVal(_trackIndex, _envIndex, "ACTIVE")
             If v <> Double.MinValue Then
                 Dim b = v <> 0
@@ -13928,8 +14150,13 @@ Namespace Reaper
 
             ' ── SendId (I_SEND_IDX) — lecture seule ────────────────────────────
             '1-based index of send in P_TRACK, or 0 if not a send
-            v = utility.GetEnvelopePropVal2(_trackIndex, _envIndex, "I_SEND_IDX")
-            If v <> Double.MinValue Then _sendId = CInt(v - 1)
+            If _sendIdLoaded = False Then
+                v = utility.GetEnvelopePropVal2(_trackIndex, _envIndex, "I_SEND_IDX")
+                If v <> Double.MinValue Then
+                    _sendId = CInt(v - 1)
+                    _sendIdLoaded = True
+                End If
+            End If
             'Console.WriteLine(_trackIndex & "|" & _envIndex & ":" & _name & "_" & _sendId)
         End Sub
 

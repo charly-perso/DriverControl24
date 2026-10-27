@@ -1,5 +1,6 @@
 ﻿Imports System.Diagnostics
 Imports System.Globalization
+Imports System.IO
 Imports System.Runtime.InteropServices
 Imports DriverConfig
 
@@ -153,26 +154,64 @@ Public Class ReaperBridge
     Public Shared Sub LogError(message As String)
         Log($"[Control24] ERROR: {message}")
     End Sub
+    ''' <summary>
+    ''' Retourne le nom du fichier exécutable du driver selon le système d'exploitation.
+    ''' Windows : <c>DriverReaperControl24.exe</c> ; macOS/Linux : <c>DriverReaperControl24</c>.
+    ''' </summary>
+    ''' <returns>Nom du fichier exécutable du driver.</returns>
+    Private Shared Function GetDriverFileName() As String
+        If RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+            Return "DriverReaperControl24.exe"
+        End If
 
+        Return "DriverReaperControl24"
+    End Function
+
+    ''' <summary>
+    ''' Lance le processus du driver Control24 situé à côté du plugin.
+    ''' Compatible Windows et macOS.
+    ''' </summary>
     Private Shared Sub LaunchDriver()
-        Dim driverPath = IO.Path.Combine(_dllDirectory, "DriverReaperControl24.exe")
-        If Not IO.File.Exists(driverPath) Then Return
+        Dim driverPath As String = IO.Path.Combine(_dllDirectory, GetDriverFileName())
 
-        _driverProcess = New Process() With {
-            .StartInfo = New ProcessStartInfo(driverPath) With {
-                .CreateNoWindow = False,
-                .UseShellExecute = False
-            },
-            .EnableRaisingEvents = True
-        }
+        If Not IO.File.Exists(driverPath) Then
+            BridgeLog($"LaunchDriver: introuvable : {driverPath}")
+            Return
+        End If
 
-        ' ── Handler de fin de processus ───────────────────────────────────────
-        ' Déclenché quand le driver s'arrête de lui-même (crash ou arrêt propre).
-        AddHandler _driverProcess.Exited, Sub(s, e)
-                                              LogInfo("Driver process exited.")
-                                          End Sub
+        ' ── macOS / Linux : s'assurer que le bit d'exécution est positionné ──
+        If Not RuntimeInformation.IsOSPlatform(OSPlatform.Windows) Then
+            Try
+                Dim mode As UnixFileMode = IO.File.GetUnixFileMode(driverPath)
+                IO.File.SetUnixFileMode(
+                    driverPath,
+                    mode Or UnixFileMode.UserExecute Or UnixFileMode.GroupExecute Or UnixFileMode.OtherExecute)
+            Catch ex As Exception
+                BridgeLog($"LaunchDriver: chmod impossible : {ex.Message}")
+            End Try
+        End If
 
-        _driverProcess.Start()
+        Try
+            _driverProcess = New Process() With {
+                .StartInfo = New ProcessStartInfo(driverPath) With {
+                    .CreateNoWindow = False,
+                    .UseShellExecute = False,
+                    .WorkingDirectory = _dllDirectory
+                },
+                .EnableRaisingEvents = True
+            }
+
+            ' ── Handler de fin de processus ───────────────────────────────────
+            ' Déclenché quand le driver s'arrête de lui-même (crash ou arrêt propre).
+            AddHandler _driverProcess.Exited,
+                Sub(s, e)
+                    LogInfo("Driver process exited.")
+                End Sub
+
+            _driverProcess.Start()
+        Catch ex As Exception
+            BridgeLog($"LaunchDriver: échec du démarrage : {ex}")
+        End Try
     End Sub
 
     ''' <summary>
@@ -199,6 +238,23 @@ Public Class ReaperBridge
     End Sub
 
     Private Shared _verboseLog As Boolean = True
+
+    ''' <summary>
+    ''' Lit une propriété chaîne d'enveloppe via GetSetEnvelopeInfo_String en réutilisant
+    ''' le buffer fourni. Retourne une chaîne vide si la lecture échoue.
+    ''' </summary>
+    Private Shared Function ReadEnvelopeString(env As IntPtr, key As String, buf As IntPtr) As String
+        Marshal.WriteByte(buf, 0)
+        Dim ok = ReaperAPI.GetSetEnvelopeInfo_String(env, key, buf, False)
+        If Not ok Then
+            Return String.Empty
+        End If
+        Dim result = Marshal.PtrToStringAnsi(buf)
+        If result Is Nothing Then
+            Return String.Empty
+        End If
+        Return result
+    End Function
 
     Private Shared Function ProcessRequest(tag As String, request As String) As String
         Dim response As String
@@ -2429,6 +2485,46 @@ Public Class ReaperBridge
                     Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
                     If tr = IntPtr.Zero Then Return "ERROR:Track not found"
                     Return ReaperAPI.CountTrackEnvelopes(tr).ToString()
+
+                ' ── GET_ENVELOPE_ALL_INFO|trackIndex|envIndex ──────────────────
+                ' Retourne en une réponse : active|visible|arm|showlane|sendIdx|guid|name
+                ' (le nom est en dernier car il peut contenir '|').
+                ' active/visible/arm/showlane/guid : valeurs brutes de GetSetEnvelopeInfo_String.
+                ' sendIdx : I_SEND_IDX (1-based, 0 si pas un envoi) en InvariantCulture "G".
+                Case "GET_ENVELOPE_ALL_INFO"
+                    If parts.Length < 3 Then Return "ERROR:Usage GET_ENVELOPE_ALL_INFO|trackIndex|envIndex"
+                    If ReaperAPI.GetTrackEnvelope Is Nothing OrElse
+                       ReaperAPI.GetSetEnvelopeInfo_String Is Nothing OrElse
+                       ReaperAPI.GetEnvelopeName Is Nothing Then Return "ERROR:API unavailable"
+                    Dim tr = GetTrackByIndex(Integer.Parse(parts(1)))
+                    If tr = IntPtr.Zero Then Return "ERROR:Track not found"
+                    Dim envIdx As Integer = 0
+                    If Not Integer.TryParse(parts(2), envIdx) Then Return "ERROR:Invalid envIndex"
+                    Dim env = ReaperAPI.GetTrackEnvelope(tr, envIdx)
+                    If env = IntPtr.Zero Then Return "ERROR:Envelope not found"
+                    Dim ic = Globalization.CultureInfo.InvariantCulture
+                    Dim sendIdx As Double = 0
+                    If ReaperAPI.GetEnvelopeInfo_Value IsNot Nothing Then
+                        sendIdx = ReaperAPI.GetEnvelopeInfo_Value(env, "I_SEND_IDX")
+                    ElseIf ReaperAPI.GetSetEnvelopeInfo_Value IsNot Nothing Then
+                        sendIdx = ReaperAPI.GetSetEnvelopeInfo_Value(env, "I_SEND_IDX", 0, False)
+                    End If
+                    Dim nameBuf As New System.Text.StringBuilder(256)
+                    ReaperAPI.GetEnvelopeName(env, nameBuf, nameBuf.Capacity)
+                    Dim infoBuf = Marshal.AllocHGlobal(256)
+                    Try
+                        Return String.Join("|", New String() {
+                            ReadEnvelopeString(env, "ACTIVE", infoBuf),
+                            ReadEnvelopeString(env, "VISIBLE", infoBuf),
+                            ReadEnvelopeString(env, "ARM", infoBuf),
+                            ReadEnvelopeString(env, "SHOWLANE", infoBuf),
+                            sendIdx.ToString("G", ic),
+                            ReadEnvelopeString(env, "GUID:GUID", infoBuf),
+                            nameBuf.ToString()
+                        })
+                    Finally
+                        Marshal.FreeHGlobal(infoBuf)
+                    End Try
 
                                     ' ── GET_ENVELOPE_NAME|trackIndex|envIndex ────────────────────
                 ' Retourne le nom affiché de l'enveloppe (ex: "Volume", "Pan",
