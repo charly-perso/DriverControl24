@@ -7954,12 +7954,15 @@ Public Class C24ReaperController
         If direction = Direction.Left Then
             If SnapToGridAL.State Then
                 Reaper.utility.Main_OnCommand(40646)
+                Console.WriteLine(40646)
                 If Selection Then
                     Dim CurPos = Reaper.utility.GetCursorPosition
-                    If CurPos >= CtlPoint Then
+                    If CurPos > CtlPoint Then
                         Reaper.utility.Main_OnCommand(40626)
+                        Console.WriteLine(40626)
                     Else
                         Reaper.utility.Main_OnCommand(40625)
+                        Console.WriteLine(40625)
                     End If
                 End If
 
@@ -7967,35 +7970,44 @@ Public Class C24ReaperController
             Else
                 If Selection Then
                     Reaper.utility.Main_OnCommand(40102)
+                    Console.WriteLine(40102)
                 Else
                     If velocity > 2 Then
                         Reaper.utility.Main_OnCommand(41666)
+                        Console.WriteLine(41666)
                     Else
                         Reaper.utility.Main_OnCommand(40104)
+                        Console.WriteLine(40104)
                     End If
                 End If
 
             End If
 
-        Else
+        Else 'Right
             If SnapToGridAL.State Then
                 Reaper.utility.Main_OnCommand(40647)
+                Console.WriteLine(40647)
                 If Selection Then
                     Dim CurPos = Reaper.utility.GetCursorPosition
-                    If CurPos >= CtlPoint Then
-                        Reaper.utility.Main_OnCommand(40625)
-                    Else
+                    If CurPos > CtlPoint Then
                         Reaper.utility.Main_OnCommand(40626)
+                        Console.WriteLine(40626)
+                    Else
+                        Reaper.utility.Main_OnCommand(40625)
+                        Console.WriteLine(40625)
                     End If
                 End If
             Else
                 If Selection Then
                     Reaper.utility.Main_OnCommand(40103)
+                    Console.WriteLine(40103)
                 Else
                     If velocity > 2 Then
                         Reaper.utility.Main_OnCommand(41667)
+                        Console.WriteLine(41667)
                     Else
                         Reaper.utility.Main_OnCommand(40105)
+                        Console.WriteLine(40105)
                     End If
                 End If
 
