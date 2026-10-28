@@ -5,6 +5,7 @@ Imports System.Runtime
 Imports System.Runtime.InteropServices.JavaScript.JSType
 Imports System.Security.Cryptography.X509Certificates
 Imports System.Threading
+Imports DriverControl24.Extension.ReaperAPI
 Imports DriverReaperControl24.C24ReaperController
 Imports DriverReaperControl24.Control24
 Imports DriverReaperControl24.Control24.Commands
@@ -718,6 +719,10 @@ Public Class C24ReaperController
         Public SnapToGridAL As C24ActionLinker
         Public CtlBtnRH As [Delegate]
         Public CtlBtnPH As [Delegate]
+        Public OnReaperZoomXH As [Delegate]
+        Public CtrlPressedH As [Delegate]
+        Public CtrlReleaseH As [Delegate]
+        Public SnapToGridALH As [Delegate]
     End Class
     Public Class C24ActionLinkerHandler
         Public C24BtnH As [Delegate]
@@ -7543,80 +7548,112 @@ Public Class C24ReaperController
         'Opt + Ctrl : déplacement selection tracks + selection
         'Ctl : déselectionne tous les items
 
+        Dim NoSnap_diff As Double = 0
+        Dim ArrangeView2 = Reaper.utility.GetArrangeView2()
+        Dim MaxTimeView = Math.Abs(ArrangeView2.EndTime - ArrangeView2.StartTime)
+        NoSnap_diff = MaxTimeView / 100
+
+        Dim OnReaperZoomXH =
+                Sub()
+
+                    ArrangeView2 = Reaper.utility.GetArrangeView2()
+                        MaxTimeView = Math.Abs(ArrangeView2.EndTime - ArrangeView2.StartTime)
+                        NoSnap_diff = MaxTimeView / 100
+
+                End Sub
+
+
+        Dim CtrlPressedH As Hardware.C24_Button.OnButtonPressedEventHandler =
+                Sub(TrackNb As Integer?)
+                    NoSnap_diff = NoSnap_diff / 10
+                End Sub
+        h.CtrlPressedH = CtrlPressedH
+        AddHandler C24_Desk.Ctrl.OnButtonPressed, CtrlPressedH
+
+        Dim CtrlReleaseH As Hardware.C24_Button.OnButtonReleasedEventHandler =
+                Sub(TrackNb As Integer?)
+                    NoSnap_diff = NoSnap_diff * 10
+                End Sub
+        h.CtrlReleaseH = CtrlReleaseH
+        AddHandler C24_Desk.Ctrl.OnButtonReleased, CtrlReleaseH
+
+        Dim SnapToGridALH As C24ActionLinker.On_StateChangeEventHandler =
+            Sub(state As Boolean)
+                If state Then
+                    'Reaper.utility.SnapToGrid(Reaper.utility.GetCursorPosition)
+                    Reaper.utility.Main_OnCommand_SafeUI(40231)
+                End If
+            End Sub
+        h.SnapToGridALH = SnapToGridALH
+        AddHandler SnapToGridAL.On_StateChange, SnapToGridALH
+
+        Dim diff As Double = 0
         Dim JogWheelChangeH As Hardware.C24_JogWheel.OnJogWheelChangeEventHandler =
             Sub(direction As Control24.Commands.Direction, velocity As Integer)
                 Select Case JogWheelMode
                     'Mode Shuttle : déplacement du curseur + Zoom + selections
                     Case JogWheelModes.Shuttle
-                        ''deplacement curseur avec/sans sélection
-                        'Dim diff As Double = 0
-                        'If SnapToGridAL.State Then
-                        '    Dim pos = Reaper.utility.GetCursorPosition
-                        '    'Dim next_pos As Double = Reaper.utility.BR_GetNextGridDivision(pos)
-                        '    Dim next_pos As Double = Reaper.utility.SnapToGrid(pos)
-                        '    diff = next_pos - pos
-                        'Else
-                        '    Dim ArrangeView2 = Reaper.utility.GetArrangeView2()
-                        '    Dim MaxTimeView = Math.Abs(ArrangeView2.EndTime - ArrangeView2.StartTime)
-                        '    If Ctrl Then
-                        '        diff = MaxTimeView / 1000
-                        '    Else
-                        '        diff = MaxTimeView / 100
-                        '    End If
-                        'End If
+                        'deplacement curseur avec/sans sélection
+                        If SnapToGridAL.State Then
+                            Dim beat_size = Reaper.utility.GetTimeSigAtTime(Reaper.utility.GetCursorPosition)
+                            diff = 1 / (beat_size.BPM / 60)
+                        Else
+                            diff = NoSnap_diff
+                        End If
+
                         If Shift = False AndAlso Opt = False Then
 
                             Select Case JogWheelToolMode
                                 Case JogWheelToolModes.None
                                     'déplacement du curseur
-                                    'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), If(Ctl, True, False))
-                                    MoveEditCursor(direction, velocity, SnapToGridAL)
+                                    Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), If(Ctl, True, False))
+                                    'MoveEditCursor(direction, velocity, SnapToGridAL)
                                 Case JogWheelToolModes.Grab
                                     'reduction/agrandissement d'un item
                                     If IsCursorPlacedLeft Then
-                                        'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
-                                        MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                        Reaper.utility.Main_OnCommand(40625)
+                                        Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
+                                        ' MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40625)
 
                                     Else
-                                        'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
-                                        MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                        Reaper.utility.Main_OnCommand(40626)
+                                        Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
+                                        'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40626)
 
                                     End If
-                                    Reaper.utility.Main_OnCommand(41206)
+                                    Reaper.utility.Main_OnCommand_SafeUI(41206)
                                 Case JogWheelToolModes.Trim
                                     'rognage d'un item
                                     If IsCursorPlacedLeft Then
-                                        'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
-                                        MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                        Reaper.utility.Main_OnCommand(41305)
+                                        Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
+                                        'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                        Reaper.utility.Main_OnCommand_SafeUI(41305)
                                     Else
-                                        'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
-                                        MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                        Reaper.utility.Main_OnCommand(41311)
+                                        Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
+                                        'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                        Reaper.utility.Main_OnCommand_SafeUI(41311)
                                     End If
                                 Case JogWheelToolModes.Shuffle
 
                                     If Ctl Then
                                         'deplacement du contenu interne d'un item
                                         If direction = Direction.Left Then
-                                            Reaper.utility.Main_OnCommand(40123)
+                                            Reaper.utility.Main_OnCommand_SafeUI(40123)
                                         Else
-                                            Reaper.utility.Main_OnCommand(40124)
+                                            Reaper.utility.Main_OnCommand_SafeUI(40124)
                                         End If
                                     Else
                                         'deplacement d'un item
                                         If direction = Direction.Left Then
-                                            Reaper.utility.Main_OnCommand(40120)
+                                            Reaper.utility.Main_OnCommand_SafeUI(40120)
                                             If SnapToGridAL.State Then
-                                                Reaper.utility.Main_OnCommand(41182)
+                                                Reaper.utility.Main_OnCommand_SafeUI(41182)
                                             End If
 
                                         Else
-                                            Reaper.utility.Main_OnCommand(40119)
+                                            Reaper.utility.Main_OnCommand_SafeUI(40119)
                                             If SnapToGridAL.State Then
-                                                Reaper.utility.Main_OnCommand(41183)
+                                                Reaper.utility.Main_OnCommand_SafeUI(41183)
                                             End If
                                         End If
                                     End If
@@ -7625,75 +7662,75 @@ Public Class C24ReaperController
                                 Case JogWheelToolModes.SelAdj
                                     'Modification d'une sélection
                                     If IsCursorPlacedLeft Then
-                                        'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
-                                        MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                        Reaper.utility.Main_OnCommand(40625)
+                                        Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
+                                        'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40625)
                                     Else
-                                        'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
-                                        MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                        Reaper.utility.Main_OnCommand(40626)
+                                        Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
+                                        'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40626)
                                     End If
 
                                 Case JogWheelToolModes.PreRool
                                     'Modification de la durée du pre roll
 
-                                    Dim SelectionStartTime = _ReaperProjectMonitor.SelectionStartTime
-                                    MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                    Reaper.utility.Main_OnCommand(40222)
-                                    Dim CurPos = Reaper.utility.GetCursorPosition
-                                    If CurPos > SelectionStartTime Then
-                                        Reaper.utility.SetCursorPosition(SelectionStartTime, True)
-                                        Reaper.utility.Main_OnCommand(40222)
-                                        Reaper.utility.Main_OnCommand(40223)
-                                    End If
-
-
-                                    'Dim delta = (If(direction = Direction.Left, -1, 1) * velocity * diff)
                                     'Dim SelectionStartTime = _ReaperProjectMonitor.SelectionStartTime
+                                    'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                    'Reaper.utility.Main_OnCommand(40222)
                                     'Dim CurPos = Reaper.utility.GetCursorPosition
-
-                                    'If CurPos + delta <= SelectionStartTime Then
-                                    '    Reaper.utility.MoveEditCursor(delta, False)
+                                    'If CurPos > SelectionStartTime Then
+                                    '    Reaper.utility.SetCursorPosition(SelectionStartTime, True)
                                     '    Reaper.utility.Main_OnCommand(40222)
-                                    'Else
-                                    '    Reaper.utility.SetCursorPosition(SelectionStartTime)
-                                    '    Reaper.utility.Main_OnCommand(40222)
+                                    '    Reaper.utility.Main_OnCommand(40223)
                                     'End If
+
+
+                                    Dim delta = (If(direction = Direction.Left, -1, 1) * velocity * diff)
+                                    Dim SelectionStartTime = _ReaperProjectMonitor.SelectionStartTime
+                                    Dim CurPos = Reaper.utility.GetCursorPosition
+
+                                    If CurPos + delta <= SelectionStartTime Then
+                                        Reaper.utility.MoveEditCursor(delta, False)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40222)
+                                    Else
+                                        Reaper.utility.SetCursorPosition(SelectionStartTime)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40222)
+                                    End If
 
                                 Case JogWheelToolModes.PostRool
                                     'Modification de la durée du post roll
 
-                                    Dim SelectionEndTime = _ReaperProjectMonitor.SelectionEndTime
-                                    MoveEditCursor(direction, velocity, SnapToGridAL, True)
-                                    Reaper.utility.Main_OnCommand(40223)
-                                    Dim CurPos = Reaper.utility.GetCursorPosition
-                                    If CurPos < SelectionEndTime Then
-                                        Reaper.utility.SetCursorPosition(SelectionEndTime, True)
-                                        Reaper.utility.Main_OnCommand(40222)
-                                        Reaper.utility.Main_OnCommand(40223)
-                                    End If
-
-                                    'Dim delta = (If(direction = Direction.Left, -1, 1) * velocity * diff)
                                     'Dim SelectionEndTime = _ReaperProjectMonitor.SelectionEndTime
+                                    'MoveEditCursor(direction, velocity, SnapToGridAL, True)
+                                    'Reaper.utility.Main_OnCommand(40223)
                                     'Dim CurPos = Reaper.utility.GetCursorPosition
-
-                                    'If CurPos + delta >= SelectionEndTime Then
-                                    '    Reaper.utility.MoveEditCursor(delta, False)
-                                    '    Reaper.utility.Main_OnCommand(40223)
-                                    'Else
-                                    '    Reaper.utility.SetCursorPosition(SelectionEndTime)
+                                    'If CurPos < SelectionEndTime Then
+                                    '    Reaper.utility.SetCursorPosition(SelectionEndTime, True)
+                                    '    Reaper.utility.Main_OnCommand(40222)
                                     '    Reaper.utility.Main_OnCommand(40223)
                                     'End If
+
+                                    Dim delta = (If(direction = Direction.Left, -1, 1) * velocity * diff)
+                                    Dim SelectionEndTime = _ReaperProjectMonitor.SelectionEndTime
+                                    Dim CurPos = Reaper.utility.GetCursorPosition
+
+                                    If CurPos + delta >= SelectionEndTime Then
+                                        Reaper.utility.MoveEditCursor(delta, False)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40223)
+                                    Else
+                                        Reaper.utility.SetCursorPosition(SelectionEndTime)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40223)
+                                    End If
                                 Case JogWheelToolModes.Automation
 
-                                    'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), If(Ctl, True, False))
-                                    MoveEditCursor(direction, velocity, SnapToGridAL)
+                                    Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), If(Ctl, True, False))
+                                    'MoveEditCursor(direction, velocity, SnapToGridAL)
                                 Case JogWheelToolModes.Nudge
                                     If direction = Direction.Left Then
-                                        Reaper.utility.Main_OnCommand(40286)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40286)
 
                                     Else
-                                        Reaper.utility.Main_OnCommand(40285)
+                                        Reaper.utility.Main_OnCommand_SafeUI(40285)
 
                                     End If
 
@@ -7705,50 +7742,51 @@ Public Class C24ReaperController
                             'Zoom X in/out (Shift)
                             'Zoom Out
                             If direction = Direction.Left Then
-                                Reaper.utility.Main_OnCommand(1011)
+                                Reaper.utility.Main_OnCommand_SafeUI(1011)
                             Else
                                 'Zoom In
-                                Reaper.utility.Main_OnCommand(1012)
+                                Reaper.utility.Main_OnCommand_SafeUI(1012)
                             End If
+                            OnReaperZoomXH.Invoke
                         ElseIf Shift = True AndAlso Ctl = False AndAlso Ctrl = False AndAlso Opt = True Then
                             'Zoom Y in/out (Shift +Opt)
                             'Zoom Out
                             If direction = Direction.Left Then
-                                Reaper.utility.Main_OnCommand(40112)
+                                Reaper.utility.Main_OnCommand_SafeUI(40112)
                             Else
                                 'Zoom In
-                                Reaper.utility.Main_OnCommand(40111)
+                                Reaper.utility.Main_OnCommand_SafeUI(40111)
                             End If
                         ElseIf Shift = False AndAlso Ctl = False AndAlso Ctrl = False AndAlso Opt = True Then
                             If JogWheelToolMode = JogWheelToolModes.Automation Then
                                 'Track: Select next prev envelope
                                 If direction = Direction.Left Then
-                                    Reaper.utility.Main_OnCommand(41863)
+                                    Reaper.utility.Main_OnCommand_SafeUI(41863)
                                 Else
-                                    Reaper.utility.Main_OnCommand(41864)
+                                    Reaper.utility.Main_OnCommand_SafeUI(41864)
                                 End If
                             Else
                                 'Déplacement de la sélection d'une piste (Opt)
                                 If direction = Direction.Left Then
-                                    Reaper.utility.Main_OnCommand(40286)
+                                    Reaper.utility.Main_OnCommand_SafeUI(40286)
                                 Else
-                                    Reaper.utility.Main_OnCommand(40285)
+                                    Reaper.utility.Main_OnCommand_SafeUI(40285)
                                 End If
                             End If
 
                         ElseIf Shift = False AndAlso Ctl = False AndAlso Ctrl = True AndAlso Opt = True Then
                             'Déplacement de la sélection pour sélectionner plusieurs pistes (Opt +Ctrl)
                             If direction = Direction.Left Then
-                                Reaper.utility.Main_OnCommand(40288)
+                                Reaper.utility.Main_OnCommand_SafeUI(40288)
                             Else
-                                Reaper.utility.Main_OnCommand(40287)
+                                Reaper.utility.Main_OnCommand_SafeUI(40287)
                             End If
                         ElseIf Shift = True AndAlso Ctl = True AndAlso Ctrl = False AndAlso Opt = False Then
                             Select Case JogWheelToolMode
                                 Case JogWheelToolModes.None
                                     'déplacement du curseur
-                                    'Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), If(Ctl, True, False))
-                                    MoveEditCursor(direction, velocity, SnapToGridAL)
+                                    Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), If(Ctl, True, False))
+                                    'MoveEditCursor(direction, velocity, SnapToGridAL)
                             End Select
 
 
@@ -7785,14 +7823,14 @@ Public Class C24ReaperController
 
                             LastSavedSelection = Reaper.utility.GetSelection
                             'Déselectionne  la zone de sélection
-                            Reaper.utility.Main_OnCommand(40020)
+                            Reaper.utility.Main_OnCommand_SafeUI(40020)
                             'Déselectionne  les points de l'envelope
-                            Reaper.utility.Main_OnCommand(40331)
-                            'Paramètre le point in et out de la zone de sélection
-                            Reaper.utility.Main_OnCommand(40625)
-                            Reaper.utility.Main_OnCommand(40626)
-                            'Fix Ctl Point
-                            CtlPoint = Reaper.utility.GetCursorPosition
+                            Reaper.utility.Main_OnCommand_SafeUI(40331)
+                            ''Paramètre le point in et out de la zone de sélection
+                            'Reaper.utility.Main_OnCommand(40625)
+                            'Reaper.utility.Main_OnCommand(40626)
+                            ''Fix Ctl Point
+                            'CtlPoint = Reaper.utility.GetCursorPosition
                         End If
 
                         If Shift = True Then
@@ -7806,7 +7844,7 @@ Public Class C24ReaperController
 
                         If Opt = True Then
                             'déselectionne toutes les pistes
-                            Reaper.utility.Main_OnCommand(40297)
+                            Reaper.utility.Main_OnCommand_SafeUI(40297)
                         End If
 
                     End If
@@ -7822,7 +7860,7 @@ Public Class C24ReaperController
                         'Ajoute les nouveaux items à ceux qui sont sauvegardés (inverse la sélection si déjà présente)
 
                         'selectionne tous les items des pistes selectionnées dans la selection
-                        Reaper.utility.Main_OnCommand(40718)
+                        Reaper.utility.Main_OnCommand_SafeUI(40718)
 
                         If saved_selecteditems IsNot Nothing AndAlso saved_selecteditems.Count > 0 Then
                             Dim _DeselectItems As New List(Of ReaperItemRef)
@@ -7844,22 +7882,22 @@ Public Class C24ReaperController
 
                         If Ctrl Then
                             'Time selection: Set time selection to items
-                            Reaper.utility.Main_OnCommand(40290)
+                            Reaper.utility.Main_OnCommand_SafeUI(40290)
 
                         End If
 
                     Else
                         'selectionne tous les items des pistes selectionnées dans la selection
-                        Reaper.utility.Main_OnCommand(40718)
+                        Reaper.utility.Main_OnCommand_SafeUI(40718)
                         If Ctrl Then
                             'Time selection: Set time selection to items
-                            Reaper.utility.Main_OnCommand(40290)
+                            Reaper.utility.Main_OnCommand_SafeUI(40290)
 
                         End If
 
                         'déplacement du curseur avec selection des points d'envelope
                         If JogWheelToolMode = JogWheelToolModes.Automation Then
-                            Reaper.utility.Main_OnCommand(40330)
+                            Reaper.utility.Main_OnCommand_SafeUI(40330)
                         End If
                     End If
                     saved_selecteditems = Nothing
@@ -7881,6 +7919,12 @@ Public Class C24ReaperController
             RemoveHandler C24_Desk.JogWheel.OnJogWheelChange, h.JogWheelChangeH
             RemoveHandler C24_Desk.Ctl_Clutch.OnButtonReleased, h.CtlBtnRH
             RemoveHandler C24_Desk.Ctl_Clutch.OnButtonPressed, h.CtlBtnPH
+            RemoveHandler C24_Desk.Ctrl.OnButtonPressed, h.CtrlPressedH
+            RemoveHandler C24_Desk.Ctrl.OnButtonReleased, h.CtrlReleaseH
+            If h.SnapToGridAL IsNot Nothing Then
+                RemoveHandler h.SnapToGridAL.On_StateChange, h.SnapToGridALH
+            End If
+
 
             If h.SnapToGridAL IsNot Nothing Then
                 h.SnapToGridAL.Dispose()
