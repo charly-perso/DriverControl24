@@ -181,7 +181,7 @@ Public Class C24ReaperController
     Private _ScribbleScriptsHandlers As New List(Of ScribbleScriptsHandler)
     Private _ZoomPresetStripHandlers As New List(Of ZoomPresetStripHandler)
     Private _AutoModifiersHandlers As New List(Of AutoModifiersHandler)
-    Private _JogWheelHandlers As New List(Of JogWheelHandler)
+    Public _JogWheelHandlers As New List(Of JogWheelHandler)
     Private _C24ActionLinkerHandlers As New List(Of C24ActionLinkerHandler)
     Private _NumPadHandlers As New List(Of NumPadHandler)
     Private _UndoSaveHandler As New List(Of UndoSaveHandler)
@@ -5689,7 +5689,7 @@ Public Class C24ReaperController
                     JogWheelToolMode = JogWheelToolModes.None
 
                 Else
-                    If Ctrl AndAlso C24_Desk.Pre_Roll.IsBlinking = False Then
+                    If Shift AndAlso C24_Desk.Pre_Roll.IsBlinking = False Then
                         'mode paramétrage du pré roll
                         'Passage de la jogwheel en mode Pre Rool
                         _EditToolsHandlers.First.Tools_C24RadioBtnHandler.SetAllBtnOff()
@@ -5774,7 +5774,7 @@ Public Class C24ReaperController
                     JogWheelToolMode = JogWheelToolModes.None
 
                 Else
-                    If Ctrl AndAlso C24_Desk.Post_Roll.IsBlinking = False Then
+                    If Shift AndAlso C24_Desk.Post_Roll.IsBlinking = False Then
                         'mode paramétrage du Post roll
                         'Passage de la jogwheel en mode Post Rool
                         _EditToolsHandlers.First.Tools_C24RadioBtnHandler.SetAllBtnOff()
@@ -6159,6 +6159,7 @@ Public Class C24ReaperController
                             'active/désactive les enveloppes existantes
                             For Each env In ReaperTrk.Envelopes.AllOfType(Of ReaperTrackVolEnvelope)
                                 env.Active = Not env.Active
+                                'env.Visible = Not env.Visible
                                 'env.Armed = Newstatus
                                 env.Refresh()
 

@@ -527,6 +527,10 @@ Public Class Main
                     Else
                         Console.Write("option non valide")
                     End If
+                Case "JogWheelMode"
+                    Console.Write("JogWheelMode")
+                    RunJogWheelMode()
+
                 Case "Clear", "clear", "cls"
                     Console.Clear()
                 Case Else
@@ -535,7 +539,94 @@ Public Class Main
             End Select
         End While
     End Sub
+    ''' <summary>
+    ''' Passe la console en mode Jogwheel : les touches Gauche/Droite envoient
+    ''' respectivement -1 / +1 au composant JogWheel du desk.
+    ''' Un appui maintenu génère des répétitions clavier, donc des crans successifs.
+    ''' Échap ou Q quitte le mode.
+    ''' </summary>
+    Private Shared Sub RunJogWheelMode()
+        Dim jog As Control24.Hardware.C24_JogWheel = Nothing
 
+        If _desk Is Nothing Then
+            Console.WriteLine("Desk non initialisé.")
+            Return
+        End If
+
+        Dim group = _desk.GroupComponents("JogWheel")
+        If group Is Nothing Then
+            Console.WriteLine("Groupe JogWheel introuvable.")
+            Return
+        End If
+
+        For Each cpn In group
+            Dim candidate = TryCast(cpn, Control24.Hardware.C24_JogWheel)
+            If candidate IsNot Nothing AndAlso candidate.Name = "JogWheel" Then
+                jog = candidate
+                Exit For
+            End If
+        Next
+
+        If jog Is Nothing Then
+            Console.WriteLine("Composant JogWheel introuvable.")
+            Return
+        End If
+
+        Console.WriteLine("Mode JogWheel : flèche gauche = -1, flèche droite = +1 (appui maintenu supporté). Échap ou Q pour quitter.")
+
+        Dim running As Boolean = True
+        Dim CtlPressed As Boolean = False
+        Dim ShiftPressed As Boolean = False
+        Dim velocity As Integer = 1
+        While running
+            Dim keyInfo As ConsoleKeyInfo = Console.ReadKey(True)
+
+            If keyInfo.Modifiers = ConsoleModifiers.Control AndAlso CtlPressed = False Then
+                'press Ctl
+                _desk.Ctl_Clutch.ButtonCmd_OnButtonStatusChange(True)
+                CtlPressed = True
+            End If
+            If keyInfo.Modifiers = ConsoleModifiers.None AndAlso CtlPressed = True Then
+                'release Ctl
+                _desk.Ctl_Clutch.ButtonCmd_OnButtonStatusChange(False)
+                CtlPressed = False
+            End If
+            If keyInfo.Modifiers = ConsoleModifiers.Shift AndAlso ShiftPressed = False Then
+                'press Sht
+                _desk.Shift.ButtonCmd_OnButtonStatusChange(True)
+                ShiftPressed = True
+            End If
+            If keyInfo.Modifiers = ConsoleModifiers.None AndAlso ShiftPressed = True Then
+                'release Sht
+                _desk.Shift.ButtonCmd_OnButtonStatusChange(False)
+                ShiftPressed = False
+            End If
+
+            Select Case keyInfo.Key
+                Case ConsoleKey.G
+                    Dim SnapToGridAL = _controller._JogWheelHandlers.First.SnapToGridAL
+                    SnapToGridAL.State = Not SnapToGridAL.State
+                    Console.WriteLine("SnapToGridAL is " & SnapToGridAL.State.ToString)
+
+                Case ConsoleKey.Q
+                    If velocity = 1 Then
+                        Console.WriteLine("Quick Mode On")
+                        velocity = 5
+                    ElseIf velocity = 5 Then
+                        Console.WriteLine("Quick Mode Off")
+                        velocity = 1
+                    End If
+                Case ConsoleKey.RightArrow
+                    jog.OnJogWheelCmdChange(velocity)
+                Case ConsoleKey.LeftArrow
+                    jog.OnJogWheelCmdChange(-1 * velocity)
+                Case ConsoleKey.Escape
+                    running = False
+            End Select
+        End While
+
+        Console.WriteLine("Mode JogWheel terminé.")
+    End Sub
     ''' <summary>
     ''' Affiche tous les groupes et composants enregistrés dans <paramref name="desk"/>.
     ''' Pour les 24 ChannelStrips, seul ChannelStrip_1 est développé ;
@@ -618,6 +709,8 @@ Public Class Main
         Console.WriteLine("  ResetC24SENDORDER <option>                  — Efface dans le dictionnaire C24SENDORDER de clés/valeurs de Reaper ")
         Console.WriteLine("  option: trkIndex                              Option l'index de la piste 0,1,2,etc ")
         Console.WriteLine("  option: All                                   Option toutes les pistes")
+        Console.WriteLine("  JogWheelMode                                - Mode JogWheel : flèche gauche = -1, flèche droite = +1 (appui maintenu supporté).Q = Velocity 5,Ctl/Shift supportés Échap pour quitter.")
+
         Console.WriteLine("  quit / exit                                 — Arrête le driver")
     End Sub
     Private Shared Function ParseCommandParts(input As String) As List(Of String)

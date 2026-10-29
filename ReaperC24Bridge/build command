@@ -1,0 +1,1 @@
+dotnet publish ReaperC24Bridge -r win-x64 -c Release

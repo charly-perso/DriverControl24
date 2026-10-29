@@ -10,7 +10,8 @@ Module Program
                         DriverReaperControl24.Main.DisplayInterfaceName()
                     Case "-s"
                         If i + 1 <= args.Count - 1 Then
-                            DriverReaperControl24.Main.StartFromConsole({args(i + 1)})
+                            'DriverReaperControl24.Main.StartFromConsole({args(i + 1)})
+                            DriverReaperControl24.Main.Main
                         End If
                 End Select
 

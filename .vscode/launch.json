@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DriverReaperControl24 (Debug)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "C:/Users/chcolin/AppData/Roaming/REAPER/UserPlugins/DriverReaperControl24.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/DriverReaperControl24",
+            "console": "externalTerminal",
+            "stopAtEntry": false
+        }
+    ]
+}
