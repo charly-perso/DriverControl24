@@ -1,0 +1,169 @@
+Analysis of sampling REAPER (pid 43025) every 1 millisecond
+Process:         REAPER [43025]
+Path:            /Applications/REAPER.app/Contents/MacOS/REAPER
+Load Address:    0x1088ae000
+Identifier:      com.cockos.reaper
+Version:         7.82.0_3385784u (7.82.0_3385784u)
+Code Type:       X86-64
+Platform:        macOS
+Parent Process:  ??? [1]
+
+Date/Time:       2026-10-30 17:51:23.712 +0100
+Launch Time:     2026-10-30 17:49:40.983 +0100
+OS Version:      macOS 14.7.5 (23H527)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+
+Physical footprint:         82.4M
+Physical footprint (peak):  104.3M
+Idle exit:                  untracked
+----
+
+Call graph:
+    2280 Thread_1519265   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 2280 start  (in dyld) + 1909  [0x7ff81832a345]
+    +   2280 NSApplicationMain  (in AppKit) + 816  [0x7ff81bdc94e3]
+    +     2280 -[NSApplication run]  (in AppKit) + 640  [0x7ff81bdf559a]
+    +       2280 -[NSApplication _handleEvent:]  (in AppKit) + 65  [0x7ff81c2d1d1e]
+    +         2280 -[REAPERapp sendEvent:]  (in REAPER) + 4290  [0x108d46e92]
+    +           2280 -[NSApplication(NSEventRouting) sendEvent:]  (in AppKit) + 1456  [0x7ff81c717190]
+    +             2280 -[NSWindow(NSEventRouting) sendEvent:]  (in AppKit) + 345  [0x7ff81bf644f3]
+    +               2280 -[NSWindow(NSEventRouting) _reallySendEvent:isDelayedEvent:]  (in AppKit) + 313  [0x7ff81bf64847]
+    +                 2280 -[NSWindow(NSEventRouting) _handleMouseDownEvent:isDelayedEvent:]  (in AppKit) + 4582  [0x7ff81bfeb7e3]
+    +                   2280 -[NSControl mouseDown:]  (in AppKit) + 666  [0x7ff81bfece3b]
+    +                     2280 -[NSButtonCell trackMouse:inRect:ofView:untilMouseUp:]  (in AppKit) + 666  [0x7ff81bfeda46]
+    +                       2280 -[NSCell trackMouse:inRect:ofView:untilMouseUp:]  (in AppKit) + 125  [0x7ff81bfedb7f]
+    +                         2280 NSControlTrackMouse  (in AppKit) + 1823  [0x7ff81bfee2c2]
+    +                           2280 -[NSButtonCell _sendActionFrom:]  (in AppKit) + 96  [0x7ff81bff13d6]
+    +                             2280 -[NSCell _sendActionFrom:]  (in AppKit) + 171  [0x7ff81bff148e]
+    +                               2280 __26-[NSCell _sendActionFrom:]_block_invoke  (in AppKit) + 131  [0x7ff81bff1585]
+    +                                 2280 -[NSControl sendAction:to:]  (in AppKit) + 86  [0x7ff81bff1653]
+    +                                   2280 -[NSApplication(NSResponder) sendAction:to:from:]  (in AppKit) + 337  [0x7ff81bff17dd]
+    +                                     2280 -[NSWindow __close]  (in AppKit) + 429  [0x7ff81c143ee6]
+    +                                       2280 __19-[NSWindow __close]_block_invoke  (in AppKit) + 198  [0x7ff81c143fce]
+    +                                         2280 -[REAPERSwell_modelesswindow windowShouldClose:]  (in REAPER) + 79  [0x108f5439f]
+    +                                           2280 SwellDialogDefaultWindowProc(HWND__*, unsigned int, unsigned long, long)  (in REAPER) + 444  [0x108f4eefc]
+    +                                             2280 MainProc(HWND__*, unsigned int, unsigned long, long)  (in REAPER) + 10212  [0x109122ae4]
+    +                                               2280 -[NSApplication terminate:]  (in AppKit) + 1979  [0x7ff81c06aa36]
+    +                                                 2280 -[NSNotificationCenter postNotificationName:object:userInfo:]  (in Foundation) + 82  [0x7ff8196f080e]
+    +                                                   2280 _CFXNotificationPost  (in CoreFoundation) + 682  [0x7ff818757f1b]
+    +                                                     2280 _CFXRegistrationPost  (in CoreFoundation) + 532  [0x7ff818818f70]
+    +                                                       2280 ___CFXRegistrationPost_block_invoke  (in CoreFoundation) + 88  [0x7ff818819026]
+    +                                                         2280 __CFNOTIFICATIONCENTER_IS_CALLING_OUT_TO_AN_OBSERVER__  (in CoreFoundation) + 137  [0x7ff818788600]
+    +                                                           2280 Main_OnAppQuit()  (in REAPER) + 798  [0x109126f1e]
+    +                                                             2280 Rewire_Shutdown()  (in REAPER) + 168  [0x108d12318]
+    +                                                               2280 ReWire_BRIDGE::RWMClose()  (in REAPER) + 193  [0x1092c2e71]
+    +                                                                 2280 RWMClose  (in REAPER) + 12  [0x108d0b69c]
+    +                                                                   2280 RWM2CloseImp  (in ReWire) + 52  [0x131fe9ae4]
+    +                                                                     2280 ???  (in ReWire)  load address 0x131fe3000 + 0x886f  [0x131feb86f]
+    +                                                                       2280 ???  (in ReWire)  load address 0x131fe3000 + 0x4a099  [0x13202d099]
+    +                                                                         2280 _pthread_join  (in libsystem_pthread.dylib) + 348  [0x7ff8186b79f1]
+    +                                                                           2280 __ulock_wait  (in libsystem_kernel.dylib) + 10  [0x7ff818677826]
+    2280 Thread_1519286: com.apple.NSEventThread
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+    +     2280 _NSEventThread  (in AppKit) + 122  [0x7ff81bf6228c]
+    +       2280 CFRunLoopRunSpecific  (in CoreFoundation) + 557  [0x7ff818791002]
+    +         2280 __CFRunLoopRun  (in CoreFoundation) + 1371  [0x7ff818791b25]
+    +           2280 __CFRunLoopServiceMachPort  (in CoreFoundation) + 143  [0x7ff8187930b5]
+    +             2280 mach_msg  (in libsystem_kernel.dylib) + 19  [0x7ff81867635d]
+    +               2280 mach_msg_overwrite  (in libsystem_kernel.dylib) + 653  [0x7ff81867d158]
+    +                 2280 mach_msg2_internal  (in libsystem_kernel.dylib) + 84  [0x7ff818684858]
+    +                   2280 mach_msg2_trap  (in libsystem_kernel.dylib) + 10  [0x7ff81867606e]
+    2280 Thread_1519291
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+    +     2280 CADeprecated::CAPThread::Entry(CADeprecated::CAPThread*)  (in CoreMIDI) + 77  [0x7ff83362f903]
+    +       2280 CADeprecated::XThread::RunHelper(void*)  (in CoreMIDI) + 10  [0x7ff83362ded6]
+    +         2280 MIDIProcess::MIDIInPortThread::Run()  (in CoreMIDI) + 104  [0x7ff8336308ba]
+    +           2280 XServerMachPort::ReceiveMessage(int&, void*, int&)  (in CoreMIDI) + 98  [0x7ff833620e52]
+    +             2280 mach_msg  (in libsystem_kernel.dylib) + 19  [0x7ff81867635d]
+    +               2280 mach_msg_overwrite  (in libsystem_kernel.dylib) + 653  [0x7ff81867d158]
+    +                 2280 mach_msg2_internal  (in libsystem_kernel.dylib) + 84  [0x7ff818684858]
+    +                   2280 mach_msg2_trap  (in libsystem_kernel.dylib) + 10  [0x7ff81867606e]
+    2280 Thread_1519312: caulk.messenger.shared:17
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+    +     2280 caulk::thread_proxy<std::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::tuple<caulk::concurrent::details::worker_thread*>>>(void*)  (in caulk) + 41  [0x7ff822ed07e8]
+    +       2280 caulk::concurrent::details::worker_thread::run()  (in caulk) + 30  [0x7ff822ed0ac4]
+    +         2280 caulk::semaphore::timed_wait(double)  (in caulk) + 150  [0x7ff822ed0ba8]
+    +           2280 semaphore_wait_trap  (in libsystem_kernel.dylib) + 10  [0x7ff818675fea]
+    2280 Thread_1519313: caulk.messenger.shared:high
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+    +     2280 caulk::thread_proxy<std::tuple<caulk::thread::attributes, void (caulk::concurrent::details::worker_thread::*)(), std::tuple<caulk::concurrent::details::worker_thread*>>>(void*)  (in caulk) + 41  [0x7ff822ed07e8]
+    +       2280 caulk::concurrent::details::worker_thread::run()  (in caulk) + 30  [0x7ff822ed0ac4]
+    +         2280 caulk::semaphore::timed_wait(double)  (in caulk) + 150  [0x7ff822ed0ba8]
+    +           2280 semaphore_wait_trap  (in libsystem_kernel.dylib) + 10  [0x7ff818675fea]
+    2280 Thread_1519390: reaper/video
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+    +     2280 __threadproc(void*)  (in REAPER) + 25  [0x108f85119]
+    +       2279 videoDecodeThread(void*)  (in reaper_video.dylib) + 1229  [0x11042fa88]
+    +       ! 2279 usleep  (in libsystem_c.dylib) + 53  [0x7ff81856b994]
+    +       !   2279 nanosleep  (in libsystem_c.dylib) + 199  [0x7ff81856ba61]
+    +       !     2279 __semwait_signal  (in libsystem_kernel.dylib) + 10  [0x7ff818678ae6]
+    +       1 videoDecodeThread(void*)  (in reaper_video.dylib) + 1236  [0x11042fa8f]
+    2280 Thread_1519391: .NET Finalizer
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+    +     2280 FinalizerStart(void*)  (in reaper_c24bridge.dylib) + 85  [0x1108d1185]  FinalizerHelpers.cpp:80
+    +       2280 S_P_CoreLib_System_Runtime___Finalizer__ProcessFinalizers  (in reaper_c24bridge.dylib) + 97  [0x1109d3321]  __Finalizer.cs:27
+    +         2280 RhpWaitForFinalizerRequest  (in reaper_c24bridge.dylib) + 134  [0x1108d12e6]  FinalizerHelpers.cpp:197
+    +           2280 UnixEvent::Wait(unsigned int)  (in reaper_c24bridge.dylib) + 194  [0x11091b562]  PalUnix.cpp:347
+    +             2280 _pthread_cond_wait  (in libsystem_pthread.dylib) + 1260  [0x7ff8186b6724]
+    +               2280 __psynch_cvwait  (in libsystem_kernel.dylib) + 10  [0x7ff818678c1a]
+    2280 Thread_1519392: PeakPipeServer
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 ThreadEntryPoint  (in reaper_c24bridge.dylib) + 25  [0x1109a7b89]  Thread.NativeAot.Unix.cs:121
+    +     2280 S_P_CoreLib_System_Threading_Thread__StartThread  (in reaper_c24bridge.dylib) + 273  [0x1109a77f1]  Thread.NativeAot.cs:459
+    +       2280 reaper_c24bridge_ReaperEntry__RunPeakPipeServer  (in reaper_c24bridge.dylib) + 363  [0x110a2996b]  ReaperEntry.cs:392
+    +         2280 System_IO_Pipes_System_IO_Pipes_NamedPipeServerStream__WaitForConnection  (in reaper_c24bridge.dylib) + 72  [0x11095aea8]  NamedPipeServerStream.Unix.cs:64
+    +           2280 S_P_CoreLib_System_Runtime_CompilerServices_TaskAwaiter__HandleNonSuccessAndDebuggerNotification  (in reaper_c24bridge.dylib) + 39  [0x1109d77a7]  TaskAwaiter.cs:104
+    +             2280 S_P_CoreLib_System_Threading_Tasks_Task__InternalWait  (in reaper_c24bridge.dylib) + 37  [0x1109b3795]  Task.cs:2965
+    +               2280 S_P_CoreLib_System_Threading_Tasks_Task__InternalWaitCore  (in reaper_c24bridge.dylib) + 76  [0x1109b37ec]  Task.cs:2982
+    +                 2280 S_P_CoreLib_System_Threading_Tasks_Task__SpinThenBlockingWait  (in reaper_c24bridge.dylib) + 342  [0x1109b3966]  Task.cs:3090
+    +                   2280 S_P_CoreLib_System_Threading_ManualResetEventSlim__Wait_4  (in reaper_c24bridge.dylib) + 653  [0x1109aa72d]  ManualResetEventSlim.cs:587
+    +                     2280 S_P_CoreLib_System_Threading_Condition__Wait_1  (in reaper_c24bridge.dylib) + 209  [0x1109a6271]  Condition.cs:120
+    +                       2280 S_P_CoreLib_System_Threading_WaitHandle__WaitOneNoCheck  (in reaper_c24bridge.dylib) + 236  [0x1109b004c]  WaitHandle.cs:144
+    +                         2280 S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait  (in reaper_c24bridge.dylib) + 122  [0x1109f3a8a]  WaitSubsystem.WaitableObject.Unix.cs:320
+    +                           2280 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait  (in reaper_c24bridge.dylib) + 437  [0x1109f3475]  WaitSubsystem.ThreadWaitInfo.Unix.cs:322
+    +                             2280 _pthread_cond_wait  (in libsystem_pthread.dylib) + 1260  [0x7ff8186b6724]
+    +                               2280 __psynch_cvwait  (in libsystem_kernel.dylib) + 10  [0x7ff818678c1a]
+    2280 Thread_1519393: .NET Sockets
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 ThreadEntryPoint  (in reaper_c24bridge.dylib) + 25  [0x1109a7b89]  Thread.NativeAot.Unix.cs:121
+    +     2280 S_P_CoreLib_System_Threading_Thread__StartThread  (in reaper_c24bridge.dylib) + 312  [0x1109a7818]  Thread.NativeAot.cs:459
+    +       2280 System_Net_Sockets_System_Net_Sockets_SocketAsyncEngine__EventLoop  (in reaper_c24bridge.dylib) + 216  [0x110967298]  SocketAsyncEngine.Unix.cs:219
+    +         2280 SystemNative_WaitForSocketEvents  (in reaper_c24bridge.dylib) + 85  [0x1108c3ad5]  pal_networking.c:3523
+    +           2280 kevent  (in libsystem_kernel.dylib) + 10  [0x7ff81867ad4e]
+    2280 Thread_1519396: .NET TP Gate
+    + 2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+    +   2280 ThreadEntryPoint  (in reaper_c24bridge.dylib) + 25  [0x1109a7b89]  Thread.NativeAot.Unix.cs:121
+    +     2280 S_P_CoreLib_System_Threading_Thread__StartThread  (in reaper_c24bridge.dylib) + 273  [0x1109a77f1]  Thread.NativeAot.cs:459
+    +       2280 S_P_CoreLib_System_Threading_PortableThreadPool_GateThread__GateThreadStart  (in reaper_c24bridge.dylib) + 1139  [0x1109f0793]  PortableThreadPool.GateThread.cs:64
+    +         2280 S_P_CoreLib_System_Threading_WaitHandle__WaitOneNoCheck  (in reaper_c24bridge.dylib) + 236  [0x1109b004c]  WaitHandle.cs:144
+    +           2280 S_P_CoreLib_System_Threading_WaitSubsystem_WaitableObject__Wait  (in reaper_c24bridge.dylib) + 122  [0x1109f3a8a]  WaitSubsystem.WaitableObject.Unix.cs:320
+    +             2280 S_P_CoreLib_System_Threading_WaitSubsystem_ThreadWaitInfo__Wait  (in reaper_c24bridge.dylib) + 437  [0x1109f3475]  WaitSubsystem.ThreadWaitInfo.Unix.cs:322
+    +               2280 _pthread_cond_wait  (in libsystem_pthread.dylib) + 1260  [0x7ff8186b6724]
+    +                 2280 __psynch_cvwait  (in libsystem_kernel.dylib) + 10  [0x7ff818678c1a]
+    2280 Thread_1520532
+      2280 thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+        2280 _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+          2280 ???  (in ReWire)  load address 0x131fe3000 + 0x49f56  [0x13202cf56]
+            2280 ???  (in ReWire)  load address 0x131fe3000 + 0x98f1  [0x131fec8f1]
+              2280 usleep  (in libsystem_c.dylib) + 53  [0x7ff81856b994]
+                2280 nanosleep  (in libsystem_c.dylib) + 199  [0x7ff81856ba61]
+                  2280 __semwait_signal  (in libsystem_kernel.dylib) + 10  [0x7ff818678ae6]
+
+Total number in stack (recursive counted multiple, when >=5):
+        10       thread_start  (in libsystem_pthread.dylib) + 15  [0x7ff8186b1ae3]
+        7       _pthread_start  (in libsystem_pthread.dylib) + 99  [0x7ff8186b618b]
+
+Sort by top of stack, same collapsed (when >= 5):
+        __psynch_cvwait  (in libsystem_kernel.dylib)        6840
+        mach_msg2_trap  (in libsystem_kernel.dylib)        4560
+        semaphore_wait_trap  (in libsystem_kernel.dylib)        4560
+        __semwait_signal  (in libsystem_kernel.dylib)        4559
+        __ulock_wait  (in libsystem_kernel.dylib)        2280
+        kevent  (in libsystem_kernel.dylib)        2280

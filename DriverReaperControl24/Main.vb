@@ -124,7 +124,7 @@ Public Class Main
 
                 Case "quit", "exit"
                     Console.WriteLine("Arrêt du driver...")
-                    Reaper.CallReaperBridge("SHOW_MESSAGE_BOX|1|Control24 Driver|Stopping...")
+                    'Reaper.CallReaperBridge("SHOW_MESSAGE_BOX|1|Control24 Driver|Stopping...")
                     Shutdown()
                     Environment.Exit(0)
 

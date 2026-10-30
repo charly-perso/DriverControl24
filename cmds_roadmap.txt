@@ -39,13 +39,13 @@ C24desk_OnButtonReleased Save Undo
 C24desk_OnButtonReleased Utility Shuttle
 C24desk_OnButtonReleased Groups Suspend
 C24desk_OnButtonReleased Transport Fw
+C24desk_OnButtonReleased Window W_Plugin
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased 
+C24desk_OnButtonReleased ChannelStrip_1 AutoMode_1 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
-C24desk_OnButtonReleased ChannelStrip_1 
-C24desk_OnButtonReleased 
-C24desk_OnButtonReleased 
-C24desk_OnButtonReleased ChannelSettings Edit_Byp
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
@@ -60,8 +60,6 @@ C24desk_GetFaderValue ChannelStrip_1 Fader_1
 C24desk_OnButtonReleased Bank Bank_Right
 C24desk_OnButtonReleased Bank Bank_Left
 
-C24desk_GetButtonStatus ChannelStrip_1 EqMode_1
-C24desk_GetButtonStatus ChannelStrip_1 DynMode_1
 C24desk_GetButtonStatus ChannelStrip_1 InsertMode_1
 C24desk_GetButtonStatus Inserts Inserts_Param
 C24desk_GetButtonStatus Automation Auto_Fader
@@ -88,7 +86,7 @@ C24desk_OnButtonReleased ChannelStrip_2 EqMode_2
 C24desk_OnVpotRotate ChannelStrip_1 Vpot_1 1
 C24desk_OnVpotRotate ChannelStrip_2 Vpot_2 1
 
-C24desk_OnVpotRotate JogWheel JogWheel 1
+C24desk_OnVpotRotate JogWheel JogWheel -5
 
 
 JS: 4-Band EQ

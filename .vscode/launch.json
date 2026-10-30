@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "C:/Users/chcolin/AppData/Roaming/REAPER/UserPlugins/DriverReaperControl24.exe",
+            "program": "/Users/charly/Library/Application Support/Reaper/UserPlugins/DriverReaperControl24",
             "args": [],
             "cwd": "${workspaceFolder}/DriverReaperControl24",
             "console": "externalTerminal",

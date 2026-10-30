@@ -232,10 +232,20 @@ Public Class ReaperBridge
     ''' Toute logique de nettoyage doit être placée ici.
     ''' </summary>
     Public Shared Sub Shutdown()
-        LogInfo("Shutting down...")
-        StopDriver()
+        ' Annule les serveurs pipe : plus aucune attente ni requête ne doit rester
+        ' en cours quand Reaper décharge le plugin.
+        _shutdownCts.Cancel()
+        ' Pas de ShowConsoleMsg ici : la console Reaper est en cours de destruction.
+        BridgeLog("Shutting down...")
+        Try
+            StopDriver()
+        Catch ex As Exception
+            BridgeLog($"Shutdown: StopDriver : {ex.Message}")
+        End Try
         ' ← Ajouter ici tout autre nettoyage pré-déchargement
     End Sub
+
+    Private Shared ReadOnly _shutdownCts As New System.Threading.CancellationTokenSource()
 
     Private Shared _verboseLog As Boolean = True
 
@@ -285,7 +295,8 @@ Public Class ReaperBridge
     Private Const BridgeServerInstances As Integer = 4
 
     Private Shared Async Function StartPipeServerAsync() As Task
-        While True
+        Dim ct = _shutdownCts.Token
+        While Not ct.IsCancellationRequested
             Dim hasError = False
             Try
                 Using pipe As New System.IO.Pipes.NamedPipeServerStream(
@@ -294,18 +305,20 @@ Public Class ReaperBridge
                     BridgeServerInstances,
                     IO.Pipes.PipeTransmissionMode.Byte)
 
-                    Await pipe.WaitForConnectionAsync()
+                    Await pipe.WaitForConnectionAsync(ct)
 
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
 
-                    Dim request = Await reader.ReadLineAsync()
-                    While request IsNot Nothing AndAlso pipe.IsConnected
+                    Dim request = Await reader.ReadLineAsync(ct)
+                    While request IsNot Nothing AndAlso pipe.IsConnected AndAlso Not ct.IsCancellationRequested
                         Dim response = ProcessRequest("bridge", request)
                         Await writer.WriteLineAsync(response)
-                        request = Await reader.ReadLineAsync()
+                        request = Await reader.ReadLineAsync(ct)
                     End While
                 End Using
+            Catch ex As OperationCanceledException
+                Exit While
             Catch ex As Exception
                 hasError = True
                 BridgeLog($"bridge: erreur serveur : {ex}")
@@ -382,7 +395,8 @@ Public Class ReaperBridge
     ''' Nom du pipe : c24_reaper_poll
     ''' </summary>
     Private Shared Async Function StartPollPipeServerAsync() As Task
-        While True
+        Dim ct = _shutdownCts.Token
+        While Not ct.IsCancellationRequested
             Dim hasError = False
             Try
                 Using pipe As New IO.Pipes.NamedPipeServerStream(
@@ -392,21 +406,23 @@ Public Class ReaperBridge
                         IO.Pipes.PipeTransmissionMode.Byte)
 
                     BridgeLog("poll: serveur créé, attente de connexion")
-                    Await pipe.WaitForConnectionAsync()
+                    Await pipe.WaitForConnectionAsync(ct)
                     BridgeLog("poll: client connecté")
 
                     Dim reader As New IO.StreamReader(pipe)
                     Dim writer As New IO.StreamWriter(pipe) With {.AutoFlush = True}
 
-                    Dim request = Await reader.ReadLineAsync()
-                    While request IsNot Nothing AndAlso pipe.IsConnected
+                    Dim request = Await reader.ReadLineAsync(ct)
+                    While request IsNot Nothing AndAlso pipe.IsConnected AndAlso Not ct.IsCancellationRequested
                         Dim response = ProcessRequest("poll", request)
                         Await writer.WriteLineAsync(response)
-                        request = Await reader.ReadLineAsync()
+                        request = Await reader.ReadLineAsync(ct)
                     End While
 
                     BridgeLog("poll: client déconnecté")
                 End Using
+            Catch ex As OperationCanceledException
+                Exit While
             Catch ex As Exception
                 hasError = True
                 BridgeLog($"poll: erreur serveur : {ex}")
@@ -2969,10 +2985,19 @@ End Sub)
                         End If
                     End If
 
-                    ReaperAPI.EnqueueUIAction(
-                             Sub()
+                    ' Exécution sur le thread UI de Reaper, puis attente de la fin
+                    ' pour garder l'ordre avec les appels API natifs qui suivent.
+                    Try
+                        RunOnMainThread(Of Boolean)(
+                             Function()
                                  ReaperAPI.Main_OnCommand(commandId, flag)
-                             End Sub)
+                                 Return True
+                             End Function, 10000)
+                    Catch ex As TimeoutException
+                        Return "ERROR:Main thread timeout"
+                    Catch ex As Exception
+                        Return "ERROR:" & ex.Message
+                    End Try
                     Return "OK"
 
                     ' ── MAIN_ON_COMMAND|commandId[|flag] ──────────────────────────

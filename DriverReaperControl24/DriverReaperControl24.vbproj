@@ -4,7 +4,8 @@
     <RootNamespace>DriverReaperControl24</RootNamespace>
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
-    <OutputPath>C:\Users\chcolin\AppData\Roaming\REAPER\UserPlugins</OutputPath>
+    <OutputPath Condition="$([MSBuild]::IsOSPlatform('Windows'))">C:\Users\chcolin\AppData\Roaming\REAPER\UserPlugins</OutputPath>
+    <OutputPath Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/REAPER/UserPlugins</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
    

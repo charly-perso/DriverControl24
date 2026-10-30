@@ -1,3 +1,47 @@
 {
-    "dotnet.defaultSolution": "DriverControl24.sln"
+    "dotnet.defaultSolution": "DriverControl24.sln",
+    "vbnetcompanion.enableLanguageClientBridge": true,
+    "vbnetcompanion.enableBridgeForCSharp": true,
+    "vbnetcompanion.enableBridgeForVisualBasic": true,
+    "vbnetcompanion.languageClientServerCommand": "dotnet",
+    "vbnetcompanion.languageClientServerArgs": [
+        "/Users/charly/.vscode/extensions/roies.vbnet-companion-0.1.47/server/VBNetCompanion.LanguageServer/publish/VBNetCompanion.LanguageServer.dll",
+        "--stdio"
+    ],
+    "editor.semanticTokenColorCustomizations": {
+        "enabled": true,
+        "rules": {
+            "comment:vb": "#57A64A",
+            "string:vb": "#D69D85",
+            "number:vb": "#B5CEA8",
+            "operator:vb": "#B4B4B4",
+            "variable:vb": "#9CDCFE",
+            "parameter:vb": "#9CDCFE",
+            "property:vb": "#DCDCDC",
+            "field:vb": "#DCDCDC",
+            "method:vb": "#DCDCAA",
+            "function:vb": "#DCDCAA",
+            "class:vb": "#4EC9B0",
+            "struct:vb": "#86C691",
+            "interface:vb": "#B8D7A3",
+            "enum:vb": "#B8D7A3",
+            "namespace:vb": "#DCDCDC",
+            "keyword:vb": "#569CD6"
+        }
+    },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            { "scope": "source.asp.vb.net comment", "settings": { "foreground": "#57A64A" } },
+            { "scope": "source.asp.vb.net string", "settings": { "foreground": "#D69D85" } },
+            { "scope": "source.asp.vb.net constant.numeric", "settings": { "foreground": "#B5CEA8" } },
+            { "scope": ["source.asp.vb.net keyword", "source.asp.vb.net storage", "source.asp.vb.net constant.language"], "settings": { "foreground": "#569CD6" } },
+            { "scope": ["source.asp.vb.net keyword.control", "source.asp.vb.net keyword.control.flow"], "settings": { "foreground": "#D8A0DF" } },
+            { "scope": ["source.asp.vb.net keyword.operator", "source.asp.vb.net punctuation"], "settings": { "foreground": "#B4B4B4" } },
+            { "scope": ["source.asp.vb.net entity.name.type", "source.asp.vb.net entity.name.class", "source.asp.vb.net support.type", "source.asp.vb.net support.class"], "settings": { "foreground": "#4EC9B0" } },
+            { "scope": ["source.asp.vb.net entity.name.function", "source.asp.vb.net support.function"], "settings": { "foreground": "#DCDCAA" } },
+            { "scope": ["source.asp.vb.net variable", "source.asp.vb.net variable.parameter"], "settings": { "foreground": "#9CDCFE" } },
+            { "scope": ["source.asp.vb.net storage.type.asp", "source.asp.vb.net storage.modifier.asp", "source.asp.vb.net variable.other.dim.asp"], "settings": { "foreground": "#569CD6" } },
+            { "scope": "source.asp.vb.net meta.preprocessor", "settings": { "foreground": "#9B9B9B" } }
+        ]
+    }
 }

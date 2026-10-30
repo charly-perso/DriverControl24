@@ -1177,6 +1177,25 @@ Public Class C24ReaperController
                 End If
                 Dim autoModeBtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                     Sub(trackNb As Integer?)
+
+                        if c24Trk.AutoModeLed.IsBlinking andalso c24Trk.AutoModeLed.AutoMode = AutoMode.All then
+                            'remet le mode normal sur la piste en mode automation précédente
+                            If LastReaperTrackIndexAutomation IsNot Nothing Then
+                                If LastReaperTrackIndexAutomation.Value = reaperTrk.TrackIndex Then
+                                    'eteind la piste actuelle
+                                    c24Trk.AutoModeLed.IsBlinking = False
+                                    c24Trk.AutoModeLed.AutoMode = GetC24AutoMode(reaperTrk.AutoMode)
+                                    'Envelope: Hide all envelopes for all tracks
+                                    Reaper.utility.Main_OnCommand(41150)
+                                    JogWheelToolMode = LastJogWheelToolMode
+                                    NavigationMode = LastNavigationMode
+                                    LastReaperTrackIndexAutomation = Nothing
+                                    Exit Sub
+                                End If
+                            End If
+                        End if
+
+
                         If Shift Then
 
 
@@ -1246,6 +1265,7 @@ Public Class C24ReaperController
                             'Ouvre et ferme les enveloppes sur la track
                             Reaper.utility.Main_OnCommand(41151)
                         Else
+
                             If Write Then
                                 On_AutoModeChange(trackNb, AutoMode.Write)
                             ElseIf Touch Then
@@ -10516,20 +10536,20 @@ Public Class C24ReaperController
         h.MixAL = MixAL
 
 
-        'If SelectedFx IsNot Nothing Then
-        '    C24_Desk.W_Plugin.Led = SelectedFx.IsOpen
-        'End If
-        'Dim W_PluginH As Control24.Hardware.C24_Button.OnButtonReleasedEventHandler =
-        '    Sub()
-        '        If SelectedFx IsNot Nothing Then
-        '            SelectedFx.IsOpen = Not SelectedFx.IsOpen
-        '            C24_Desk.W_Plugin.Led = Not C24_Desk.W_Plugin.Led
-        '        Else
-        '            C24_Desk.W_Plugin.Led = False
-        '        End If
-        '    End Sub
-        'h.W_PluginH = W_PluginH
-        'AddHandler C24_Desk.W_Plugin.OnButtonReleased, W_PluginH
+        If SelectedFx IsNot Nothing andalso SelectedFx.IsOpen Then
+           C24_Desk.W_Plugin.Led = True
+        End If
+        Dim W_PluginH As Control24.Hardware.C24_Button.OnButtonReleasedEventHandler =
+           Sub()
+               If SelectedFx IsNot Nothing andalso SelectedFx.IsOpen Then
+                   SelectedFx.IsHide = Not SelectedFx.IsHide
+                   C24_Desk.W_Plugin.Led = Not SelectedFx.IsHide 
+               Else
+                   C24_Desk.W_Plugin.Led = False
+               End If
+           End Sub
+        h.W_PluginH = W_PluginH
+        AddHandler C24_Desk.W_Plugin.OnButtonReleased, W_PluginH
 
         Dim TransAL As New C24ActionLinker(C24_Desk.W_Trans, 40259,,,, True)
 
@@ -10543,9 +10563,7 @@ Public Class C24ReaperController
 
         h.Mem_LocAL = Mem_LocAL
 
-        Dim PlugInAL As New C24ActionLinker(C24_Desk.W_Plugin, 4174,,,, True)
-
-        h.PlugInAL = PlugInAL
+        
 
 
 
@@ -10567,9 +10585,7 @@ Public Class C24ReaperController
             If h.Mem_LocAL IsNot Nothing Then
                 h.Mem_LocAL.Dispose()
             End If
-            If h.PlugInAL IsNot Nothing Then
-                h.PlugInAL.Dispose()
-            End If
+            
         Next
         _WindowsHandlers.Clear()
 
@@ -10809,7 +10825,7 @@ Public Class C24ReaperController
 
             Case C24ViewModes.FxParam
 
-                SelectedFx.IsOpen = False
+                SelectedFx.IsHide = True
 
                 RemoveFxParamStripHandlers()
 
@@ -12056,9 +12072,11 @@ Public Class C24ReaperController
                                 Sub()
                                     If C24_Desk.Inserts_Param.IsBlinking = True Then
                                         C24_Desk.Inserts_Param.IsBlinking = False
-
+                                        'Hide Fx Plugin View
+                                        SelectedFx.IsHide = True
+                                        C24_Desk.W_Plugin.Led = False
                                         RefreshC24InsertViewMode(SelectedFx.TrackIndex, InsertViewMode_PageNb)
-                                        'SelectedFx = Fx
+                                        
                                     End If
                                 End Sub
             FxH.InsertParamBtnH = InsertParamBtnH
@@ -12172,7 +12190,8 @@ Public Class C24ReaperController
 
         '----------------- Display + FxParamHandlers -------------------------------------------------
 
-        Fx.IsOpen = True
+        Fx.IsHide = False
+        C24_Desk.W_Plugin.Led = True
 
         'reload Track state chunk
         Dim Trk_guid As String = Nothing
@@ -13125,11 +13144,8 @@ Public Class C24ReaperController
             _PeakTimer = Nothing
         End If
 
-        If _ReaperProjectMonitor IsNot Nothing Then
-            _ReaperProjectMonitor.Stop()
-            _ReaperProjectMonitor.Dispose()
-            _ReaperProjectMonitor = Nothing
-        End If
+        ' NB : _ReaperProjectMonitor est arrêté plus bas, APRÈS le retrait des handlers
+        ' (RemoveTransportHandlers a besoin de l'instance pour faire RemoveHandler).
 
         ' ── Forcer le nettoyage de la vue COURANTE (pas de la précédente) ─────
         ' RemoveViewsStripHandlers utilise LastC24ViewMode → on l'aligne sur
@@ -13149,16 +13165,22 @@ Public Class C24ReaperController
 
         ' ── Handlers communs ──────────────────────────────────────────────────
 
-        RemoveAllCommonC24Function()
-        '-----------------------------------
+        ' Une exception ici ne doit pas empêcher l'arrêt du hub et des monitors plus bas :
+        ' sinon le polling vers Reaper continue après l'arrêt du driver.
+        Try
+            RemoveAllCommonC24Function()
+            '-----------------------------------
 
-        'Remove Reaper all tracks Handlers
-        RemoveReaperEnvArmedHandlers()
-        RemoveReaperSoloHandlers()
-        RemoveReaperAutoModeHandlers()
+            'Remove Reaper all tracks Handlers
+            RemoveReaperEnvArmedHandlers()
+            RemoveReaperSoloHandlers()
+            RemoveReaperAutoModeHandlers()
 
-        RemoveCommonStripHandlers()
-        RemoveFlipHandlers()
+            RemoveCommonStripHandlers()
+            RemoveFlipHandlers()
+        Catch ex As Exception
+            Debug.WriteLine($"Dispose: erreur retrait handlers : {ex}")
+        End Try
 
 
         ' ── Managers ──────────────────────────────────────────────────────────
@@ -13172,6 +13194,15 @@ Public Class C24ReaperController
         End If
 
         ' ── Session et hub ────────────────────────────────────────────────────
+        ' Les handlers doivent être retirés AVANT de mettre monitor/session à Nothing
+        ' (RemoveHandler utilise ces instances).
+        Try
+            RemoveProjectManagementHandler()
+            RemoveSessionManagementHandler()
+        Catch ex As Exception
+            Debug.WriteLine($"Dispose: erreur retrait handlers projet/session : {ex}")
+        End Try
+
         If _ReaperProjectMonitor IsNot Nothing Then
             _ReaperProjectMonitor.Stop()
             _ReaperProjectMonitor.Dispose()
@@ -13182,9 +13213,6 @@ Public Class C24ReaperController
             _ReaperSession.Dispose()
             _ReaperSession = Nothing
         End If
-
-        RemoveProjectManagementHandler()
-        RemoveSessionManagementHandler()
 
         ReaperPollHub.Instance.Stop()
         Reaper.Monitors.ReaperEventPipeMonitor.Stop()

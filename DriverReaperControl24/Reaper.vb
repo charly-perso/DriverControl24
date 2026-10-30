@@ -909,7 +909,7 @@ Namespace Reaper
         Public Function Main_OnCommand(commandId As Integer,
                                        Optional flag As Integer = 0) As Boolean
             Dim raw As String = CallReaperBridge(
-                $"MAIN_ON_COMMAND|{commandId.ToString(CultureInfo.InvariantCulture)}|{flag.ToString(CultureInfo.InvariantCulture)}")
+                $"MAIN_ON_COMMAND_SAFE|{commandId.ToString(CultureInfo.InvariantCulture)}|{flag.ToString(CultureInfo.InvariantCulture)}")
 
             If String.IsNullOrEmpty(raw) Then
                 Return False
@@ -2554,7 +2554,7 @@ Namespace Reaper
                                 open As Boolean)
             'showflag=0 for hidechain, =1 for show chain(index valid), =2 for hide floating window(index valid), =3 for show floating window (index valid)
             ' showFlag 3 = ouvrir flottant (déterministe, pas de toggle)
-            ' showFlag 0 = cacher
+            ' showFlag 2 = cacher
             Dim showFlag = If(open, 3, 2)
             CallReaperBridge($"TRACKFX_SHOW|{trackIndex}|{fxIndex}|{showFlag}")
         End Sub
@@ -15947,6 +15947,9 @@ Namespace Reaper
         Private _preset As String = String.Empty
         Private _params As New List(Of ReaperFXParam)
         Private _guid As String = String.Empty
+        
+    
+        Private _IsHide As Boolean = False
 
         ' ── Événements ────────────────────────────────────────────────────────
         Public Event On_EnabledChange(_enabled As Boolean)
@@ -15997,12 +16000,24 @@ Namespace Reaper
         ''' Ouvre ou ferme la fenêtre flottante du FX.
         ''' Le setter écrit immédiatement dans Reaper.
         ''' </summary>
-        Public Property IsOpen As Boolean
+        Public ReadOnly Property IsOpen As Boolean
             Get
                 Return utility.TrackFX_IsOpen(_trackIndex, _fxIndex)
             End Get
+        End Property
+                
+
+         ''' <summary>
+        ''' Cache ou affiche la fenêtre flottante du FX.
+        ''' Le setter écrit immédiatement dans Reaper.
+        ''' </summary>
+        Public Property IsHide As Boolean
+            Get
+                Return _IsHide
+            End Get
             Set
-                utility.TrackFX_Show(_trackIndex, _fxIndex, Value)
+                utility.TrackFX_Show(_trackIndex, _fxIndex,not Value)
+                _IsHide = Value
             End Set
         End Property
 

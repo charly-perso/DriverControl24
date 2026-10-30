@@ -79,6 +79,19 @@ public static unsafe class ReaperEntry
             {
                 // Reaper décharge le plugin — annuler les serveurs pipe puis nettoyer
                 _cts.Cancel();
+                // Désenregistre le timer et les hooks : Reaper ne doit plus appeler
+                // du code managé pendant/après le déchargement.
+                if (_regCached is not null)
+                {
+                    try
+                    {
+                        RegisterAnsi(_regCached, "-timer", (nint)(delegate* unmanaged<void>)&OnReaperTimer);
+                        RegisterAnsi(_regCached, "-hookcommand", (nint)(delegate* unmanaged<int, int, int>)&HookCommandNative);
+                        RegisterAnsi(_regCached, "-hookcommand2", (nint)(delegate* unmanaged<IntPtr, int, int, int, int, IntPtr, int>)&HookCommand2Native);
+                    }
+                    catch { }
+                }
+                _uiQueue.Clear();
                 ReaperBridge.Shutdown();
                 return 0;
             }
@@ -350,6 +363,7 @@ public static unsafe class ReaperEntry
             RegisterAnsi(reg, "timer", (nint)timerPtr);
 
             _getFnCached = getFn;
+            _regCached = reg;
             TryBindSwsApis();
 
             return ReaperBridge.Initialize(rec, dllDir);
@@ -680,6 +694,7 @@ public static unsafe class ReaperEntry
     }
 
     private static GetFuncRawDelegate? _getFnCached;
+    private static RegisterRawDelegate? _regCached;
 
     private static void TryBindSwsApis()
     {
