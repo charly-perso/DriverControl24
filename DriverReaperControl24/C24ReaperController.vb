@@ -7403,8 +7403,7 @@ Public Class C24ReaperController
         RemoveZoomPresetHandlers()
 
         Dim h As New ZoomPresetStripHandler
-        Dim Actual_ZommX As ZoomX = ZoomX.User
-        Dim LastZoomX As ZoomX = ZoomX.Prev
+        Dim IsZoomSelection as Boolean = false
 
         Dim ZoomMinHeightAL As New C24ActionLinker(40110)
 
@@ -7433,23 +7432,18 @@ Public Class C24ReaperController
         Dim Preset_3BtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                 Sub(TrackNb As Integer?)
 
-                    Select Case Actual_ZommX
-                        Case ZoomX.Prev
-                            Select Case LastZoomX
-                                Case ZoomX.Project
-                                    Actual_ZommX = ZoomX.Selection
-                                    Reaper.utility.Main_OnCommand(40031) 'Selection Zoom level
-                                Case ZoomX.Selection
-                                    Actual_ZommX = ZoomX.Project
-                                    Reaper.utility.Main_OnCommand(40295) 'Zoom out project 
-                            End Select
-                            LastZoomX = ZoomX.Prev
-                        Case Else
-                            LastZoomX = Actual_ZommX
-                            Actual_ZommX = ZoomX.Prev
-                            Reaper.utility.Main_OnCommand(40869) 'previous Zoom level
-                    End Select
-                End Sub
+                  if IsZoomSelection Then
+                    Reaper.utility.Main_OnCommand(40295) 'Zoom out project 
+                    IsZoomSelection = false
+                  else
+                    Reaper.utility.Main_OnCommand(40031) 'Selection Zoom level
+                    IsZoomSelection = true
+                  end if
+                                    
+                        
+                                    
+                end sub
+
         h.Preset_3BtnH = Preset_3BtnH
         AddHandler C24_Desk.Preset_3.OnButtonReleased, Preset_3BtnH
 
@@ -7458,12 +7452,7 @@ Public Class C24ReaperController
 
 
     End Sub
-    Enum ZoomX
-        Prev
-        Selection
-        Project
-        User
-    End Enum
+    
     Private Sub RemoveZoomPresetHandlers()
         For Each h In _ZoomPresetStripHandlers
             RemoveHandler C24_Desk.Preset_1.OnButtonReleased, h.Preset_1BtnH
