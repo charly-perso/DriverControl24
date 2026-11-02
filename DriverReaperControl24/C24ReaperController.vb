@@ -711,8 +711,7 @@ Public Class C24ReaperController
     Public Class ZoomPresetStripHandler
         Public Preset_1BtnH As [Delegate]
         Public Preset_2BtnH As [Delegate]
-        Public ZoomPreset1OnTracksRebuiltH As [Delegate]
-        Public ZoomPreset2OnTracksRebuiltH As [Delegate]
+        Public Preset_3BtnH As [Delegate]
     End Class
     Public Class JogWheelHandler
         Public JogWheelChangeH As [Delegate]
@@ -7404,39 +7403,73 @@ Public Class C24ReaperController
         RemoveZoomPresetHandlers()
 
         Dim h As New ZoomPresetStripHandler
+        Dim Actual_ZommX As ZoomX = ZoomX.User
+        Dim LastZoomX As ZoomX = ZoomX.Prev
 
-        '----------------- ZoomPreset1 Handler -------------------------------------------------
+        Dim ZoomMinHeightAL As New C24ActionLinker(40110)
+
+        '----------------- ZoomPreset1 Handler Zoom out X/Y project -------------------------------------------------
         Dim Preset_1BtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                 Sub(TrackNb As Integer?)
-
-
+                    Reaper.utility.Main_OnCommand(40295)
+                    If ZoomMinHeightAL.State = False Then
+                        ZoomMinHeightAL.State = True
+                    End If
                 End Sub
         h.Preset_1BtnH = Preset_1BtnH
         AddHandler C24_Desk.Preset_1.OnButtonReleased, Preset_1BtnH
 
-        '----------------- ZoomPreset2 Handler -------------------------------------------------
+        '----------------- ZoomPreset2 Handler cycle de zoom Y -------------------------------------------------
         Dim Preset_2BtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                 Sub(TrackNb As Integer?)
-
+                    Reaper.utility.Main_OnCommand(42698)
 
 
                 End Sub
         h.Preset_2BtnH = Preset_2BtnH
         AddHandler C24_Desk.Preset_2.OnButtonReleased, Preset_2BtnH
 
+        '----------------- ZoomPreset3 Handler cycle de zoom X -------------------------------------------------
+        Dim Preset_3BtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
+                Sub(TrackNb As Integer?)
 
+                    Select Case Actual_ZommX
+                        Case ZoomX.Prev
+                            Select Case LastZoomX
+                                Case ZoomX.Project
+                                    Actual_ZommX = ZoomX.Selection
+                                    Reaper.utility.Main_OnCommand(40031) 'Selection Zoom level
+                                Case ZoomX.Selection
+                                    Actual_ZommX = ZoomX.Project
+                                    Reaper.utility.Main_OnCommand(40295) 'Zoom out project 
+                            End Select
+                            LastZoomX = ZoomX.Prev
+                        Case Else
+                            LastZoomX = Actual_ZommX
+                            Actual_ZommX = ZoomX.Prev
+                            Reaper.utility.Main_OnCommand(40869) 'previous Zoom level
+                    End Select
+                End Sub
+        h.Preset_3BtnH = Preset_3BtnH
+        AddHandler C24_Desk.Preset_3.OnButtonReleased, Preset_3BtnH
 
         _ZoomPresetStripHandlers.Add(h)
 
 
 
     End Sub
+    Enum ZoomX
+        Prev
+        Selection
+        Project
+        User
+    End Enum
     Private Sub RemoveZoomPresetHandlers()
         For Each h In _ZoomPresetStripHandlers
             RemoveHandler C24_Desk.Preset_1.OnButtonReleased, h.Preset_1BtnH
-            RemoveHandler _ReaperTracksManager.On_TracksRebuilt, h.ZoomPreset1OnTracksRebuiltH
             RemoveHandler C24_Desk.Preset_2.OnButtonReleased, h.Preset_2BtnH
-            RemoveHandler _ReaperTracksManager.On_TracksRebuilt, h.ZoomPreset2OnTracksRebuiltH
+            RemoveHandler C24_Desk.Preset_3.OnButtonReleased, h.Preset_3BtnH
+
         Next
         _ZoomPresetStripHandlers.Clear()
     End Sub
