@@ -4866,6 +4866,7 @@ Public Class C24ReaperController
                     If _FxSettingManager.PasteSettingsTo(FxSettingManager.CompareMode.A, SelectedFx) = False Then
                         C24DisplayTempMessage("FxPaste", "Not same Fx choose to paste settings !")
                     Else
+                        _ReaperFxParamMonitor?.RequestPoll()
                         _FxSettingManager.Dispose()
                         _FxSettingManager = Nothing
                         C24_Desk.Copy_Settings.IsBlinking = False
@@ -4914,13 +4915,13 @@ Public Class C24ReaperController
             If _CompareMode = CompareMode.A Then
                 A_SettingsCopy.Clear()
                 For Each param In _FxSource.Params
-                    A_SettingsCopy.Add(param.RawValue)
+                    A_SettingsCopy.Add(param.FetchRawValue())
                 Next
 
             Else
                 B_SettingsCopy.Clear()
                 For Each param In _FxSource.Params
-                    B_SettingsCopy.Add(param.RawValue)
+                    B_SettingsCopy.Add(param.FetchRawValue())
                 Next
 
             End If
@@ -4933,17 +4934,28 @@ Public Class C24ReaperController
 
             If FromCompareMode = CompareMode.A Then
                 For i = 0 To A_SettingsCopy.Count - 1
-                    Fx.Params(i).RawValue = A_SettingsCopy(i)
+                    Fx.Params(i).ForceRawValue(A_SettingsCopy(i))
                 Next
             Else
                 For i = 0 To B_SettingsCopy.Count - 1
-                    Fx.Params(i).RawValue = B_SettingsCopy(i)
+                    Fx.Params(i).ForceRawValue(B_SettingsCopy(i))
                 Next
             End If
 
             Return True
 
         End Function
+
+        Public Function IsSameFx(Fx As ReaperFX) As Boolean
+            Return Not disposedValue AndAlso Fx IsNot Nothing AndAlso
+                   Fx.TrackIndex = _FxSource.TrackIndex AndAlso Fx.FxIndex = _FxSource.FxIndex AndAlso Fx.Name = _Name
+        End Function
+
+        Public ReadOnly Property IsModeA As Boolean
+            Get
+                Return ActualCompareMode = CompareMode.A
+            End Get
+        End Property
 
         Public Sub InitCompareAB()
             CopyParams(CompareMode.A)
@@ -7656,14 +7668,7 @@ Public Class C24ReaperController
                                     End If
                                 Case JogWheelToolModes.Shuffle
 
-                                    If Ctl Then
-                                        'deplacement du contenu interne d'un item
-                                        If direction = Direction.Left Then
-                                            Reaper.utility.Main_OnCommand_SafeUI(40123)
-                                        Else
-                                            Reaper.utility.Main_OnCommand_SafeUI(40124)
-                                        End If
-                                    Else
+                                    
                                         'deplacement d'un item
                                         If direction = Direction.Left Then
                                             Reaper.utility.Main_OnCommand_SafeUI(40120)
@@ -7677,7 +7682,13 @@ Public Class C24ReaperController
                                                 Reaper.utility.Main_OnCommand_SafeUI(41183)
                                             End If
                                         End If
-                                    End If
+                                case JogWheelToolModes.Ripple
+                                    'deplacement du contenu interne d'un item
+                                        If direction = Direction.Left Then
+                                            Reaper.utility.Main_OnCommand_SafeUI(40123)
+                                        Else
+                                            Reaper.utility.Main_OnCommand_SafeUI(40124)
+                                        End If
 
 
                                 Case JogWheelToolModes.SelAdj
@@ -7968,6 +7979,7 @@ Public Class C24ReaperController
         PostRool
         Automation
         Nudge
+        Ripple
     End Enum
     Function IsUnselectIsAllowed() As Boolean
         If JogWheelToolMode = JogWheelToolModes.PreRool Then
@@ -10107,6 +10119,19 @@ Public Class C24ReaperController
                  End Sub
         Tools_C24RadioBtnHandler.Add(C24_Desk.Shuffle, ShuffleBtnD)
 
+        Dim SlipBtnD As [Delegate] =
+                 Sub(FakeArg As Integer?)
+                     'eteint le mode EditTools dans Navigation
+                     If _NavigationHandlers.Count > 0 Then
+                         _NavigationHandlers.First.None.DynamicInvoke()
+                     End If
+
+                     JogWheelToolMode = JogWheelToolModes.ripple
+
+
+                 End Sub
+        Tools_C24RadioBtnHandler.Add(C24_Desk.Slip, SlipBtnD)
+
         Tools_C24RadioBtnHandler.AddHandlers()
         h.Tools_C24RadioBtnHandler = Tools_C24RadioBtnHandler
 
@@ -12020,7 +12045,7 @@ Public Class C24ReaperController
 
 #Region "FxParam"
     Private Sub AddFxParamStripHandlers(Fx As ReaperFX, _FxParamPageNb As Integer)
-        RemoveFxParamStripHandlers()
+        RemoveFxParamStripHandlers(keepCompare:=True)
 
         ClearC24_MiddleStrip()
 
@@ -12144,19 +12169,33 @@ Public Class C24ReaperController
         '----------------- Compare Handler -------------------------------------------------
         If AutoSelect_Mode = False Then
 
-            'init compare
-            CompareAB = New FxSettingManager(SelectedFx)
-            CompareAB.InitCompareAB()
-            C24_Desk.Compare.IsBlinking = True
+            'init compare (conservé d'une page à l'autre pour le même Fx, sinon A serait écrasé par l'état modifié)
+            If CompareAB Is Nothing OrElse Not CompareAB.IsSameFx(SelectedFx) Then
+                If CompareAB IsNot Nothing Then CompareAB.Dispose()
+                CompareAB = New FxSettingManager(SelectedFx)
+                CompareAB.InitCompareAB()
+                C24_Desk.Compare.IsBlinking = True
+            ElseIf CompareAB.IsModeA Then
+                C24_Desk.Compare.IsBlinking = False
+                C24_Desk.Compare.Led = True
+            Else
+                C24_Desk.Compare.IsBlinking = True
+            End If
             Dim CompareBtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                 Sub()
-                    If CompareAB.CompareAB = FxSettingManager.CompareMode.A Then
-                        C24_Desk.Compare.IsBlinking = False
-                        C24_Desk.Compare.Led = True
-                    Else
-                        C24_Desk.Compare.IsBlinking = True
-                    End If
-
+                    Try
+                        Dim newMode = CompareAB.CompareAB
+                        ' les valeurs ont été écrites via l'API : forcer le monitor à rafraîchir vpots/faders
+                        _ReaperFxParamMonitor?.RequestPoll()
+                        If newMode = FxSettingManager.CompareMode.A Then
+                            C24_Desk.Compare.IsBlinking = False
+                            C24_Desk.Compare.Led = True
+                        Else
+                            C24_Desk.Compare.IsBlinking = True
+                        End If
+                    Catch ex As Exception
+                        Console.WriteLine("Compare error: " & ex.Message)
+                    End Try
                 End Sub
             FxH.CompareBtnH = CompareBtnH
             AddHandler C24_Desk.Compare.OnButtonReleased, CompareBtnH
@@ -12233,7 +12272,7 @@ Public Class C24ReaperController
 
 
     End Sub
-    Sub RemoveFxParamStripHandlers()
+    Sub RemoveFxParamStripHandlers(Optional keepCompare As Boolean = False)
         RemoveBankHandlers()
         RemoveFlipHandlers()
         RemovePageHandlers()
@@ -12250,7 +12289,11 @@ Public Class C24ReaperController
             If h.CompareBtnH IsNot Nothing Then
                 RemoveHandler C24_Desk.Compare.OnButtonReleased, h.CompareBtnH
                 C24_Desk.Compare.IsBlinking = False
-                CompareAB.Dispose()
+                C24_Desk.Compare.Led = False
+                If Not keepCompare AndAlso CompareAB IsNot Nothing Then
+                    CompareAB.Dispose()
+                    CompareAB = Nothing
+                End If
             End If
             If h.Master_BypassBtnH IsNot Nothing Then
                 RemoveHandler C24_Desk.Master_Bypass.OnButtonReleased, h.Master_BypassBtnH

@@ -24,6 +24,12 @@ Public Class Main
     ''' Entrée principale — 
     ''' </summary>
     Public Shared Sub Main()
+        ' ── Journal des exceptions non gérées (threads secondaires inclus) ──
+        AddHandler AppDomain.CurrentDomain.UnhandledException,
+            Sub(s, e) LogCrash("UnhandledException (terminating=" & e.IsTerminating.ToString & ")", TryCast(e.ExceptionObject, Exception))
+        AddHandler Threading.Tasks.TaskScheduler.UnobservedTaskException,
+            Sub(s, e) LogCrash("UnobservedTaskException", e.Exception)
+
         Dim _ReaperSessionConfig As New Reaper.ReaperSessionConfig
         Dim interfaceName As String = _ReaperSessionConfig.SelectedNetworkInterface
 
@@ -86,6 +92,15 @@ Public Class Main
                 Threading.Thread.Sleep(Threading.Timeout.Infinite)
             End If
         End If
+    End Sub
+
+    Private Shared Sub LogCrash(title As String, ex As Exception)
+        Try
+            Dim path = IO.Path.Combine(IO.Path.GetTempPath(), "driver_crash.log")
+            IO.File.AppendAllText(path, $"{Date.Now:HH:mm:ss.fff} {title}{vbLf}{If(ex Is Nothing, "(no exception object)", ex.ToString)}{vbLf}{vbLf}")
+            Console.Error.WriteLine($"{title}: {ex}")
+        Catch
+        End Try
     End Sub
 
     ''' <summary>

@@ -4850,12 +4850,22 @@ Namespace Control24
             Private Sub SendingTimingQueueLoop()
                 While IsRunning
                     Dim SendCmdBytes As New List(Of Byte())
-                    For Each _AutoRefresh_C24_Component In Me.AutoRefresh_C24_Components
-                        For Each C24_Command In _AutoRefresh_C24_Component.C24_SendingCommands
-                            SendCmdBytes.Add(DirectCast(C24_Command.Cmd.Clone(), Byte()))
-                        Next
-
-                    Next
+                    ' Boucles indexées : les listes peuvent être modifiées par un autre thread
+                    ' pendant l'énumération (ajout de composant/commande) → pas de For Each.
+                    Dim components = Me.AutoRefresh_C24_Components
+                    Dim ci As Integer = 0
+                    While ci < components.Count
+                        Dim comp = components(ci)
+                        ci += 1
+                        If comp Is Nothing Then Continue While
+                        Dim cmds = comp.C24_SendingCommands
+                        Dim ki As Integer = 0
+                        While ki < cmds.Count
+                            Dim c = cmds(ki)
+                            ki += 1
+                            If c IsNot Nothing Then SendCmdBytes.Add(DirectCast(c.Cmd.Clone(), Byte()))
+                        End While
+                    End While
                     EnqueueAllCmdBytes(SendCmdBytes)
                     Thread.Sleep(TimingQueueTimeout)
                 End While

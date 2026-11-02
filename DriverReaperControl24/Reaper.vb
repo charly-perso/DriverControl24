@@ -4698,6 +4698,11 @@ Namespace Reaper
                 Threading.Volatile.Write(_stateChanged, True)
             End Sub
 
+            ''' <summary>Force un poll au prochain cycle (ex: après écriture de valeurs depuis l'API).</summary>
+            Public Sub RequestPoll()
+                Threading.Volatile.Write(_stateChanged, True)
+            End Sub
+
             ''' <summary>
             ''' Interroge tous les paramètres surveillés via le pipe persistant.
             ''' 1 requête <c>GET_FX_PARAM_NORM</c> par paramètre par cycle.
@@ -15801,6 +15806,42 @@ Namespace Reaper
                 End If
             End Set
         End Property
+
+        ''' <summary>
+        ''' Lit la valeur brute réelle dans Reaper (le cache <see cref="RawValue"/> peut être périmé
+        ''' quand la valeur a été modifiée via <see cref="NormValue"/>) et resynchronise les caches.
+        ''' </summary>
+        Public Function FetchRawValue() As Double
+            Dim exRaw = utility.CallReaperBridge($"GET_FX_PARAM_EX|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+            If Not String.IsNullOrEmpty(exRaw) AndAlso Not exRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
+                Dim dbl As Double = 0
+                If Double.TryParse(exRaw.Split("|"c)(0), NumberStyles.Any, Ic, dbl) Then
+                    Set_NewRawValue(dbl)
+                End If
+            End If
+            Return _rawValue
+        End Function
+
+        ''' <summary>
+        ''' Écrit toujours la valeur brute dans Reaper (sans test sur le cache) puis resynchronise
+        ''' <see cref="NormValue"/> et <see cref="Formatted"/>.
+        ''' </summary>
+        Public Sub ForceRawValue(newRaw As Double)
+            _rawValue = newRaw
+            RaiseEvent SuspendMonitoring(_paramIndex, True)
+            utility.CallReaperBridge($"SET_FX_PARAM|{_trackIndex}|{_fxIndex}|{_paramIndex}|{newRaw.ToString("G", Ic)}")
+            RaiseEvent SuspendMonitoring(_paramIndex, False)
+            Dim valRaw = utility.CallReaperBridge($"GET_FX_PARAM_NORMALIZED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+            Dim n As Double = 0
+            If Not String.IsNullOrEmpty(valRaw) AndAlso Not valRaw.StartsWith("ERROR", StringComparison.Ordinal) AndAlso
+               Double.TryParse(valRaw, NumberStyles.Any, Ic, n) Then
+                Set_NewNormValue(n)
+            End If
+            Dim fmtRaw = utility.CallReaperBridge($"GET_FX_PARAM_FORMATTED|{_trackIndex}|{_fxIndex}|{_paramIndex}")
+            If Not String.IsNullOrEmpty(fmtRaw) AndAlso Not fmtRaw.StartsWith("ERROR", StringComparison.Ordinal) Then
+                _formatted = fmtRaw
+            End If
+        End Sub
 
         ''' <summary>Convertit une valeur normalisée [0..1] en valeur brute native.</summary>
         Public Function NormalizedToRaw(normValue As Double) As Double
