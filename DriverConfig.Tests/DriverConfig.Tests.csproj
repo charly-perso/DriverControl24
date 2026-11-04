@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="4.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DriverConfig\DriverConfig.vbproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Logique pure de l'éditeur web, testée sans démarrer Blazor -->
+    <Compile Include="..\DriverConfig.Web\Services\Models.cs" Link="Web\Models.cs" />
+    <Compile Include="..\DriverConfig.Web\Services\LongNameMode.cs" Link="Web\LongNameMode.cs" />
+  </ItemGroup>
+
+</Project>

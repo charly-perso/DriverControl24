@@ -1,0 +1,148 @@
+@page "/plugins"
+@inject ConfigService Cfg
+
+<PageTitle>Plugins — Control24 Config</PageTitle>
+
+<h1>Plugins</h1>
+
+<div class="toolbar">
+    <input type="search" placeholder="Filtrer par nom…" @bind="_filter" @bind:event="oninput" />
+    <select @bind="_kind">
+        <option value="">Tous les types</option>
+        @foreach (var k in _kinds)
+        {
+            <option value="@k">@k</option>
+        }
+    </select>
+    <select @bind="_show">
+        <option value="all">Tous</option>
+        <option value="visible">Visibles</option>
+        <option value="hidden">Masqués</option>
+        <option value="eq">EQ</option>
+        <option value="dyn">DYN</option>
+        <option value="dirty">Modifiés</option>
+    </select>
+    <span class="count">@Filtered.Count / @_rows.Count</span>
+    <span class="spacer"></span>
+    <button class="btn" @onclick="() => SetVisible(true)" title="Applique aux plugins actuellement filtrés">Afficher le filtre</button>
+    <button class="btn" @onclick="() => SetVisible(false)" title="Applique aux plugins actuellement filtrés">Masquer le filtre</button>
+</div>
+
+<div class="table-wrap">
+    <table class="grid">
+        <thead>
+            <tr>
+                <th class="c">Visible</th>
+                <th>Plugin</th>
+                <th>Nom court <small>(8 car.)</small></th>
+                <th class="c">EQ</th>
+                <th class="c">DYN</th>
+                <th class="c">Paramètres</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Filtered)
+            {
+                var err = ShortNameError(r);
+                <tr class="@(r.IsDirty ? "dirty" : null) @(r.Visible ? null : "dim")">
+                    <td class="c"><input type="checkbox" @bind="r.Visible" aria-label="Visible" /></td>
+                    <td class="name" title="@r.Name">@r.Name</td>
+                    <td>
+                        <input class="short @(err != null ? "invalid" : null)" maxlength="8" size="9"
+                               @bind="r.ShortName" @bind:event="oninput" title="@err" />
+                    </td>
+                    <td class="c"><input type="checkbox" @bind="r.Eq" aria-label="EQ" /></td>
+                    <td class="c"><input type="checkbox" @bind="r.Dyn" aria-label="DYN" /></td>
+                    <td class="c">
+                        @if (r.HasParams)
+                        {
+                            <a href="@("params?plugin=" + Uri.EscapeDataString(r.Name))">Éditer</a>
+                        }
+                        else
+                        {
+                            <span class="muted">—</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="savebar">
+    <span>@DirtyCount modification(s) en attente</span>
+    @if (_message != null)
+    {
+        <span class="@(_isError ? "bad" : "ok")">@_message</span>
+    }
+    <span class="spacer"></span>
+    <button class="btn" disabled="@(DirtyCount == 0)" @onclick="Load">Annuler</button>
+    <button class="btn primary" disabled="@(DirtyCount == 0 || HasErrors)" @onclick="Save">Enregistrer</button>
+</div>
+
+@code {
+    private List<PluginEdit> _rows = [];
+    private string _filter = "", _kind = "", _show = "all";
+    private string? _message;
+    private bool _isError;
+
+    private IEnumerable<string> _kinds => _rows.Select(r => r.Kind).Distinct().Order();
+    private int DirtyCount => _rows.Count(r => r.IsDirty);
+    private bool HasErrors => _rows.Any(r => r.IsDirty && ShortNameError(r) != null);
+
+    private List<PluginEdit> Filtered => _rows.Where(r =>
+        (_filter.Length == 0 || r.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)
+                              || r.ShortName.Contains(_filter, StringComparison.OrdinalIgnoreCase))
+        && (_kind.Length == 0 || r.Kind == _kind)
+        && _show switch
+        {
+            "visible" => r.Visible,
+            "hidden" => !r.Visible,
+            "eq" => r.Eq,
+            "dyn" => r.Dyn,
+            "dirty" => r.IsDirty,
+            _ => true
+        }).ToList();
+
+    protected override void OnInitialized() => Load();
+
+    private void Load()
+    {
+        _rows = Cfg.GetPlugins();
+        _message = null;
+    }
+
+    private string? ShortNameError(PluginEdit r)
+    {
+        string s = r.ShortName.Trim();
+        if (s.Length == 0) return "Le nom court ne peut pas être vide.";
+        if (s.Length > 8) return "8 caractères maximum.";
+        if (s.IndexOfAny(['|', '=', '[', ']']) >= 0) return "Caractères interdits : | = [ ]";
+        // Doublon : seulement signalé sur les lignes modifiées, pour ne pas bloquer à cause de l'existant.
+        if (r.IsDirty && _rows.Any(o => o != r && string.Equals(o.ShortName.Trim(), s, StringComparison.OrdinalIgnoreCase)))
+            return "Nom court déjà utilisé par un autre plugin.";
+        return null;
+    }
+
+    private void SetVisible(bool visible)
+    {
+        foreach (var r in Filtered) r.Visible = visible;
+    }
+
+    private void Save()
+    {
+        try
+        {
+            Cfg.SavePlugins(_rows);
+            int n = DirtyCount;
+            Load();
+            _message = $"Enregistré ({n} plugin(s)).";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+    }
+}

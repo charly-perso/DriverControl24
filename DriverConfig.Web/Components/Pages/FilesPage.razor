@@ -1,0 +1,77 @@
+@page "/files"
+@inject ConfigService Cfg
+
+<PageTitle>Fichier — Control24 Config</PageTitle>
+
+<h1>Fichier &amp; sauvegardes</h1>
+
+<section class="card">
+    <h2>Sauvegardes</h2>
+    <p class="muted">Une copie du fichier est faite automatiquement avant chaque enregistrement (30 conservées).</p>
+    @if (_message != null)
+    {
+        <p class="@(_isError ? "bad" : "ok")">@_message</p>
+    }
+    @if (_backups.Count == 0)
+    {
+        <p class="muted">Aucune sauvegarde pour l'instant.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <thead><tr><th>Date</th><th>Taille</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var b in _backups)
+                {
+                    <tr>
+                        <td>@b.TimestampUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                        <td>@(b.Size / 1024) Ko</td>
+                        <td class="c">
+                            <button class="btn sm" @onclick="() => Restore(b.FileName)">Restaurer</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+<section class="card">
+    <h2>Contenu actuel du fichier <small>(lecture seule)</small></h2>
+    <div class="actions">
+        <button class="btn" @onclick="Refresh">Actualiser</button>
+        <button class="btn" @onclick="Cfg.Reload">Recharger depuis le disque</button>
+    </div>
+    <pre class="raw">@_raw</pre>
+</section>
+
+@code {
+    private List<BackupInfo> _backups = [];
+    private string _raw = "";
+    private string? _message;
+    private bool _isError;
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh()
+    {
+        _backups = Cfg.GetBackups();
+        _raw = Cfg.ReadRaw();
+    }
+
+    private void Restore(string fileName)
+    {
+        try
+        {
+            Cfg.RestoreBackup(fileName);
+            _message = "Sauvegarde restaurée. Les autres pages affichent désormais cette version.";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+        Refresh();
+    }
+}

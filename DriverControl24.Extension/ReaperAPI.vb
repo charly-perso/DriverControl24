@@ -955,7 +955,33 @@ Public Class ReaperAPI
     ''' <summary>Durée de la source (lengthIsQN=True si la durée est en QN).</summary>
     Public Delegate Function GetMediaSourceLengthDel(source As IntPtr, ByRef lengthIsQN As Boolean) As Double
     Public Shared GetMediaSourceLength As GetMediaSourceLengthDel
+    ''' <summary>Nombre de stretch markers d'un take.</summary>
+    Public Delegate Function GetTakeNumStretchMarkersDel(take As IntPtr) As Integer
+    Public Shared GetTakeNumStretchMarkers As GetTakeNumStretchMarkersDel
 
+    ''' <summary>
+    ''' Lit un stretch marker d'un take.
+    ''' pos : position dans l'item (secondes), srcpos : position dans la source (secondes).
+    ''' Retourne l'index du marqueur, ou -1 si introuvable.
+    ''' </summary>
+    Public Delegate Function GetTakeStretchMarkerDel(
+        take As IntPtr,
+        idx As Integer,
+        ByRef pos As Double,
+        ByRef srcpos As Double) As Integer
+    Public Shared GetTakeStretchMarker As GetTakeStretchMarkerDel
+
+    ''' <summary>
+    ''' Crée (idx = -1) ou modifie un stretch marker d'un take.
+    ''' srcposIn : pointeur sur un double, ou IntPtr.Zero pour laisser Reaper le calculer.
+    ''' Retourne l'index du marqueur, ou -1 en cas d'échec.
+    ''' </summary>
+    Public Delegate Function SetTakeStretchMarkerDel(
+        take As IntPtr,
+        idx As Integer,
+        pos As Double,
+        srcposIn As IntPtr) As Integer
+    Public Shared SetTakeStretchMarker As SetTakeStretchMarkerDel
     ' ══════════════════════════════════════════════════════════════
     '  FX SUPPLÉMENTAIRES
     ' ══════════════════════════════════════════════════════════════

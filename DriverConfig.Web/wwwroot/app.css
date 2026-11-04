@@ -1,0 +1,182 @@
+:root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel2: #eceef2;
+    --text: #1d2330;
+    --muted: #667085;
+    --border: #d5d9e0;
+    --accent: #1f6feb;
+    --accent-text: #ffffff;
+    --ok: #1a7f37;
+    --bad: #cf222e;
+    --warn: #9a6700;
+    --dirty: #fff8c5;
+    --lcd-bg: #2b1a08;
+    --lcd-fg: #ff9a1f;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #14171c;
+        --panel: #1d2128;
+        --panel2: #262b34;
+        --text: #e6e9ef;
+        --muted: #98a2b3;
+        --border: #343a46;
+        --accent: #4c8dff;
+        --accent-text: #0b0f16;
+        --ok: #3fb950;
+        --bad: #ff7b72;
+        --warn: #d29922;
+        --dirty: #3a3315;
+    }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+h1:focus { outline: none; }
+h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+small { color: var(--muted); font-weight: 400; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.ok { color: var(--ok); }
+.bad { color: var(--bad); }
+.warnmsg { color: var(--warn); }
+.spacer { flex: 1; }
+.c { text-align: center; }
+.nowrap { white-space: nowrap; }
+
+/* ── Barre du haut ─────────────────────────────────────────── */
+.topbar {
+    display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+    padding: .6rem 1rem; background: var(--panel); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 5;
+}
+.brand { font-weight: 700; font-size: 1.1rem; }
+.brand span { color: var(--accent); }
+.brand small { font-weight: 400; }
+.topbar nav { display: flex; gap: .25rem; flex-wrap: wrap; }
+.topbar nav a {
+    padding: .35rem .7rem; border-radius: 6px; color: var(--text); text-decoration: none;
+}
+.topbar nav a:hover { background: var(--panel2); }
+.topbar nav a.active { background: var(--accent); color: var(--accent-text); }
+.topbar .file {
+    margin-left: auto; color: var(--muted); font: 12px ui-monospace, Menlo, Consolas, monospace;
+    max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left;
+}
+
+main { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 6rem; }
+
+.banner {
+    display: flex; gap: 1rem; align-items: center; justify-content: space-between;
+    padding: .7rem 1rem; border-bottom: 1px solid var(--border);
+}
+.banner.warn { background: var(--dirty); color: var(--text); border-left: 4px solid var(--warn); }
+.banner.err { background: transparent; color: var(--bad); border: 1px solid var(--bad); border-radius: 8px; margin: 1rem; }
+
+/* ── Cartes, formulaires ───────────────────────────────────── */
+.card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.25rem; margin-bottom: 1rem;
+}
+.row { display: flex; gap: .75rem; align-items: flex-start; padding: .5rem 0; cursor: pointer; }
+.row span { display: flex; flex-direction: column; }
+.field { display: flex; flex-direction: column; gap: .35rem; padding: .5rem 0; max-width: 520px; }
+.actions { display: flex; gap: .6rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
+
+input, select, button { font: inherit; color: inherit; }
+input[type=text], input[type=search], input:not([type]), select {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: .3rem .5rem;
+}
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+}
+input[type=checkbox] { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+input.invalid { border-color: var(--bad); outline: 1px solid var(--bad); }
+input.warn { border-color: var(--warn); }
+
+.btn {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 6px;
+    padding: .4rem .9rem; cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.btn.sm { padding: .1rem .45rem; }
+
+/* ── Barres d'outils / d'enregistrement ────────────────────── */
+.toolbar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; margin-bottom: .75rem; }
+.toolbar input[type=search] { min-width: 240px; }
+.count { color: var(--muted); }
+.savebar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 4;
+    display: flex; gap: .75rem; align-items: center; flex-wrap: wrap;
+    padding: .6rem 1rem; background: var(--panel); border-top: 1px solid var(--border);
+}
+
+/* ── Tableaux ──────────────────────────────────────────────── */
+.table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: auto; max-height: 68vh; }
+table.grid { width: 100%; border-collapse: collapse; }
+.grid th, .grid td { padding: .3rem .6rem; border-bottom: 1px solid var(--border); text-align: left; }
+.grid th.c, .grid td.c { text-align: center; }
+.grid thead th { position: sticky; top: 0; background: var(--panel2); z-index: 1; }
+.grid td.name { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grid tr.dirty { background: var(--dirty); }
+.grid tr.dim td.name { color: var(--muted); }
+.grid tr.dragover td { border-top: 2px solid var(--accent); }
+.grid td.handle { cursor: grab; color: var(--muted); width: 1.5rem; user-select: none; }
+.grid tr.textrow { background: var(--panel2); }
+input.short { font-family: ui-monospace, Menlo, Consolas, monospace; }
+input.text { width: 100%; }
+
+/* ── Aperçu LCD ────────────────────────────────────────────── */
+.preview { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; margin-bottom: 1rem; }
+.preview-head { display: flex; gap: .6rem; align-items: center; margin-bottom: .5rem; flex-wrap: wrap; }
+.strips { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.strip {
+    background: var(--lcd-bg); color: var(--lcd-fg); border-radius: 4px; padding: .3rem .25rem;
+    font: 600 12px ui-monospace, Menlo, Consolas, monospace; text-align: center; min-height: 2.6rem;
+    display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+}
+.strip .lcd2 { font-weight: 400; font-size: 10px; opacity: .7; min-height: 1em; }
+.strip.empty { opacity: .25; }
+.strip.hid { opacity: .35; text-decoration: line-through; }
+.strip.txt { outline: 1px dashed var(--lcd-fg); outline-offset: -3px; }
+@media (max-width: 760px) { .strips { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+pre.raw {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: .75rem;
+    max-height: 60vh; overflow: auto; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; white-space: pre;
+}
+
+/* ── Erreurs Blazor ────────────────────────────────────────── */
+#blazor-error-ui {
+    color-scheme: light only; background: #fff3cd; color: #1d2330; bottom: 0; box-shadow: 0 -1px 2px rgba(0,0,0,.2);
+    display: none; left: 0; padding: .6rem 1.25rem .7rem 1.25rem; position: fixed; width: 100%; z-index: 1000;
+}
+#blazor-error-ui .dismiss { cursor: pointer; position: absolute; right: .75rem; top: .5rem; }
+.blazor-error-boundary { background: #b32121; padding: 1rem; color: white; }
+.blazor-error-boundary::after { content: "Une erreur est survenue."; }
+
+.modes label { display: inline-flex; align-items: center; gap: .25rem; margin: 0 .35rem; cursor: pointer; }
+
+/* ── Blocs « Long » : séparateur texte + paramètre liés ─────── */
+.grid tr.linkTop td, .grid tr.linkBot td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.grid tr.linkTop td { border-bottom-color: transparent; }
+.grid tr.linkTop td:first-child, .grid tr.linkBot td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+.grid tr.linkTop td:first-child { border-top-left-radius: 6px; }
+.grid tr.linkBot td:first-child { border-bottom-left-radius: 6px; }
+.grid tr.linkTop input.text { border-style: dashed; }
+
+.strip.linkL, .strip.linkR { box-shadow: inset 0 3px 0 var(--accent); }
+.strip.linkL { margin-right: -4px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.strip.linkR { border-top-left-radius: 0; border-bottom-left-radius: 0; }

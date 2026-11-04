@@ -1,0 +1,60 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject ConfigService Cfg
+
+<header class="topbar">
+    <div class="brand">Control<span>24</span> <small>Config</small></div>
+    <nav>
+        <NavLink href="" Match="NavLinkMatch.All">Driver</NavLink>
+        <NavLink href="plugins">Plugins</NavLink>
+        <NavLink href="params">Paramètres FX</NavLink>
+        <NavLink href="files">Fichier &amp; sauvegardes</NavLink>
+    </nav>
+    <div class="file" title="@Cfg.IniPath">@Cfg.IniPath</div>
+</header>
+
+@if (Cfg.ExternalChange)
+{
+    <div class="banner warn" role="alert">
+        <span>Le fichier INI a été modifié en dehors de l'éditeur (le driver tourne ?). Rechargez pour repartir de la version sur disque : vos modifications non enregistrées seront perdues.</span>
+        <button class="btn" @onclick="Cfg.Reload">Recharger</button>
+    </div>
+}
+
+<main>
+    @if (!Cfg.Available)
+    {
+        <div class="banner err">@Cfg.LastError</div>
+    }
+    else
+    {
+        @* La clé recrée la page après un rechargement : les brouillons sont alors repris depuis le disque. *@
+        <div @key="_version">@Body</div>
+    }
+</main>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Une erreur est survenue.
+    <a href="." class="reload">Recharger</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private int _version;
+
+    protected override void OnInitialized()
+    {
+        Cfg.Changed += OnChanged;
+        Cfg.Reloaded += OnReloaded;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnReloaded() => InvokeAsync(() => { _version++; StateHasChanged(); });
+
+    public void Dispose()
+    {
+        Cfg.Changed -= OnChanged;
+        Cfg.Reloaded -= OnReloaded;
+    }
+}

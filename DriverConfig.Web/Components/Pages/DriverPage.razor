@@ -1,0 +1,116 @@
+@page "/"
+@implements IDisposable
+@inject ConfigService Cfg
+
+<PageTitle>Driver — Control24 Config</PageTitle>
+
+<h1>Driver</h1>
+
+<section class="card">
+    <label class="row">
+        <input type="checkbox" @bind="_autostart" />
+        <span>
+            <strong>Démarrage automatique</strong>
+            <small>Lance le driver à l'ouverture de l'application.</small>
+        </span>
+    </label>
+
+    <label class="row">
+        <input type="checkbox" @bind="_vsDebug" />
+        <span>
+            <strong>Débogage Visual Studio</strong>
+            <small>Attache le débogueur au démarrage du driver (défaut : désactivé).</small>
+        </span>
+    </label>
+
+    <div class="field">
+        <label for="nic"><strong>Interface réseau</strong></label>
+        <select id="nic" @bind="_nic">
+            @if (!_known.Contains(_nic))
+            {
+                <option value="@_nic">@(_nic == "" ? "(aucune)" : _nic) — introuvable</option>
+            }
+            <option value="TestWithoutC24">TestWithoutC24 (simulation sans console)</option>
+            @foreach (var nic in _all.Where(n => n != "TestWithoutC24"))
+            {
+                <option value="@nic">@nic</option>
+            }
+        </select>
+        @if (!_known.Contains(_nic))
+        {
+            <small class="bad">Cette interface n'existe pas sur cet ordinateur : le driver ne pourra pas démarrer avec.</small>
+        }
+        else if (_nic == "TestWithoutC24")
+        {
+            <small>Mode simulation : aucune console Control24 n'est requise.</small>
+        }
+    </div>
+
+    <div class="actions">
+        <button class="btn primary" disabled="@(!IsDirty)" @onclick="Save">Enregistrer</button>
+        <button class="btn" disabled="@(!IsDirty)" @onclick="Load">Annuler</button>
+        @if (_message != null)
+        {
+            <span class="@(_isError ? "bad" : "ok")">@_message</span>
+        }
+    </div>
+</section>
+
+@code {
+    private bool _autostart, _vsDebug;
+    private string _nic = "";
+    private DriverSettings _orig = default!;
+    private HashSet<string> _known = new();
+    private IReadOnlyList<string> _all = [];
+    private string? _message;
+    private bool _isError;
+
+    private bool IsDirty => _autostart != _orig.Autostart || _vsDebug != _orig.VsDebug || _nic != _orig.NetworkInterface;
+
+    protected override void OnInitialized()
+    {
+        Cfg.Changed += OnExternal;
+        Load();
+    }
+
+    private void Load()
+    {
+        _orig = Cfg.GetDriver();
+        _autostart = _orig.Autostart;
+        _vsDebug = _orig.VsDebug;
+        _nic = _orig.NetworkInterface;
+        _all = _orig.Interfaces;
+        _known = new HashSet<string>(_all) { "TestWithoutC24" };
+        _message = null;
+    }
+
+    private void Save()
+    {
+        try
+        {
+            Cfg.SaveDriver(_autostart, _vsDebug, _nic);
+            Load();
+            _message = "Enregistré.";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+    }
+
+    // Après un enregistrement ou un rechargement venant d'ailleurs : on ne remplace le brouillon que s'il est propre.
+    private void OnExternal() => InvokeAsync(() =>
+    {
+        if (!IsDirty && !Cfg.ExternalChange)
+        {
+            var (msg, err) = (_message, _isError);
+            Load();
+            (_message, _isError) = (msg, err);
+            StateHasChanged();
+        }
+    });
+
+    public void Dispose() => Cfg.Changed -= OnExternal;
+}

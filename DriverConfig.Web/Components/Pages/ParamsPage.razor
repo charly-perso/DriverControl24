@@ -1,0 +1,230 @@
+@page "/params"
+@inject ConfigService Cfg
+@inject NavigationManager Nav
+
+<PageTitle>Paramètres FX — Control24 Config</PageTitle>
+
+<h1>Paramètres FX</h1>
+
+<div class="toolbar">
+    <label for="plugin"><strong>Plugin</strong></label>
+    <select id="plugin" value="@_plugin" @onchange="OnPluginChanged">
+        <option value="">— choisir —</option>
+        @foreach (var p in _plugins)
+        {
+            <option value="@p">@p</option>
+        }
+    </select>
+    @if (_plugin != "")
+    {
+        <span class="count">@_rows.Count ligne(s) · @PageCount page(s) de 24</span>
+    }
+</div>
+
+@if (_plugin == "")
+{
+    <p class="muted">Choisissez un plugin pour éditer l'ordre, les noms et la visibilité de ses paramètres sur le Control24.
+       Seuls les plugins déjà ouverts au moins une fois par le driver apparaissent ici.</p>
+}
+else
+{
+    <section class="preview" aria-label="Aperçu des strips">
+        <div class="preview-head">
+            <strong>Aperçu Control24</strong>
+            <small>(indicatif — l'ordre est celui de la liste, 24 strips par page)</small>
+            <span class="spacer"></span>
+            <button class="btn sm" disabled="@(_page == 0)" @onclick="() => _page--">◀</button>
+            <span>Page @(_page + 1) / @PageCount</span>
+            <button class="btn sm" disabled="@(_page >= PageCount - 1)" @onclick="() => _page++">▶</button>
+        </div>
+        <div class="strips">
+            @for (int i = 0; i < 24; i++)
+            {
+                int pos = _page * 24 + i;
+                var r = pos < _rows.Count ? _rows[pos] : null;
+                <div class="strip @(r == null ? "empty" : null) @(r != null && !r.IsText && !r.Visible ? "hid" : null) @(r is { IsText: true } ? "txt" : null) @(r != null && LongNameMode.IsLinkedSeparator(_rows, pos) ? "linkL" : null) @(r != null && LongNameMode.IsLong(_rows, pos) ? "linkR" : null)">
+                    <span class="lcd">@(r == null ? "" : r.IsText ? Clip(r.Text, 8) : Clip(r.ShortName, 4))</span>
+                    <span class="lcd2">@(r == null || r.IsText ? "" : Clip(r.LongName, 8))</span>
+                </div>
+            }
+        </div>
+    </section>
+
+    <div class="table-wrap">
+        <table class="grid">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="c">#</th>
+                    <th>Paramètre Reaper</th>
+                    <th>Court <small>(4)</small></th>
+                    <th>Long <small>(8)</small></th>
+                    <th class="c">Visible</th>
+                    <th class="c" title="Long : le nom long occupe 2 strips (séparateur texte + paramètre)">Affichage</th>
+                    <th class="c">Ordre</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < _rows.Count; i++)
+                {
+                    int idx = i;
+                    var r = _rows[i];
+                    <tr draggable="true"
+                        class="@(r.IsText ? "textrow" : null) @(_dragOver == idx ? "dragover" : null) @(!r.IsText && !r.Visible ? "dim" : null) @(LongNameMode.IsLinkedSeparator(_rows, idx) ? "linkTop" : null) @(LongNameMode.IsLong(_rows, idx) ? "linkBot" : null)"
+                        @ondragstart="() => _drag = idx"
+                        @ondragover="() => _dragOver = idx"
+                        @ondragover:preventDefault
+                        @ondragleave="() => { if (_dragOver == idx) _dragOver = -1; }"
+                        @ondrop="() => Drop(idx)"
+                        @ondragend="() => { _drag = -1; _dragOver = -1; }"
+                        @key="r.Id">
+                        <td class="handle" title="@(LongNameMode.IsLinkedSeparator(_rows, idx) || LongNameMode.IsLong(_rows, idx) ? "Bloc lié (séparateur + paramètre) : se déplace ensemble" : "Glisser pour réordonner")">⠿</td>
+                        <td class="c">@(r.IsText ? "T" : r.ParamIndex)</td>
+                        @if (r.IsText)
+                        {
+                            <td colspan="3">
+                                <input class="text" placeholder="Texte affiché sur le strip" maxlength="@(LongNameMode.IsLinkedSeparator(_rows, idx) ? 4 : 64)"
+                                       value="@r.Text" @oninput="e => LongNameMode.EditSeparatorText(_rows, idx, e.Value?.ToString() ?? string.Empty)" />
+                            </td>
+                            <td class="c"><button class="btn sm" title="Supprimer ce séparateur" @onclick="() => Remove(idx)">✕</button></td>
+                            <td></td>
+                        }
+                        else
+                        {
+                            <td class="name" title="@r.FullName">@r.FullName</td>
+                            <td><input class="short @(Warn(r.ShortName) ? "warn" : null)" maxlength="4" size="5"
+                                       value="@r.ShortName" @oninput="e => LongNameMode.EditShortName(_rows, idx, e.Value?.ToString() ?? string.Empty)" /></td>
+                            <td><input class="short @(Warn(r.LongName) ? "warn" : null)" maxlength="8" size="9"
+                                       value="@r.LongName" @oninput="e => OnLongInput(idx, e.Value?.ToString() ?? string.Empty)" /></td>
+                            <td class="c"><input type="checkbox" @bind="r.Visible" aria-label="Visible" /></td>
+                            <td class="c nowrap modes">
+                                @{ bool isLong = LongNameMode.IsLong(_rows, idx); }
+                                <label><input type="radio" name="mode-@r.Id" checked="@(!isLong)" @onchange="() => SetShort(idx)" /> Court</label>
+                                <label title="@(LongNameMode.CanBeLong(r) ? null : "Le nom long doit dépasser 4 caractères")">
+                                    <input type="radio" name="mode-@r.Id" checked="@isLong" disabled="@(!isLong && !LongNameMode.CanBeLong(r))"
+                                           @onchange="() => SetLong(idx)" /> Long</label>
+                            </td>
+                        }
+                        <td class="c nowrap">
+                            <button class="btn sm" disabled="@(!CanMove(idx, -1))" @onclick="() => Move(idx, -1)" aria-label="Monter">▲</button>
+                            <button class="btn sm" disabled="@(!CanMove(idx, 1))" @onclick="() => Move(idx, 1)" aria-label="Descendre">▼</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="savebar">
+        <button class="btn" @onclick="AddText">+ Séparateur texte</button>
+        <button class="btn" @onclick="ShowAll">Tout afficher</button>
+        @if (_rows.Any(r => !r.IsText && (Warn(r.ShortName) || Warn(r.LongName))))
+        {
+            <span class="warnmsg">Caractères non ASCII : ils risquent de mal s'afficher sur l'écran de la console.</span>
+        }
+        @if (_message != null)
+        {
+            <span class="@(_isError ? "bad" : "ok")">@_message</span>
+        }
+        <span class="spacer"></span>
+        <button class="btn" disabled="@(!IsDirty)" @onclick="Load">Annuler</button>
+        <button class="btn primary" disabled="@(!IsDirty)" @onclick="Save">Enregistrer</button>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "plugin")] public string? PluginQuery { get; set; }
+
+    private List<string> _plugins = [];
+    private string _plugin = "";
+    private List<ParamEdit> _rows = [];
+    private List<ParamEdit> _orig = [];
+    private int _page, _drag = -1, _dragOver = -1;
+    private string? _message;
+    private bool _isError;
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(_rows.Count / 24.0));
+    private bool IsDirty => _rows.Count != _orig.Count || _rows.Where((r, i) => !r.SameContent(_orig[i])).Any();
+
+    protected override void OnInitialized() => _plugins = Cfg.GetPluginsWithParams();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(PluginQuery) && PluginQuery != _plugin && _plugins.Contains(PluginQuery))
+        {
+            _plugin = PluginQuery;
+            Load();
+        }
+    }
+
+    private void OnPluginChanged(ChangeEventArgs e)
+    {
+        _plugin = e.Value?.ToString() ?? "";
+        Nav.NavigateTo(_plugin == "" ? "params" : "params?plugin=" + Uri.EscapeDataString(_plugin));
+        Load();
+    }
+
+    private void Load()
+    {
+        _rows = _plugin == "" ? [] : Cfg.GetParams(_plugin);
+        _orig = _rows.Select(r => r.Clone()).ToList();
+        _page = 0;
+        _message = null;
+    }
+
+    // Un paramètre en mode Long se déplace avec son séparateur texte (voir LongNameMode.BlockRange).
+    private void Move(int idx, int delta) => LongNameMode.MoveBlock(_rows, idx, delta);
+
+    private bool CanMove(int idx, int delta)
+    {
+        var (start, count) = LongNameMode.BlockRange(_rows, idx);
+        return delta < 0 ? start > 0 : start + count < _rows.Count;
+    }
+
+    private void Drop(int target)
+    {
+        int from = _drag;
+        _drag = _dragOver = -1;
+        if (from < 0 || from == target || from >= _rows.Count) return;
+        LongNameMode.DropBlock(_rows, from, target);
+    }
+
+    private void Remove(int idx) => _rows.RemoveAt(idx);
+
+    private void SetLong(int idx) => LongNameMode.SetLong(_rows, idx);
+
+    private void SetShort(int idx) => LongNameMode.SetShort(_rows, idx);
+
+    private void OnLongInput(int idx, string value) => LongNameMode.EditLongName(_rows, idx, value);
+
+    private void AddText()
+    {
+        _rows.Add(new ParamEdit { ParamIndex = -1, Visible = false, Text = "" });
+        _page = PageCount - 1;
+    }
+
+    private void ShowAll()
+    {
+        foreach (var r in _rows.Where(r => !r.IsText)) r.Visible = true;
+    }
+
+    private static bool Warn(string s) => s.Any(c => c > 126 || c < 32);
+
+    private static string Clip(string s, int n) => s.Length <= n ? s : s[..n];
+
+    private void Save()
+    {
+        try
+        {
+            Cfg.SaveParams(_plugin, _rows);
+            Load();
+            _message = "Enregistré.";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+    }
+}

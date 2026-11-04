@@ -209,7 +209,15 @@ Public Class ReaperConfigReader
                 matching.Add(k)
             End If
         Next
-        matching.Sort(StringComparer.Ordinal)
+        ' Tri naturel : Plugin2 avant Plugin10 (suffixe numérique comparé comme un entier).
+        matching.Sort(Function(a, b)
+                          Dim na As Integer, nb As Integer
+                          If Integer.TryParse(a.Substring(prefixUp.Length), na) AndAlso
+                             Integer.TryParse(b.Substring(prefixUp.Length), nb) Then
+                              Return na.CompareTo(nb)
+                          End If
+                          Return String.CompareOrdinal(a, b)
+                      End Function)
 
         For Each k In matching
             result.Add(sectionData(k))

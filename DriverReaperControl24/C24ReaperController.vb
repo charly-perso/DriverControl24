@@ -5,6 +5,7 @@ Imports System.Runtime
 Imports System.Runtime.InteropServices.JavaScript.JSType
 Imports System.Security.Cryptography.X509Certificates
 Imports System.Threading
+Imports DriverConfig
 Imports DriverControl24.Extension.ReaperAPI
 Imports DriverReaperControl24.C24ReaperController
 Imports DriverReaperControl24.Control24
@@ -718,6 +719,9 @@ Public Class C24ReaperController
         Public SnapToGridAL As C24ActionLinker
         Public CtlBtnRH As [Delegate]
         Public CtlBtnPH As [Delegate]
+        Public ShiftBtnPH As [Delegate]
+
+        Public OptBtnPH As [Delegate]
         Public OnReaperZoomXH As [Delegate]
         Public CtrlPressedH As [Delegate]
         Public CtrlReleaseH As [Delegate]
@@ -1031,6 +1035,10 @@ Public Class C24ReaperController
     Private Sub AddCommonStripHandlers(Optional C24ViewMode As C24ViewModes = C24ViewModes.Home)
         RemoveCommonStripHandlers()
 
+        ' Changement de projet en cours : le manager n'est pas (encore) recréé.
+        ' Les handlers seront ajoutés par AddAllCommonC24Function une fois le manager instancié.
+        If _ReaperTracksManager Is Nothing Then Return
+
         '-------------------------Common Handlers------------------------------
         For i = 0 To 23
             Dim c24Trk = C24_Desk.ChannelStrips(i)
@@ -1177,7 +1185,7 @@ Public Class C24ReaperController
                 Dim autoModeBtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                     Sub(trackNb As Integer?)
 
-                        if c24Trk.AutoModeLed.IsBlinking andalso c24Trk.AutoModeLed.AutoMode = AutoMode.All then
+                        If c24Trk.AutoModeLed.IsBlinking AndAlso c24Trk.AutoModeLed.AutoMode = AutoMode.All Then
                             'remet le mode normal sur la piste en mode automation précédente
                             If LastReaperTrackIndexAutomation IsNot Nothing Then
                                 If LastReaperTrackIndexAutomation.Value = reaperTrk.TrackIndex Then
@@ -1192,7 +1200,7 @@ Public Class C24ReaperController
                                     Exit Sub
                                 End If
                             End If
-                        End if
+                        End If
 
 
                         If Shift Then
@@ -7403,7 +7411,7 @@ Public Class C24ReaperController
         RemoveZoomPresetHandlers()
 
         Dim h As New ZoomPresetStripHandler
-        Dim IsZoomSelection as Boolean = false
+        Dim IsZoomSelection As Boolean = False
 
         Dim ZoomMinHeightAL As New C24ActionLinker(40110)
 
@@ -7432,17 +7440,17 @@ Public Class C24ReaperController
         Dim Preset_3BtnH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                 Sub(TrackNb As Integer?)
 
-                  if IsZoomSelection Then
-                    Reaper.utility.Main_OnCommand(40295) 'Zoom out project 
-                    IsZoomSelection = false
-                  else
-                    Reaper.utility.Main_OnCommand(40031) 'Selection Zoom level
-                    IsZoomSelection = true
-                  end if
-                                    
-                        
-                                    
-                end sub
+                    If IsZoomSelection Then
+                        Reaper.utility.Main_OnCommand(40295) 'Zoom out project 
+                        IsZoomSelection = False
+                    Else
+                        Reaper.utility.Main_OnCommand(40031) 'Selection Zoom level
+                        IsZoomSelection = True
+                    End If
+
+
+
+                End Sub
 
         h.Preset_3BtnH = Preset_3BtnH
         AddHandler C24_Desk.Preset_3.OnButtonReleased, Preset_3BtnH
@@ -7452,7 +7460,7 @@ Public Class C24ReaperController
 
 
     End Sub
-    
+
     Private Sub RemoveZoomPresetHandlers()
         For Each h In _ZoomPresetStripHandlers
             RemoveHandler C24_Desk.Preset_1.OnButtonReleased, h.Preset_1BtnH
@@ -7612,22 +7620,39 @@ Public Class C24ReaperController
                 Sub()
 
                     ArrangeView2 = Reaper.utility.GetArrangeView2()
-                        MaxTimeView = Math.Abs(ArrangeView2.EndTime - ArrangeView2.StartTime)
-                        NoSnap_diff = MaxTimeView / 100
+                    MaxTimeView = Math.Abs(ArrangeView2.EndTime - ArrangeView2.StartTime)
+                    NoSnap_diff = MaxTimeView / 100
 
                 End Sub
 
 
         Dim CtrlPressedH As Hardware.C24_Button.OnButtonPressedEventHandler =
                 Sub(TrackNb As Integer?)
-                    NoSnap_diff = NoSnap_diff / 10
+                    If JogWheelToolMode = JogWheelToolModes.StretchMarker Then
+                        Dim items = _SelectedItemsManager.GetSelectedItems()
+                        If items.Count > 0 Then
+                            If C24_Desk.Ctl_Clutch.IsPressed Then
+                                'Add StretchMarker
+                                Reaper.utility.Main_OnCommand(41842)
+                            End If
+
+                        End If
+                    Else
+                        NoSnap_diff = NoSnap_diff / 10
+                    End If
+
                 End Sub
         h.CtrlPressedH = CtrlPressedH
         AddHandler C24_Desk.Ctrl.OnButtonPressed, CtrlPressedH
 
         Dim CtrlReleaseH As Hardware.C24_Button.OnButtonReleasedEventHandler =
                 Sub(TrackNb As Integer?)
-                    NoSnap_diff = NoSnap_diff * 10
+                    If JogWheelToolMode = JogWheelToolModes.StretchMarker Then
+
+                    Else
+                        NoSnap_diff = NoSnap_diff * 10
+                    End If
+
                 End Sub
         h.CtrlReleaseH = CtrlReleaseH
         AddHandler C24_Desk.Ctrl.OnButtonReleased, CtrlReleaseH
@@ -7690,27 +7715,27 @@ Public Class C24ReaperController
                                     End If
                                 Case JogWheelToolModes.Shuffle
 
-                                    
-                                        'deplacement d'un item
-                                        If direction = Direction.Left Then
-                                            Reaper.utility.Main_OnCommand_SafeUI(40120)
-                                            If SnapToGridAL.State Then
-                                                Reaper.utility.Main_OnCommand_SafeUI(41182)
-                                            End If
 
-                                        Else
-                                            Reaper.utility.Main_OnCommand_SafeUI(40119)
-                                            If SnapToGridAL.State Then
-                                                Reaper.utility.Main_OnCommand_SafeUI(41183)
-                                            End If
+                                    'deplacement d'un item
+                                    If direction = Direction.Left Then
+                                        Reaper.utility.Main_OnCommand_SafeUI(40120)
+                                        If SnapToGridAL.State Then
+                                            Reaper.utility.Main_OnCommand_SafeUI(41182)
                                         End If
-                                case JogWheelToolModes.Ripple
+
+                                    Else
+                                        Reaper.utility.Main_OnCommand_SafeUI(40119)
+                                        If SnapToGridAL.State Then
+                                            Reaper.utility.Main_OnCommand_SafeUI(41183)
+                                        End If
+                                    End If
+                                Case JogWheelToolModes.Ripple
                                     'deplacement du contenu interne d'un item
-                                        If direction = Direction.Left Then
-                                            Reaper.utility.Main_OnCommand_SafeUI(40123)
-                                        Else
-                                            Reaper.utility.Main_OnCommand_SafeUI(40124)
-                                        End If
+                                    If direction = Direction.Left Then
+                                        Reaper.utility.Main_OnCommand_SafeUI(40123)
+                                    Else
+                                        Reaper.utility.Main_OnCommand_SafeUI(40124)
+                                    End If
 
 
                                 Case JogWheelToolModes.SelAdj
@@ -7787,6 +7812,8 @@ Public Class C24ReaperController
                                         Reaper.utility.Main_OnCommand_SafeUI(40285)
 
                                     End If
+                                Case JogWheelToolModes.StretchMarker
+                                    Reaper.utility.MoveEditCursor((If(direction = Direction.Left, -1, 1) * velocity * diff), False)
 
                             End Select
 
@@ -7870,6 +7897,7 @@ Public Class C24ReaperController
 
         Dim CtlBtnPH As Control24.Hardware.C24_Button.OnButtonPressedEventHandler =
             Sub()
+
                 If IsUnselectIsAllowed() Then
                     If JogWheelMode = JogWheelModes.Shuttle Then
                         If Shift = False AndAlso Opt = False AndAlso Ctrl = False Then
@@ -7880,11 +7908,7 @@ Public Class C24ReaperController
                             Reaper.utility.Main_OnCommand_SafeUI(40020)
                             'Déselectionne  les points de l'envelope
                             Reaper.utility.Main_OnCommand_SafeUI(40331)
-                            ''Paramètre le point in et out de la zone de sélection
-                            'Reaper.utility.Main_OnCommand(40625)
-                            'Reaper.utility.Main_OnCommand(40626)
-                            ''Fix Ctl Point
-                            'CtlPoint = Reaper.utility.GetCursorPosition
+
                         End If
 
                         If Shift = True Then
@@ -7907,58 +7931,101 @@ Public Class C24ReaperController
         h.CtlBtnPH = CtlBtnPH
         AddHandler C24_Desk.Ctl_Clutch.OnButtonPressed, CtlBtnPH
 
+
+
+        Dim OptBtnPH As Control24.Hardware.C24_Button.OnButtonPressedEventHandler =
+           Sub()
+               If JogWheelToolMode = JogWheelToolModes.StretchMarker Then
+                   Dim items = _SelectedItemsManager.GetSelectedItems()
+                   If items.Count > 0 Then
+                       If C24_Desk.Ctl_Clutch.IsPressed Then
+                           'Go to nearest StretchMarker
+                           Reaper.utility.Main_OnCommand(41862)
+                           'Remove StretchMarker
+                           Reaper.utility.Main_OnCommand(41859)
+                       End If
+
+                   End If
+               End If
+
+           End Sub
+        h.OptBtnPH = OptBtnPH
+        AddHandler C24_Desk.Opt.OnButtonPressed, OptBtnPH
+
+        Dim ShiftBtnPH As Control24.Hardware.C24_Button.OnButtonPressedEventHandler =
+           Sub()
+               If JogWheelToolMode = JogWheelToolModes.StretchMarker Then
+                   Dim items = _SelectedItemsManager.GetSelectedItems()
+                   If items.Count > 0 Then
+                       If C24_Desk.Ctl_Clutch.IsPressed Then
+                           'Set StretchMarker at cursor pos
+                           Dim item = items.First
+                           Dim id = Reaper.utility.FindTakeStretchMarkerBySrcPos(item.TrackIndex, item.ItemIndex, Reaper.utility.GetCursorPosition)
+                           If id <> -1 Then
+                               Reaper.utility.SetTakeStretchMarker(item.TrackIndex, item.ItemIndex, id, Reaper.utility.GetCursorPosition)
+                           End If
+                       End If
+
+                   End If
+               End If
+
+           End Sub
+        h.ShiftBtnPH = ShiftBtnPH
+        AddHandler C24_Desk.Shift.OnButtonPressed, ShiftBtnPH
+
         Dim CtlBtnRH As Control24.Hardware.C24_Button.OnButtonReleasedEventHandler =
-            Sub()
-                If JogWheelMode = JogWheelModes.Shuttle AndAlso C24_Desk.Tools_Select.Led Then
-                    If Shift = True Then
-                        'Ajoute les nouveaux items à ceux qui sont sauvegardés (inverse la sélection si déjà présente)
+                    Sub()
+                        If JogWheelMode = JogWheelModes.Shuttle AndAlso C24_Desk.Tools_Select.Led Then
+                            If Shift = True Then
+                                'Ajoute les nouveaux items à ceux qui sont sauvegardés (inverse la sélection si déjà présente)
 
-                        'selectionne tous les items des pistes selectionnées dans la selection
-                        Reaper.utility.Main_OnCommand_SafeUI(40718)
+                                'selectionne tous les items des pistes selectionnées dans la selection
+                                Reaper.utility.Main_OnCommand_SafeUI(40718)
 
-                        If saved_selecteditems IsNot Nothing AndAlso saved_selecteditems.Count > 0 Then
-                            Dim _DeselectItems As New List(Of ReaperItemRef)
+                                If saved_selecteditems IsNot Nothing AndAlso saved_selecteditems.Count > 0 Then
+                                    Dim _DeselectItems As New List(Of ReaperItemRef)
 
-                            For Each item In _SelectedItemsManager.GetSelectedItems
-                                If saved_selecteditems.Contains(item) Then
-                                    saved_selecteditems.Remove(item)
-                                    _DeselectItems.Add(item)
+                                    For Each item In _SelectedItemsManager.GetSelectedItems
+                                        If saved_selecteditems.Contains(item) Then
+                                            saved_selecteditems.Remove(item)
+                                            _DeselectItems.Add(item)
+                                        End If
+                                    Next
+                                    If saved_selecteditems.Count > 0 Then
+                                        _SelectedItemsManager.SelectItems(saved_selecteditems)
+                                    End If
+                                    If _DeselectItems.Count > 0 Then
+                                        _SelectedItemsManager.DeselectItems(_DeselectItems)
+                                    End If
                                 End If
-                            Next
-                            If saved_selecteditems.Count > 0 Then
-                                _SelectedItemsManager.SelectItems(saved_selecteditems)
+
+
+                                If Ctrl Then
+                                    'Time selection: Set time selection to items
+                                    Reaper.utility.Main_OnCommand_SafeUI(40290)
+
+                                End If
+
+                            Else
+                                'selectionne tous les items des pistes selectionnées dans la selection
+                                Reaper.utility.Main_OnCommand_SafeUI(40718)
+                                If Ctrl Then
+                                    'Time selection: Set time selection to items
+                                    Reaper.utility.Main_OnCommand_SafeUI(40290)
+
+                                End If
+
+                                'déplacement du curseur avec selection des points d'envelope
+                                If JogWheelToolMode = JogWheelToolModes.Automation Then
+                                    Reaper.utility.Main_OnCommand_SafeUI(40330)
+                                End If
                             End If
-                            If _DeselectItems.Count > 0 Then
-                                _SelectedItemsManager.DeselectItems(_DeselectItems)
-                            End If
+                            saved_selecteditems = Nothing
+                            AddSelectedItemsMode = False
                         End If
 
 
-                        If Ctrl Then
-                            'Time selection: Set time selection to items
-                            Reaper.utility.Main_OnCommand_SafeUI(40290)
-
-                        End If
-
-                    Else
-                        'selectionne tous les items des pistes selectionnées dans la selection
-                        Reaper.utility.Main_OnCommand_SafeUI(40718)
-                        If Ctrl Then
-                            'Time selection: Set time selection to items
-                            Reaper.utility.Main_OnCommand_SafeUI(40290)
-
-                        End If
-
-                        'déplacement du curseur avec selection des points d'envelope
-                        If JogWheelToolMode = JogWheelToolModes.Automation Then
-                            Reaper.utility.Main_OnCommand_SafeUI(40330)
-                        End If
-                    End If
-                    saved_selecteditems = Nothing
-                    AddSelectedItemsMode = False
-                End If
-
-            End Sub
+                    End Sub
         h.CtlBtnRH = CtlBtnRH
         AddHandler C24_Desk.Ctl_Clutch.OnButtonReleased, CtlBtnRH
 
@@ -7975,6 +8042,9 @@ Public Class C24ReaperController
             RemoveHandler C24_Desk.Ctl_Clutch.OnButtonPressed, h.CtlBtnPH
             RemoveHandler C24_Desk.Ctrl.OnButtonPressed, h.CtrlPressedH
             RemoveHandler C24_Desk.Ctrl.OnButtonReleased, h.CtrlReleaseH
+            RemoveHandler C24_Desk.Opt.OnButtonPressed, h.OptBtnPH
+            RemoveHandler C24_Desk.Shift.OnButtonPressed, h.ShiftBtnPH
+
             If h.SnapToGridAL IsNot Nothing Then
                 RemoveHandler h.SnapToGridAL.On_StateChange, h.SnapToGridALH
             End If
@@ -8002,6 +8072,7 @@ Public Class C24ReaperController
         Automation
         Nudge
         Ripple
+        StretchMarker
     End Enum
     Function IsUnselectIsAllowed() As Boolean
         If JogWheelToolMode = JogWheelToolModes.PreRool Then
@@ -10154,6 +10225,18 @@ Public Class C24ReaperController
                  End Sub
         Tools_C24RadioBtnHandler.Add(C24_Desk.Slip, SlipBtnD)
 
+        Dim Tools_PencilBtnD As [Delegate] =
+                 Sub(FakeArg As Integer?)
+                     'eteint le mode EditTools dans Navigation
+                     If _NavigationHandlers.Count > 0 Then
+                         _NavigationHandlers.First.None.DynamicInvoke()
+                     End If
+
+                     JogWheelToolMode = JogWheelToolModes.StretchMarker
+                 End Sub
+        Tools_C24RadioBtnHandler.Add(C24_Desk.Tools_Pencil, Tools_PencilBtnD)
+
+
         Tools_C24RadioBtnHandler.AddHandlers()
         h.Tools_C24RadioBtnHandler = Tools_C24RadioBtnHandler
 
@@ -10399,12 +10482,24 @@ Public Class C24ReaperController
             Sub()
                 Dim selection = Reaper.utility.GetSelection
                 If selection.Item1 > 0 AndAlso selection.Item2 > 0 Then
-                    'Item: Split items at time selection or razor edit
-                    Reaper.Main_OnCommand(40061)
+                    If Shift Then
+                        'Item: Glue items within time selection
+                        Reaper.Main_OnCommand(42432)
+                    Else
+                        'Item: Split items at time selection or razor edit
+                        Reaper.Main_OnCommand(40061)
+                    End If
+
 
                 Else
-                    'Item: Split items at edit or play cursor (select right)
-                    Reaper.Main_OnCommand(40012)
+                    If Shift Then
+                        'Item: Glue items within time selection
+                        Reaper.Main_OnCommand(42432)
+                    Else
+                        'Item: Split items at edit or play cursor (select right)
+                        Reaper.Main_OnCommand(40012)
+                    End If
+
                 End If
 
             End Sub
@@ -10583,14 +10678,14 @@ Public Class C24ReaperController
         h.MixAL = MixAL
 
 
-        If SelectedFx IsNot Nothing andalso SelectedFx.IsOpen Then
-           C24_Desk.W_Plugin.Led = True
+        If SelectedFx IsNot Nothing AndAlso SelectedFx.IsOpen Then
+            C24_Desk.W_Plugin.Led = True
         End If
         Dim W_PluginH As Control24.Hardware.C24_Button.OnButtonReleasedEventHandler =
            Sub()
-               If SelectedFx IsNot Nothing andalso SelectedFx.IsOpen Then
+               If SelectedFx IsNot Nothing AndAlso SelectedFx.IsOpen Then
                    SelectedFx.IsHide = Not SelectedFx.IsHide
-                   C24_Desk.W_Plugin.Led = Not SelectedFx.IsHide 
+                   C24_Desk.W_Plugin.Led = Not SelectedFx.IsHide
                Else
                    C24_Desk.W_Plugin.Led = False
                End If
@@ -10610,7 +10705,7 @@ Public Class C24ReaperController
 
         h.Mem_LocAL = Mem_LocAL
 
-        
+
 
 
 
@@ -10632,7 +10727,7 @@ Public Class C24ReaperController
             If h.Mem_LocAL IsNot Nothing Then
                 h.Mem_LocAL.Dispose()
             End If
-            
+
         Next
         _WindowsHandlers.Clear()
 
@@ -12123,7 +12218,7 @@ Public Class C24ReaperController
                                         SelectedFx.IsHide = True
                                         C24_Desk.W_Plugin.Led = False
                                         RefreshC24InsertViewMode(SelectedFx.TrackIndex, InsertViewMode_PageNb)
-                                        
+
                                     End If
                                 End Sub
             FxH.InsertParamBtnH = InsertParamBtnH

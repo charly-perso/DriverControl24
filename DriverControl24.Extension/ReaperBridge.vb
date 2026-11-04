@@ -3792,6 +3792,148 @@ End Sub)
                         End If
                     Next
                     Return String.Join("|", result)
+                Case "GET_TAKE_NUM_STRETCH_MARKERS"
+                    If parts.Length < 4 Then
+                        Return "ERROR:Usage GET_TAKE_NUM_STRETCH_MARKERS|projectIndex|t:i|takeIndex"
+                    End If
+
+                    If ReaperAPI.GetTakeNumStretchMarkers Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim smnTake As IntPtr = IntPtr.Zero
+                    Dim smnError As String = ResolveTake(parts, 1, smnTake)
+                    If smnError IsNot Nothing Then
+                        Return smnError
+                    End If
+
+                    Return ReaperAPI.GetTakeNumStretchMarkers(smnTake).ToString(CultureInfo.InvariantCulture)
+
+                Case "GET_TAKE_STRETCH_MARKER"
+                    If parts.Length < 5 Then
+                        Return "ERROR:Usage GET_TAKE_STRETCH_MARKER|projectIndex|t:i|takeIndex|markerIndex[|pos[|srcpos]]"
+                    End If
+
+                    If ReaperAPI.GetTakeStretchMarker Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim smgTake As IntPtr = IntPtr.Zero
+                    Dim smgError As String = ResolveTake(parts, 1, smgTake)
+                    If smgError IsNot Nothing Then
+                        Return smgError
+                    End If
+
+                    Dim smgIdx As Integer = 0
+                    If Integer.TryParse(parts(4), NumberStyles.Integer, CultureInfo.InvariantCulture, smgIdx) = False Then
+                        Return "ERROR:Invalid markerIndex"
+                    End If
+
+                    Dim smgPos As Double = -1.0
+                    Dim smgSrc As Double = -1.0
+
+                    If parts.Length >= 6 AndAlso parts(5).Length > 0 Then
+                        If Double.TryParse(parts(5), NumberStyles.Any, CultureInfo.InvariantCulture, smgPos) = False Then
+                            Return "ERROR:Invalid pos"
+                        End If
+                    End If
+
+                    If parts.Length >= 7 AndAlso parts(6).Length > 0 Then
+                        If Double.TryParse(parts(6), NumberStyles.Any, CultureInfo.InvariantCulture, smgSrc) = False Then
+                            Return "ERROR:Invalid srcpos"
+                        End If
+                    End If
+
+                    If smgIdx < 0 AndAlso smgPos < 0.0 AndAlso smgSrc < 0.0 Then
+                        Return "ERROR:pos or srcpos required when markerIndex = -1"
+                    End If
+
+                    Dim smgFound As Integer = ReaperAPI.GetTakeStretchMarker(smgTake, smgIdx, smgPos, smgSrc)
+                    If smgFound < 0 Then
+                        Return "ERROR:Stretch marker not found"
+                    End If
+
+                    If smgIdx < 0 Then
+                        Dim smgRealPos As Double = 0.0
+                        Dim smgRealSrc As Double = 0.0
+                        If ReaperAPI.GetTakeStretchMarker(smgTake, smgFound, smgRealPos, smgRealSrc) < 0 Then
+                            Return "ERROR:Stretch marker not found"
+                        End If
+
+                        smgPos = smgRealPos
+                        smgSrc = smgRealSrc
+                    End If
+
+                    Return String.Join("|",
+                        smgFound.ToString(CultureInfo.InvariantCulture),
+                        smgPos.ToString("G", CultureInfo.InvariantCulture),
+                        smgSrc.ToString("G", CultureInfo.InvariantCulture))
+
+                Case "SET_TAKE_STRETCH_MARKER"
+                    If parts.Length < 6 Then
+                        Return "ERROR:Usage SET_TAKE_STRETCH_MARKER|projectIndex|t:i|takeIndex|markerIndex|pos[|srcpos]"
+                    End If
+
+                    If ReaperAPI.SetTakeStretchMarker Is Nothing Then
+                        Return "ERROR:API unavailable"
+                    End If
+
+                    Dim smsTake As IntPtr = IntPtr.Zero
+                    Dim smsError As String = ResolveTake(parts, 1, smsTake)
+                    If smsError IsNot Nothing Then
+                        Return smsError
+                    End If
+
+                    Dim smsIdx As Integer = 0
+                    If Integer.TryParse(parts(4), NumberStyles.Integer, CultureInfo.InvariantCulture, smsIdx) = False Then
+                        Return "ERROR:Invalid markerIndex"
+                    End If
+
+                    Dim smsPos As Double = 0.0
+                    If Double.TryParse(parts(5), NumberStyles.Any, CultureInfo.InvariantCulture, smsPos) = False Then
+                        Return "ERROR:Invalid pos"
+                    End If
+
+                    Dim smsHasSrc As Boolean = False
+                    Dim smsSrc As Double = 0.0
+                    If parts.Length >= 7 AndAlso parts(6).Length > 0 Then
+                        If Double.TryParse(parts(6), NumberStyles.Any, CultureInfo.InvariantCulture, smsSrc) = False Then
+                            Return "ERROR:Invalid srcpos"
+                        End If
+                        smsHasSrc = True
+                    End If
+
+                    Dim smsFn = ReaperAPI.SetTakeStretchMarker
+                    Dim smsRet As Integer = RunOnMainThread(
+                        Function()
+                            Dim srcPtr As IntPtr = IntPtr.Zero
+                            Try
+                                If smsHasSrc Then
+                                    srcPtr = Marshal.AllocHGlobal(8)
+                                    Marshal.WriteInt64(srcPtr, BitConverter.DoubleToInt64Bits(smsSrc))
+                                End If
+
+                                Dim r As Integer = smsFn(smsTake, smsIdx, smsPos, srcPtr)
+
+                                If ReaperAPI.UpdateArrange IsNot Nothing Then
+                                    ReaperAPI.UpdateArrange()
+                                End If
+
+                                Return r
+                            Finally
+                                If srcPtr <> IntPtr.Zero Then
+                                    Marshal.FreeHGlobal(srcPtr)
+                                End If
+                            End Try
+                        End Function,
+                        5000)
+
+                    If smsRet < 0 Then
+                        Return "ERROR:SetTakeStretchMarker failed"
+                    End If
+
+                    Return smsRet.ToString(CultureInfo.InvariantCulture)
+
                 Case Else
                     Return $"ERROR:Unknown {parts(0)}"
 
@@ -3880,5 +4022,55 @@ End Sub)
         End If
 
         Return ReaperAPI.GetTrackMediaItem(tr, itemIdx)
+    End Function
+    ''' <summary>
+    ''' Résout "projectIndex|t:i|takeIndex" (à partir de startIndex dans parts) en pointeur MediaItem_Take*.
+    ''' takeIndex = -1 : take actif.
+    ''' Retourne Nothing si la résolution a réussi, sinon un message "ERROR:...".
+    ''' </summary>
+    Private Shared Function ResolveTake(parts As String(), startIndex As Integer, ByRef take As IntPtr) As String
+        take = IntPtr.Zero
+
+        If ReaperAPI.GetActiveTake Is Nothing OrElse ReaperAPI.GetMediaItemTake Is Nothing Then
+            Return "ERROR:API unavailable"
+        End If
+
+        Dim projIdx As Integer = -1
+        If Integer.TryParse(parts(startIndex), NumberStyles.Integer, CultureInfo.InvariantCulture, projIdx) = False Then
+            Return "ERROR:Invalid projectIndex"
+        End If
+
+        Dim proj As IntPtr = IntPtr.Zero
+        If TryGetProject(projIdx, proj) = False Then
+            Return "ERROR:Project not found"
+        End If
+
+        Dim trackIdx As Integer = 0
+        Dim itemIdx As Integer = 0
+        If TryParseItemRef(parts(startIndex + 1), trackIdx, itemIdx) = False Then
+            Return "ERROR:Invalid item reference"
+        End If
+
+        Dim takeIdx As Integer = -1
+        If Integer.TryParse(parts(startIndex + 2), NumberStyles.Integer, CultureInfo.InvariantCulture, takeIdx) = False Then
+            Return "ERROR:Invalid takeIndex"
+        End If
+
+        Dim item As IntPtr = GetItemByRef(proj, trackIdx, itemIdx)
+        If item = IntPtr.Zero Then
+            Return "ERROR:Item not found"
+        End If
+
+        If takeIdx < 0 Then
+            take = ReaperAPI.GetActiveTake(item)
+        Else
+            take = ReaperAPI.GetMediaItemTake(item, takeIdx)
+        End If
+
+        If take = IntPtr.Zero Then
+            Return "ERROR:Take not found"
+        End If
+
+        Return Nothing
     End Function
 End Class

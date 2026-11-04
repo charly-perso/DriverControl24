@@ -257,7 +257,9 @@ public static unsafe class ReaperEntry
             ReaperAPI.GetMediaItemTake_Source = GetDel<ReaperAPI.GetMediaItemTake_SourceDel>(getFn, "GetMediaItemTake_Source");
             ReaperAPI.GetMediaSourceType = GetDel<ReaperAPI.GetMediaSourceTypeDel>(getFn, "GetMediaSourceType");
             ReaperAPI.GetMediaSourceLength = GetDel<ReaperAPI.GetMediaSourceLengthDel>(getFn, "GetMediaSourceLength");
-
+            ReaperAPI.GetTakeNumStretchMarkers = GetDel<ReaperAPI.GetTakeNumStretchMarkersDel>(getFn, "GetTakeNumStretchMarkers");
+            ReaperAPI.GetTakeStretchMarker = GetDel<ReaperAPI.GetTakeStretchMarkerDel>(getFn, "GetTakeStretchMarker");
+            ReaperAPI.SetTakeStretchMarker = GetDel<ReaperAPI.SetTakeStretchMarkerDel>(getFn, "SetTakeStretchMarker");
             // Marqueurs
           
            
