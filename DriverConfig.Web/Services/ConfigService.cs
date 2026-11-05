@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 
 namespace DriverConfig.Web.Services;
@@ -18,6 +19,7 @@ public sealed class ConfigService : IDisposable
     private readonly ReaperSessionConfigBase? _cfg;
     private readonly FileSystemWatcher? _watcher;
     private readonly Timer _debounce;
+    private readonly Timer _nicDebounce;
     private DateTime _knownWriteUtc;
 
     public string IniPath { get; }
@@ -25,24 +27,38 @@ public sealed class ConfigService : IDisposable
     public bool Available => _cfg != null;
     /// <summary>Vrai si le fichier a été modifié par un autre processus (ex : le driver) depuis le dernier chargement.</summary>
     public bool ExternalChange { get; private set; }
-    public string? LastError { get; private set; }
+    private string? _lastError;
+    private bool _iniNotFound;
+
+    /// <summary>Dernière erreur (texte dans la langue de la requête courante pour « fichier introuvable »).</summary>
+    public string? LastError
+    {
+        get => _iniNotFound ? Loc.T("err.notfound", IniPath) : _lastError;
+        private set => _lastError = value;
+    }
 
     /// <summary>Un enregistrement, un rechargement ou une modification externe vient d'avoir lieu.</summary>
     public event Action? Changed;
     /// <summary>L'état en mémoire a été remplacé par le contenu du disque : les brouillons des pages sont périmés.</summary>
     public event Action? Reloaded;
+    /// <summary>La liste des interfaces réseau vient d'être relue (bouton ou changement détecté par le système).</summary>
+    public event Action? InterfacesChanged;
 
     public ConfigService(IConfiguration configuration, ILogger<ConfigService> log)
     {
         _log = log;
         _debounce = new Timer(_ => CheckExternalChange(), null, Timeout.Infinite, Timeout.Infinite);
+        _nicDebounce = new Timer(_ => RefreshInterfaces(), null, Timeout.Infinite, Timeout.Infinite);
+        // Rafraîchissement en direct : le système signale branchement / débranchement / changement d'adresse.
+        NetworkChange.NetworkAddressChanged += OnNetworkChanged;
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkChanged;
         IniPath = ResolveIniPath(configuration["IniPath"]);
         _backupDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DriverControl24", "backups");
 
         if (!File.Exists(IniPath))
         {
-            LastError = $"Fichier introuvable : {IniPath}. Lancez une fois le driver, ou renseignez « IniPath » dans appsettings.json.";
+            _iniNotFound = true;
             return;
         }
 
@@ -91,6 +107,17 @@ public sealed class ConfigService : IDisposable
                                       c.AllNetworkInterfaces.ToList(), c.IsInterfaceValid);
         }
     }
+
+    /// <summary>Relit la liste des interfaces réseau du système (sans écrire le fichier INI).</summary>
+    public void RefreshInterfaces()
+    {
+        if (_cfg == null) return;
+        lock (_gate) _cfg.RefreshNetworkInterfaces();
+        InterfacesChanged?.Invoke();
+    }
+
+    // Les événements système arrivent souvent en rafale : on regroupe.
+    private void OnNetworkChanged(object? sender, EventArgs e) => _nicDebounce.Change(500, Timeout.Infinite);
 
     public List<PluginEdit> GetPlugins()
     {
@@ -210,9 +237,9 @@ public sealed class ConfigService : IDisposable
     public void RestoreBackup(string fileName)
     {
         // Pas de séparateur de chemin : on ne restaure que depuis le dossier de sauvegardes.
-        if (fileName != Path.GetFileName(fileName)) throw new ArgumentException("Nom de sauvegarde invalide.");
+        if (fileName != Path.GetFileName(fileName)) throw new ArgumentException(Loc.T("err.badbackup"));
         string source = Path.Combine(_backupDir, fileName);
-        if (!File.Exists(source)) throw new FileNotFoundException("Sauvegarde introuvable.", fileName);
+        if (!File.Exists(source)) throw new FileNotFoundException(Loc.T("err.nobackup"), fileName);
 
         lock (_gate)
         {
@@ -225,7 +252,7 @@ public sealed class ConfigService : IDisposable
 
     // ── Interne ───────────────────────────────────────────────────────────
 
-    private ReaperSessionConfigBase Cfg() => _cfg ?? throw new InvalidOperationException(LastError ?? "Configuration indisponible.");
+    private ReaperSessionConfigBase Cfg() => _cfg ?? throw new InvalidOperationException(LastError ?? Loc.T("err.unavailable"));
 
     /// <summary>Sauvegarde le fichier actuel puis applique les modifications en une seule écriture.</summary>
     private void Commit(Action<ReaperSessionConfigBase> edit)
@@ -234,8 +261,7 @@ public sealed class ConfigService : IDisposable
         {
             var c = Cfg();
             if (ExternalChange)
-                throw new InvalidOperationException(
-                    "Le fichier a été modifié en dehors de l'éditeur (le driver ?). Rechargez avant d'enregistrer.");
+                throw new InvalidOperationException(Loc.T("err.external"));
 
             LastError = null;
             Backup();
@@ -278,6 +304,9 @@ public sealed class ConfigService : IDisposable
 
     public void Dispose()
     {
+        NetworkChange.NetworkAddressChanged -= OnNetworkChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkChanged;
+        _nicDebounce.Dispose();
         _watcher?.Dispose();
         _debounce.Dispose();
     }

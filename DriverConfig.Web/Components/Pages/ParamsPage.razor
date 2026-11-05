@@ -1,15 +1,16 @@
 @page "/params"
 @inject ConfigService Cfg
 @inject NavigationManager Nav
+@inject Loc L
 
-<PageTitle>Paramètres FX — Control24 Config</PageTitle>
+<PageTitle>@L["title.params"]</PageTitle>
 
-<h1>Paramètres FX</h1>
+<h1>@L["nav.params"]</h1>
 
 <div class="toolbar">
     <label for="plugin"><strong>Plugin</strong></label>
     <select id="plugin" value="@_plugin" @onchange="OnPluginChanged">
-        <option value="">— choisir —</option>
+        <option value="">@L["params.choose"]</option>
         @foreach (var p in _plugins)
         {
             <option value="@p">@p</option>
@@ -17,24 +18,23 @@
     </select>
     @if (_plugin != "")
     {
-        <span class="count">@_rows.Count ligne(s) · @PageCount page(s) de 24</span>
+        <span class="count">@Loc.T("params.lines", _rows.Count, PageCount)</span>
     }
 </div>
 
 @if (_plugin == "")
 {
-    <p class="muted">Choisissez un plugin pour éditer l'ordre, les noms et la visibilité de ses paramètres sur le Control24.
-       Seuls les plugins déjà ouverts au moins une fois par le driver apparaissent ici.</p>
+    <p class="muted">@L["params.intro"]</p>
 }
 else
 {
-    <section class="preview" aria-label="Aperçu des strips">
+    <section class="preview" aria-label="@L["params.preview.aria"]">
         <div class="preview-head">
-            <strong>Aperçu Control24</strong>
-            <small>(indicatif — l'ordre est celui de la liste, 24 strips par page)</small>
+            <strong>@L["params.preview"]</strong>
+            <small>@L["params.preview.help"]</small>
             <span class="spacer"></span>
             <button class="btn sm" disabled="@(_page == 0)" @onclick="() => _page--">◀</button>
-            <span>Page @(_page + 1) / @PageCount</span>
+            <span>@Loc.T("params.page", _page + 1, PageCount)</span>
             <button class="btn sm" disabled="@(_page >= PageCount - 1)" @onclick="() => _page++">▶</button>
         </div>
         <div class="strips">
@@ -56,12 +56,12 @@ else
                 <tr>
                     <th></th>
                     <th class="c">#</th>
-                    <th>Paramètre Reaper</th>
-                    <th>Court <small>(4)</small></th>
-                    <th>Long <small>(8)</small></th>
-                    <th class="c">Visible</th>
-                    <th class="c" title="Long : le nom long occupe 2 strips (séparateur texte + paramètre)">Affichage</th>
-                    <th class="c">Ordre</th>
+                    <th>@L["params.col.param"]</th>
+                    <th>@L["params.col.short"] <small>(4)</small></th>
+                    <th>@L["params.col.long"] <small>(8)</small></th>
+                    <th class="c">@L["col.visible"]</th>
+                    <th class="c" title="@L["params.col.display.help"]">@L["params.col.display"]</th>
+                    <th class="c">@L["params.col.order"]</th>
                 </tr>
             </thead>
             <tbody>
@@ -78,15 +78,15 @@ else
                         @ondrop="() => Drop(idx)"
                         @ondragend="() => { _drag = -1; _dragOver = -1; }"
                         @key="r.Id">
-                        <td class="handle" title="@(LongNameMode.IsLinkedSeparator(_rows, idx) || LongNameMode.IsLong(_rows, idx) ? "Bloc lié (séparateur + paramètre) : se déplace ensemble" : "Glisser pour réordonner")">⠿</td>
+                        <td class="handle" title="@(LongNameMode.IsLinkedSeparator(_rows, idx) || LongNameMode.IsLong(_rows, idx) ? L["params.drag.linked"] : L["params.drag"])">⠿</td>
                         <td class="c">@(r.IsText ? "T" : r.ParamIndex)</td>
                         @if (r.IsText)
                         {
                             <td colspan="3">
-                                <input class="text" placeholder="Texte affiché sur le strip" maxlength="@(LongNameMode.IsLinkedSeparator(_rows, idx) ? 4 : 64)"
+                                <input class="text" placeholder="@L["params.text.placeholder"]" maxlength="@(LongNameMode.IsLinkedSeparator(_rows, idx) ? 4 : 64)"
                                        value="@r.Text" @oninput="e => LongNameMode.EditSeparatorText(_rows, idx, e.Value?.ToString() ?? string.Empty)" />
                             </td>
-                            <td class="c"><button class="btn sm" title="Supprimer ce séparateur" @onclick="() => Remove(idx)">✕</button></td>
+                            <td class="c"><button class="btn sm" title="@L["params.text.remove"]" @onclick="() => Remove(idx)">✕</button></td>
                             <td></td>
                         }
                         else
@@ -96,18 +96,18 @@ else
                                        value="@r.ShortName" @oninput="e => LongNameMode.EditShortName(_rows, idx, e.Value?.ToString() ?? string.Empty)" /></td>
                             <td><input class="short @(Warn(r.LongName) ? "warn" : null)" maxlength="8" size="9"
                                        value="@r.LongName" @oninput="e => OnLongInput(idx, e.Value?.ToString() ?? string.Empty)" /></td>
-                            <td class="c"><input type="checkbox" @bind="r.Visible" aria-label="Visible" /></td>
+                            <td class="c"><input type="checkbox" @bind="r.Visible" aria-label="@L["col.visible"]" /></td>
                             <td class="c nowrap modes">
                                 @{ bool isLong = LongNameMode.IsLong(_rows, idx); }
-                                <label><input type="radio" name="mode-@r.Id" checked="@(!isLong)" @onchange="() => SetShort(idx)" /> Court</label>
-                                <label title="@(LongNameMode.CanBeLong(r) ? null : "Le nom long doit dépasser 4 caractères")">
+                                <label><input type="radio" name="mode-@r.Id" checked="@(!isLong)" @onchange="() => SetShort(idx)" /> @L["params.mode.short"]</label>
+                                <label title="@(LongNameMode.CanBeLong(r) ? null : L["params.mode.long.help"])">
                                     <input type="radio" name="mode-@r.Id" checked="@isLong" disabled="@(!isLong && !LongNameMode.CanBeLong(r))"
-                                           @onchange="() => SetLong(idx)" /> Long</label>
+                                           @onchange="() => SetLong(idx)" /> @L["params.mode.long"]</label>
                             </td>
                         }
                         <td class="c nowrap">
-                            <button class="btn sm" disabled="@(!CanMove(idx, -1))" @onclick="() => Move(idx, -1)" aria-label="Monter">▲</button>
-                            <button class="btn sm" disabled="@(!CanMove(idx, 1))" @onclick="() => Move(idx, 1)" aria-label="Descendre">▼</button>
+                            <button class="btn sm" disabled="@(!CanMove(idx, -1))" @onclick="() => Move(idx, -1)" aria-label="@L["params.up"]">▲</button>
+                            <button class="btn sm" disabled="@(!CanMove(idx, 1))" @onclick="() => Move(idx, 1)" aria-label="@L["params.down"]">▼</button>
                         </td>
                     </tr>
                 }
@@ -116,19 +116,19 @@ else
     </div>
 
     <div class="savebar">
-        <button class="btn" @onclick="AddText">+ Séparateur texte</button>
-        <button class="btn" @onclick="ShowAll">Tout afficher</button>
+        <button class="btn" @onclick="AddText">@L["params.addtext"]</button>
+        <button class="btn" @onclick="ShowAll">@L["params.showall"]</button>
         @if (_rows.Any(r => !r.IsText && (Warn(r.ShortName) || Warn(r.LongName))))
         {
-            <span class="warnmsg">Caractères non ASCII : ils risquent de mal s'afficher sur l'écran de la console.</span>
+            <span class="warnmsg">@L["params.nonascii"]</span>
         }
         @if (_message != null)
         {
             <span class="@(_isError ? "bad" : "ok")">@_message</span>
         }
         <span class="spacer"></span>
-        <button class="btn" disabled="@(!IsDirty)" @onclick="Load">Annuler</button>
-        <button class="btn primary" disabled="@(!IsDirty)" @onclick="Save">Enregistrer</button>
+        <button class="btn" disabled="@(!IsDirty)" @onclick="Load">@L["btn.cancel"]</button>
+        <button class="btn primary" disabled="@(!IsDirty)" @onclick="Save">@L["btn.save"]</button>
     </div>
 }
 
@@ -218,7 +218,7 @@ else
         {
             Cfg.SaveParams(_plugin, _rows);
             Load();
-            _message = "Enregistré.";
+            _message = Loc.T("msg.saved");
             _isError = false;
         }
         catch (Exception ex)

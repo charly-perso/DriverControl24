@@ -90,6 +90,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 6rem; }
 }
 .row { display: flex; gap: .75rem; align-items: flex-start; padding: .5rem 0; cursor: pointer; }
 .row span { display: flex; flex-direction: column; }
+.nicrow { display: flex; gap: .5rem; align-items: center; }
+.nicrow select { flex: 1; min-width: 0; }
 .field { display: flex; flex-direction: column; gap: .35rem; padding: .5rem 0; max-width: 520px; }
 .actions { display: flex; gap: .6rem; align-items: center; margin-top: .75rem; flex-wrap: wrap; }
 

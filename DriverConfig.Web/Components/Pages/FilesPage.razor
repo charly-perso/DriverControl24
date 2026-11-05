@@ -1,33 +1,34 @@
 @page "/files"
 @inject ConfigService Cfg
+@inject Loc L
 
-<PageTitle>Fichier — Control24 Config</PageTitle>
+<PageTitle>@L["title.files"]</PageTitle>
 
-<h1>Fichier &amp; sauvegardes</h1>
+<h1>@L["files.h1"]</h1>
 
 <section class="card">
-    <h2>Sauvegardes</h2>
-    <p class="muted">Une copie du fichier est faite automatiquement avant chaque enregistrement (30 conservées).</p>
+    <h2>@L["files.backups"]</h2>
+    <p class="muted">@L["files.backups.help"]</p>
     @if (_message != null)
     {
         <p class="@(_isError ? "bad" : "ok")">@_message</p>
     }
     @if (_backups.Count == 0)
     {
-        <p class="muted">Aucune sauvegarde pour l'instant.</p>
+        <p class="muted">@L["files.nobackup"]</p>
     }
     else
     {
         <table class="grid">
-            <thead><tr><th>Date</th><th>Taille</th><th></th></tr></thead>
+            <thead><tr><th>@L["files.col.date"]</th><th>@L["files.col.size"]</th><th></th></tr></thead>
             <tbody>
                 @foreach (var b in _backups)
                 {
                     <tr>
-                        <td>@b.TimestampUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
-                        <td>@(b.Size / 1024) Ko</td>
+                        <td>@b.TimestampUtc.ToLocalTime().ToString("G")</td>
+                        <td>@(b.Size / 1024) @L["files.size.unit"]</td>
                         <td class="c">
-                            <button class="btn sm" @onclick="() => Restore(b.FileName)">Restaurer</button>
+                            <button class="btn sm" @onclick="() => Restore(b.FileName)">@L["files.restore"]</button>
                         </td>
                     </tr>
                 }
@@ -37,10 +38,10 @@
 </section>
 
 <section class="card">
-    <h2>Contenu actuel du fichier <small>(lecture seule)</small></h2>
+    <h2>@L["files.content"] <small>@L["files.readonly"]</small></h2>
     <div class="actions">
-        <button class="btn" @onclick="Refresh">Actualiser</button>
-        <button class="btn" @onclick="Cfg.Reload">Recharger depuis le disque</button>
+        <button class="btn" @onclick="Refresh">@L["files.refresh"]</button>
+        <button class="btn" @onclick="Cfg.Reload">@L["files.reload"]</button>
     </div>
     <pre class="raw">@_raw</pre>
 </section>
@@ -64,7 +65,7 @@
         try
         {
             Cfg.RestoreBackup(fileName);
-            _message = "Sauvegarde restaurée. Les autres pages affichent désormais cette version.";
+            _message = Loc.T("files.restored");
             _isError = false;
         }
         catch (Exception ex)

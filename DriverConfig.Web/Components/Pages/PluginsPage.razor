@@ -1,43 +1,44 @@
 @page "/plugins"
 @inject ConfigService Cfg
+@inject Loc L
 
-<PageTitle>Plugins — Control24 Config</PageTitle>
+<PageTitle>@L["title.plugins"]</PageTitle>
 
 <h1>Plugins</h1>
 
 <div class="toolbar">
-    <input type="search" placeholder="Filtrer par nom…" @bind="_filter" @bind:event="oninput" />
+    <input type="search" placeholder="@L["plugins.filter"]" @bind="_filter" @bind:event="oninput" />
     <select @bind="_kind">
-        <option value="">Tous les types</option>
+        <option value="">@L["plugins.allkinds"]</option>
         @foreach (var k in _kinds)
         {
             <option value="@k">@k</option>
         }
     </select>
     <select @bind="_show">
-        <option value="all">Tous</option>
-        <option value="visible">Visibles</option>
-        <option value="hidden">Masqués</option>
+        <option value="all">@L["plugins.show.all"]</option>
+        <option value="visible">@L["plugins.show.visible"]</option>
+        <option value="hidden">@L["plugins.show.hidden"]</option>
         <option value="eq">EQ</option>
         <option value="dyn">DYN</option>
-        <option value="dirty">Modifiés</option>
+        <option value="dirty">@L["plugins.show.dirty"]</option>
     </select>
     <span class="count">@Filtered.Count / @_rows.Count</span>
     <span class="spacer"></span>
-    <button class="btn" @onclick="() => SetVisible(true)" title="Applique aux plugins actuellement filtrés">Afficher le filtre</button>
-    <button class="btn" @onclick="() => SetVisible(false)" title="Applique aux plugins actuellement filtrés">Masquer le filtre</button>
+    <button class="btn" @onclick="() => SetVisible(true)" title="@L["plugins.filter.help"]">@L["plugins.showfilter"]</button>
+    <button class="btn" @onclick="() => SetVisible(false)" title="@L["plugins.filter.help"]">@L["plugins.hidefilter"]</button>
 </div>
 
 <div class="table-wrap">
     <table class="grid">
         <thead>
             <tr>
-                <th class="c">Visible</th>
-                <th>Plugin</th>
-                <th>Nom court <small>(8 car.)</small></th>
+                <th class="c">@L["col.visible"]</th>
+                <th>@L["plugins.col.plugin"]</th>
+                <th>@L["plugins.col.short"] <small>@L["plugins.col.chars8"]</small></th>
                 <th class="c">EQ</th>
                 <th class="c">DYN</th>
-                <th class="c">Paramètres</th>
+                <th class="c">@L["plugins.col.params"]</th>
             </tr>
         </thead>
         <tbody>
@@ -45,7 +46,7 @@
             {
                 var err = ShortNameError(r);
                 <tr class="@(r.IsDirty ? "dirty" : null) @(r.Visible ? null : "dim")">
-                    <td class="c"><input type="checkbox" @bind="r.Visible" aria-label="Visible" /></td>
+                    <td class="c"><input type="checkbox" @bind="r.Visible" aria-label="@L["col.visible"]" /></td>
                     <td class="name" title="@r.Name">@r.Name</td>
                     <td>
                         <input class="short @(err != null ? "invalid" : null)" maxlength="8" size="9"
@@ -56,7 +57,7 @@
                     <td class="c">
                         @if (r.HasParams)
                         {
-                            <a href="@("params?plugin=" + Uri.EscapeDataString(r.Name))">Éditer</a>
+                            <a href="@("params?plugin=" + Uri.EscapeDataString(r.Name))">@L["plugins.edit"]</a>
                         }
                         else
                         {
@@ -70,14 +71,14 @@
 </div>
 
 <div class="savebar">
-    <span>@DirtyCount modification(s) en attente</span>
+    <span>@Loc.T("plugins.pending", DirtyCount)</span>
     @if (_message != null)
     {
         <span class="@(_isError ? "bad" : "ok")">@_message</span>
     }
     <span class="spacer"></span>
-    <button class="btn" disabled="@(DirtyCount == 0)" @onclick="Load">Annuler</button>
-    <button class="btn primary" disabled="@(DirtyCount == 0 || HasErrors)" @onclick="Save">Enregistrer</button>
+    <button class="btn" disabled="@(DirtyCount == 0)" @onclick="Load">@L["btn.cancel"]</button>
+    <button class="btn primary" disabled="@(DirtyCount == 0 || HasErrors)" @onclick="Save">@L["btn.save"]</button>
 </div>
 
 @code {
@@ -115,12 +116,12 @@
     private string? ShortNameError(PluginEdit r)
     {
         string s = r.ShortName.Trim();
-        if (s.Length == 0) return "Le nom court ne peut pas être vide.";
-        if (s.Length > 8) return "8 caractères maximum.";
-        if (s.IndexOfAny(['|', '=', '[', ']']) >= 0) return "Caractères interdits : | = [ ]";
+        if (s.Length == 0) return Loc.T("plugins.err.empty");
+        if (s.Length > 8) return Loc.T("plugins.err.max8");
+        if (s.IndexOfAny(['|', '=', '[', ']']) >= 0) return Loc.T("plugins.err.chars");
         // Doublon : seulement signalé sur les lignes modifiées, pour ne pas bloquer à cause de l'existant.
         if (r.IsDirty && _rows.Any(o => o != r && string.Equals(o.ShortName.Trim(), s, StringComparison.OrdinalIgnoreCase)))
-            return "Nom court déjà utilisé par un autre plugin.";
+            return Loc.T("plugins.err.dup");
         return null;
     }
 
@@ -136,7 +137,7 @@
             Cfg.SavePlugins(_rows);
             int n = DirtyCount;
             Load();
-            _message = $"Enregistré ({n} plugin(s)).";
+            _message = Loc.T("plugins.saved", n);
             _isError = false;
         }
         catch (Exception ex)

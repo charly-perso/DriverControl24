@@ -1,8 +1,9 @@
 @page "/"
 @implements IDisposable
 @inject ConfigService Cfg
+@inject Loc L
 
-<PageTitle>Driver — Control24 Config</PageTitle>
+<PageTitle>@L["title.driver"]</PageTitle>
 
 <h1>Driver</h1>
 
@@ -10,45 +11,48 @@
     <label class="row">
         <input type="checkbox" @bind="_autostart" />
         <span>
-            <strong>Démarrage automatique</strong>
-            <small>Lance le driver à l'ouverture de l'application.</small>
+            <strong>@L["driver.autostart"]</strong>
+            <small>@L["driver.autostart.help"]</small>
         </span>
     </label>
 
     <label class="row">
         <input type="checkbox" @bind="_vsDebug" />
         <span>
-            <strong>Débogage Visual Studio</strong>
-            <small>Attache le débogueur au démarrage du driver (défaut : désactivé).</small>
+            <strong>@L["driver.vsdebug"]</strong>
+            <small>@L["driver.vsdebug.help"]</small>
         </span>
     </label>
 
     <div class="field">
-        <label for="nic"><strong>Interface réseau</strong></label>
+        <label for="nic"><strong>@L["driver.nic"]</strong></label>
+        <div class="nicrow">
         <select id="nic" @bind="_nic">
             @if (!_known.Contains(_nic))
             {
-                <option value="@_nic">@(_nic == "" ? "(aucune)" : _nic) — introuvable</option>
+                <option value="@_nic">@(_nic == "" ? L["driver.nic.none"] : _nic) — @L["driver.nic.missing"]</option>
             }
-            <option value="TestWithoutC24">TestWithoutC24 (simulation sans console)</option>
+            <option value="TestWithoutC24">@L["driver.nic.test"]</option>
             @foreach (var nic in _all.Where(n => n != "TestWithoutC24"))
             {
                 <option value="@nic">@nic</option>
             }
         </select>
+        <button type="button" class="btn sm" title="@L["driver.nic.refresh.help"]" @onclick="Cfg.RefreshInterfaces">⟳ @L["driver.nic.refresh"]</button>
+        </div>
         @if (!_known.Contains(_nic))
         {
-            <small class="bad">Cette interface n'existe pas sur cet ordinateur : le driver ne pourra pas démarrer avec.</small>
+            <small class="bad">@L["driver.nic.unknown"]</small>
         }
         else if (_nic == "TestWithoutC24")
         {
-            <small>Mode simulation : aucune console Control24 n'est requise.</small>
+            <small>@L["driver.nic.simulation"]</small>
         }
     </div>
 
     <div class="actions">
-        <button class="btn primary" disabled="@(!IsDirty)" @onclick="Save">Enregistrer</button>
-        <button class="btn" disabled="@(!IsDirty)" @onclick="Load">Annuler</button>
+        <button class="btn primary" disabled="@(!IsDirty)" @onclick="Save">@L["btn.save"]</button>
+        <button class="btn" disabled="@(!IsDirty)" @onclick="Load">@L["btn.cancel"]</button>
         @if (_message != null)
         {
             <span class="@(_isError ? "bad" : "ok")">@_message</span>
@@ -70,6 +74,7 @@
     protected override void OnInitialized()
     {
         Cfg.Changed += OnExternal;
+        Cfg.InterfacesChanged += OnInterfaces;
         Load();
     }
 
@@ -90,7 +95,7 @@
         {
             Cfg.SaveDriver(_autostart, _vsDebug, _nic);
             Load();
-            _message = "Enregistré.";
+            _message = Loc.T("msg.saved");
             _isError = false;
         }
         catch (Exception ex)
@@ -112,5 +117,17 @@
         }
     });
 
-    public void Dispose() => Cfg.Changed -= OnExternal;
+    // Liste des interfaces relue : on met à jour la liste sans toucher au brouillon (choix en cours conservé).
+    private void OnInterfaces() => InvokeAsync(() =>
+    {
+        _all = Cfg.GetDriver().Interfaces;
+        _known = new HashSet<string>(_all) { "TestWithoutC24" };
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Cfg.Changed -= OnExternal;
+        Cfg.InterfacesChanged -= OnInterfaces;
+    }
 }

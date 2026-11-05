@@ -41,6 +41,9 @@ Public Class C24ReaperController
     Private LastNavigationMode As NavigationModes = NavigationModes.None
     Private LastJogWheelToolMode As JogWheelToolModes = JogWheelToolModes.None
     Private LastSavedSelection As Tuple(Of Double, Double) = Nothing
+    ' Vrai quand Ctrl+Ctl+FFW/REW vient de sélectionner une région : au relâchement de Ctl, la sélection
+    ' de temps ne doit pas être recalculée d'après les items (40290), sinon elle remplace la région.
+    Private KeepRegionSelectionOnCtlRelease As Boolean = False
     Private IsCursorPlacedLeft As Boolean = True
     Private NavigationMode As NavigationModes = NavigationModes.None
     Private DefautResumeScreensBtn As New List(Of C24_Button)
@@ -5503,9 +5506,11 @@ Public Class C24ReaperController
 
         ' ── Fwd : Press → appel immédiat + timer 500 ms ───────────────────────
         _fwdTimer = New System.Timers.Timer(500) With {.AutoReset = True}
+        ' fwdHeld : vrai tant que le bouton est maintenu (évite un dernier tick après le relâchement)
+        Dim fwdHeld As Boolean = False
         AddHandler _fwdTimer.Elapsed,
             Sub(s As Object, ev As System.Timers.ElapsedEventArgs)
-                SetReaperPlayState(C24TransportBtn.Fwd)
+                If fwdHeld Then SetReaperPlayState(C24TransportBtn.Fwd)
             End Sub
 
         Dim FwdBtnH As Hardware.C24_LedButton.OnButtonPressedEventHandler =
@@ -5514,6 +5519,7 @@ Public Class C24ReaperController
 
                 Else
                     C24_Desk.Fwd.Led = True
+                    fwdHeld = True
                     SetReaperPlayState(C24TransportBtn.Fwd)
                     _fwdTimer.Start()
                 End If
@@ -5523,6 +5529,11 @@ Public Class C24ReaperController
 
         Dim FwdBtnReleasedH As Hardware.C24_LedButton.OnButtonReleasedEventHandler =
             Sub(TrackNb As Integer?)
+                ' Toujours arrêter l'avance rapide au relâchement, quel que soit l'état des modificateurs
+                ' (un modificateur peut avoir été enfoncé après le Press).
+                fwdHeld = False
+                _fwdTimer.Stop()
+                C24_Desk.Fwd.Led = False
                 If Opt OrElse Ctrl Then
                     ReBuildMarkersRegions()
                     Dim pos = Reaper.utility.GetCursorPosition
@@ -5564,13 +5575,11 @@ Public Class C24ReaperController
 
                             If NextRegion IsNot Nothing Then
                                 Reaper.utility.GetSet_LoopTimeRange(True, False, False, NextRegion.Start_Pos, NextRegion.End_pos, False)
+                                KeepRegionSelectionOnCtlRelease = True
                             End If
                         End If
 
                     End If
-                Else
-                    _fwdTimer.Stop()
-                    C24_Desk.Fwd.Led = False
                 End If
 
 
@@ -5581,9 +5590,11 @@ Public Class C24ReaperController
 
         ' ── Rwd : Press → appel immédiat + timer 500 ms ───────────────────────
         _rwdTimer = New System.Timers.Timer(500) With {.AutoReset = True}
+        ' rwdHeld : vrai tant que le bouton est maintenu (évite un dernier tick après le relâchement)
+        Dim rwdHeld As Boolean = False
         AddHandler _rwdTimer.Elapsed,
             Sub(s As Object, ev As System.Timers.ElapsedEventArgs)
-                SetReaperPlayState(C24TransportBtn.Rwd)
+                If rwdHeld Then SetReaperPlayState(C24TransportBtn.Rwd)
             End Sub
 
         Dim RwdBtnPressedH As Hardware.C24_LedButton.OnButtonPressedEventHandler =
@@ -5592,6 +5603,7 @@ Public Class C24ReaperController
 
                 Else
                     C24_Desk.Rew.Led = True
+                    rwdHeld = True
                     SetReaperPlayState(C24TransportBtn.Rwd)
                     _rwdTimer.Start()
                 End If
@@ -5602,6 +5614,9 @@ Public Class C24ReaperController
 
         Dim RwdBtnH As Hardware.C24_LedButton.OnButtonReleasedEventHandler =
             Sub(TrackNb As Integer?)
+                rwdHeld = False
+                _rwdTimer.Stop()
+                C24_Desk.Rew.Led = False
 
                 If Opt OrElse Ctrl Then
                     ReBuildMarkersRegions()
@@ -5643,15 +5658,13 @@ Public Class C24ReaperController
                             'aller a la région d'avant et la sélectionner
                             If LastRegion IsNot Nothing Then
                                 Reaper.utility.GetSet_LoopTimeRange(True, False, False, LastRegion.Start_Pos, LastRegion.End_pos, False)
+                                KeepRegionSelectionOnCtlRelease = True
                             End If
                         End If
 
                     End If
 
 
-                Else
-                    _rwdTimer.Stop()
-                    C24_Desk.Rew.Led = False
                 End If
 
 
@@ -7987,6 +8000,8 @@ Public Class C24ReaperController
 
         Dim CtlBtnRH As Control24.Hardware.C24_Button.OnButtonReleasedEventHandler =
                     Sub()
+                        Dim keepTimeSelection = KeepRegionSelectionOnCtlRelease
+                        KeepRegionSelectionOnCtlRelease = False
                         If JogWheelMode = JogWheelModes.Shuttle AndAlso C24_Desk.Tools_Select.Led Then
                             If Shift = True Then
                                 'Ajoute les nouveaux items à ceux qui sont sauvegardés (inverse la sélection si déjà présente)
@@ -8012,7 +8027,7 @@ Public Class C24ReaperController
                                 End If
 
 
-                                If Ctrl Then
+                                If Ctrl AndAlso Not keepTimeSelection Then
                                     'Time selection: Set time selection to items
                                     Reaper.utility.Main_OnCommand_SafeUI(40290)
 
@@ -8021,7 +8036,7 @@ Public Class C24ReaperController
                             Else
                                 'selectionne tous les items des pistes selectionnées dans la selection
                                 Reaper.utility.Main_OnCommand_SafeUI(40718)
-                                If Ctrl Then
+                                If Ctrl AndAlso Not keepTimeSelection Then
                                     'Time selection: Set time selection to items
                                     Reaper.utility.Main_OnCommand_SafeUI(40290)
 

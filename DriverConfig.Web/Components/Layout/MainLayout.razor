@@ -1,14 +1,15 @@
 ﻿@inherits LayoutComponentBase
 @implements IDisposable
 @inject ConfigService Cfg
+@inject Loc L
 
 <header class="topbar">
     <div class="brand">Control<span>24</span> <small>Config</small></div>
     <nav>
         <NavLink href="" Match="NavLinkMatch.All">Driver</NavLink>
         <NavLink href="plugins">Plugins</NavLink>
-        <NavLink href="params">Paramètres FX</NavLink>
-        <NavLink href="files">Fichier &amp; sauvegardes</NavLink>
+        <NavLink href="params">@L["nav.params"]</NavLink>
+        <NavLink href="files">@L["nav.files"]</NavLink>
     </nav>
     <div class="file" title="@Cfg.IniPath">@Cfg.IniPath</div>
 </header>
@@ -16,8 +17,8 @@
 @if (Cfg.ExternalChange)
 {
     <div class="banner warn" role="alert">
-        <span>Le fichier INI a été modifié en dehors de l'éditeur (le driver tourne ?). Rechargez pour repartir de la version sur disque : vos modifications non enregistrées seront perdues.</span>
-        <button class="btn" @onclick="Cfg.Reload">Recharger</button>
+        <span>@L["banner.external"]</span>
+        <button class="btn" @onclick="Cfg.Reload">@L["btn.reload"]</button>
     </div>
 }
 
@@ -34,8 +35,8 @@
 </main>
 
 <div id="blazor-error-ui" data-nosnippet>
-    Une erreur est survenue.
-    <a href="." class="reload">Recharger</a>
+    @L["ui.error"]
+    <a href="." class="reload">@L["btn.reload"]</a>
     <span class="dismiss">🗙</span>
 </div>
 

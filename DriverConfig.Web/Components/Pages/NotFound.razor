@@ -1,5 +1,7 @@
 ﻿@page "/not-found"
 @layout MainLayout
 
-<h3>Page introuvable</h3>
-<p>Cette page n'existe pas.</p>
+@inject Loc L
+
+<h3>@L["notfound.title"]</h3>
+<p>@L["notfound.text"]</p>

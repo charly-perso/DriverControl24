@@ -45,7 +45,7 @@ C24desk_OnButtonReleased
 C24desk_OnButtonReleased ChannelStrip_1 AutoMode_1 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
-C24desk_OnButtonReleased 
+C24desk_OnButtonReleased Transport Ext_Trans
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
 C24desk_OnButtonReleased 
