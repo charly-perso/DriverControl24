@@ -17379,15 +17379,27 @@ Namespace Reaper
                 _projectCache(key) = proj
             End If
 
-            ' ── Projet neuf ou déjà en cache : compléter les sections FxParams ──
-            ' (n'écrit que si des paramètres manquent dans le fichier INI)
+            ' La génération des sections [FxParams:...] n'est plus automatique (trop coûteuse) :
+            ' appeler GenerateFxParamSections() à la demande.
+
+            _project = proj
+            RaiseEvent On_ProjectChanged(_project)
+        End Sub
+
+        ''' <summary>
+        ''' Lit les FX du projet actif (pistes + master) depuis Reaper et ajoute au fichier INI
+        ''' les sections [FxParams:...] / paramètres manquants (les configs existantes sont conservées).
+        ''' Coûteux (~9 appels bridge par paramètre) : à appeler explicitement, pas à chaque événement.
+        ''' </summary>
+        Public Sub GenerateFxParamSections()
+            Dim proj = _project
+            If proj Is Nothing Then Return
+            proj.RefreshAllFX()
+            proj.MasterTrackFx.Refresh()
             Dim allFx As New List(Of ReaperTrackFX)
             allFx.AddRange(proj.TrackFXList)
             allFx.Add(proj.MasterTrackFx)
             _config.GetAllFxParams(allFx)
-
-            _project = proj
-            RaiseEvent On_ProjectChanged(_project)
         End Sub
 
         ''' <summary>
