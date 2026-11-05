@@ -503,6 +503,7 @@ Public Class C24ReaperController
         Public Goto_EndBtnH As [Delegate]
         Public Loop_RecBtnH As [Delegate]
         Public ReaperQuickPunchH As [Delegate]
+        Public Ext_TransBtnH As [Delegate]
 
         Public TimeValueExcedH As [Delegate]
         Public captureBtnH As [Delegate]
@@ -5321,6 +5322,16 @@ Public Class C24ReaperController
         Dim PlayLoopSavedState As Boolean = False
 
 
+        Dim Ext_TransBtnH As Hardware.C24_LedButton.OnButtonReleasedEventHandler =
+            Sub(TrackNb As Integer?)
+                C24_Desk.Ext_Trans.Led = True
+                C24DisplayTempMessage("FxParams", "Writing FxParams sections in ReaperDriverControl24.ini")
+                _ReaperSession.GenerateFxParamSections()
+                C24_Desk.Ext_Trans.Led = False
+            End Sub
+        h.Ext_TransBtnH = Ext_TransBtnH
+        AddHandler C24_Desk.Ext_Trans.OnButtonReleased, Ext_TransBtnH
+
         Dim PlayLoopAL As New C24ActionLinker(C24_Desk.Loop_Play, 1068)
         h.PlayLoopAL = PlayLoopAL
 
@@ -6054,6 +6065,7 @@ Public Class C24ReaperController
             RemoveHandler C24_Desk.Capture.OnButtonReleased, h.captureBtnH
             RemoveHandler C24_Desk.Quick_Punch.OnButtonReleased, h.Quick_PunchBtnH
             RemoveHandler ReaperEventPipeMonitor.On_HookPostCommand2, h.ReaperQuickPunchH
+            RemoveHandler C24_Desk.Ext_Trans.OnButtonReleased, h.Ext_TransBtnH
             h.PlayLoopAL.Dispose()
 
         Next
