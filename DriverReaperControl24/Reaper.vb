@@ -49,7 +49,7 @@ Namespace Reaper
                             pipe.Dispose()
                         End If
                         If reused = False Then
-                            Console.WriteLine(ex.Message)
+                            'Console.WriteLine(ex.Message)
                             Return String.Empty
                         End If
                     End Try
@@ -6533,7 +6533,7 @@ Namespace Reaper
             Public Sub Log_Poll()
                 If Not IsConnected Then
                     Dim ok = Connect()
-                    Console.WriteLine($"[PollPipe] Connect → {ok}")
+                    'Console.WriteLine($"[PollPipe] Connect → {ok}")
                     If Not ok Then Return
                 End If
 
@@ -6542,24 +6542,24 @@ Namespace Reaper
                     utility.WriteLineBytes(_pipe, "POLL_STATE")
                     raw = utility.ReadLineBytes(_pipe)
                 Catch ex As Exception
-                    Console.WriteLine($"[PollPipe] Erreur lecture : {ex.Message}")
+                    'Console.WriteLine($"[PollPipe] Erreur lecture : {ex.Message}")
                     Disconnect()
                     Return
                 End Try
 
-                Console.WriteLine($"[PollPipe] Réponse brute : '{raw}'")
+                'Console.WriteLine($"[PollPipe] Réponse brute : '{raw}'")
 
                 If String.IsNullOrEmpty(raw) OrElse raw.StartsWith("ERROR", StringComparison.Ordinal) Then Return
                 Dim p = raw.Split("|"c)
 
-                Console.WriteLine($"[PollPipe] Champs : {p.Length}  → {String.Join(" | ", p)}")
+                'Console.WriteLine($"[PollPipe] Champs : {p.Length}  → {String.Join(" | ", p)}")
 
                 If p.Length < 3 Then Return
 
                 Dim new_stateCount As Integer = 0
                 Integer.TryParse(p(0), new_stateCount)
 
-                Console.WriteLine($"[PollPipe] stateCount : last={_lastStateCount}  new={new_stateCount}")
+                'Console.WriteLine($"[PollPipe] stateCount : last={_lastStateCount}  new={new_stateCount}")
 
                 If _lastStateCount <> new_stateCount Then
                     _lastStateCount = new_stateCount
@@ -8038,7 +8038,7 @@ Namespace Reaper
                 _TrackSendNames = New Dictionary(Of Integer, String)
                 _TrackSendIndexes = New Dictionary(Of Integer, Integer?)
 
-                Console.WriteLine("sendManager:" & sendLetter)
+                'Console.WriteLine("sendManager:" & sendLetter)
                 For Each trk In tracks
 
                     Dim _ReaperTrackSendsEditor As New ReaperTrackSendsEditor(trk.TrackIndex, AllTracks)
@@ -8060,7 +8060,7 @@ Namespace Reaper
                         _TrackSendIndexes(trk.TrackIndex) = sendIndex
                     End If
                     _Sends.Add(send)
-                    Console.WriteLine("SndMng:" & If(send IsNot Nothing, send.Name, "Nothing"))
+                    'Console.WriteLine("SndMng:" & If(send IsNot Nothing, send.Name, "Nothing"))
                 Next
 
                 If _SendMonitor IsNot Nothing Then

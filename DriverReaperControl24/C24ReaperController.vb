@@ -8183,7 +8183,7 @@ Public Class C24ReaperController
         Else 'Right
             If SnapToGridAL.State Then
                 Reaper.utility.Main_OnCommand_SafeUI(40647)
-                Console.WriteLine(40647)
+                'Console.WriteLine(40647)
                 If Selection Then
                     Dim CurPos = Reaper.utility.GetCursorPosition
                     If CurPos > CtlPoint Then
@@ -12338,7 +12338,7 @@ Public Class C24ReaperController
                             C24_Desk.Compare.IsBlinking = True
                         End If
                     Catch ex As Exception
-                        Console.WriteLine("Compare error: " & ex.Message)
+                        'Console.WriteLine("Compare error: " & ex.Message)
                     End Try
                 End Sub
             FxH.CompareBtnH = CompareBtnH
@@ -13366,7 +13366,7 @@ Public Class C24ReaperController
             RemoveCommonStripHandlers()
             RemoveFlipHandlers()
         Catch ex As Exception
-            Debug.WriteLine($"Dispose: erreur retrait handlers : {ex}")
+            'Debug.WriteLine($"Dispose: erreur retrait handlers : {ex}")
         End Try
 
 
@@ -13387,7 +13387,7 @@ Public Class C24ReaperController
             RemoveProjectManagementHandler()
             RemoveSessionManagementHandler()
         Catch ex As Exception
-            Debug.WriteLine($"Dispose: erreur retrait handlers projet/session : {ex}")
+            'Debug.WriteLine($"Dispose: erreur retrait handlers projet/session : {ex}")
         End Try
 
         If _ReaperProjectMonitor IsNot Nothing Then

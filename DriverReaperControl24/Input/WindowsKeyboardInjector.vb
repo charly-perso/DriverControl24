@@ -113,7 +113,7 @@ Namespace DriverReaperControl24.Input
 
             If sent = 0UI Then
                 Dim lastError As Integer = Marshal.GetLastWin32Error()
-                Console.WriteLine("SendInput failed. LastError=" & lastError.ToString(Globalization.CultureInfo.InvariantCulture))
+                'Console.WriteLine("SendInput failed. LastError=" & lastError.ToString(Globalization.CultureInfo.InvariantCulture))
             End If
         End Sub
 

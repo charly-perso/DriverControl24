@@ -95,6 +95,7 @@ Public Class Main
     End Sub
 
     Private Shared Sub LogCrash(title As String, ex As Exception)
+        Return ' logs désactivés (retirer ce Return pour réactiver driver_crash.log)
         Try
             Dim path = IO.Path.Combine(IO.Path.GetTempPath(), "driver_crash.log")
             IO.File.AppendAllText(path, $"{Date.Now:HH:mm:ss.fff} {title}{vbLf}{If(ex Is Nothing, "(no exception object)", ex.ToString)}{vbLf}{vbLf}")

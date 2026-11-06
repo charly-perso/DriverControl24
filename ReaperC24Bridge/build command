@@ -1,2 +1,3 @@
 dotnet publish ReaperC24Bridge -r win-x64 -c Release
 dotnet publish ReaperC24Bridge -r osx-x64 -c Release
+dotnet publish /Users/charly/DriverControl24/DriverReaperControl24/DriverReaperControl24.vbproj -r osx-x64 -c Release --self-contained

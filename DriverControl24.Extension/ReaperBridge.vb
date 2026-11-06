@@ -39,7 +39,11 @@ Public Class ReaperBridge
 
         Return result
     End Function
+    ''' <summary>Active/désactive tous les logs (fichier ReaperC24Bridge.log et console Reaper).</summary>
+    Public Shared LoggingEnabled As Boolean = False
+
     Private Shared Sub BridgeLog(message As String)
+        If Not LoggingEnabled Then Return
         Try
             IO.File.AppendAllText(
             IO.Path.Combine(IO.Path.GetTempPath(), "ReaperC24Bridge.log"),
@@ -50,6 +54,10 @@ Public Class ReaperBridge
 
     Private Shared WithEvents _driverProcess As Process = Nothing
     Private Shared _dllDirectory As String = String.Empty
+    ' Interface "TestWithoutC24" : le driver a une boucle console interactive (il lui faut un terminal)
+    Private Shared _testWithoutC24 As Boolean = False
+    ' Driver lancé dans une fenêtre Terminal (macOS) : _driverProcess n'est alors pas le driver
+    Private Shared _driverInTerminal As Boolean = False
 
     ' ✅ Pointeurs statiques — doivent rester en vie tant que Reaper tourne
     Private Shared _actionIdPtr As IntPtr = IntPtr.Zero
@@ -84,12 +92,13 @@ Public Class ReaperBridge
         Dim autoStart As Boolean = False
         Dim VSDebug As Boolean = False
 
-        Dim iniFilePath As String = IO.Path.Combine(dllDirectory, "ReaperDriver.ini")
+        Dim iniFilePath As String = IO.Path.Combine(dllDirectory, "ReaperDriverControl24.ini")
         If IO.File.Exists(iniFilePath) Then
             Dim _ReaperConfigReader As New ReaperConfigReader(iniFilePath)
             _ReaperConfigReader.Load()
             autoStart = _ReaperConfigReader.GetBoolean("Driver", "Autostart", False)
             VSDebug = _ReaperConfigReader.GetBoolean("Driver", "VSDebug", False)
+            _testWithoutC24 = String.Equals(_ReaperConfigReader.GetString("Driver", "NetworkInterface", ""), "TestWithoutC24", StringComparison.OrdinalIgnoreCase)
         End If
         BridgeLog($"Initialize dllDirectory={dllDirectory}")
         BridgeLog($"ini={iniFilePath} exists={IO.File.Exists(iniFilePath)}")
@@ -134,6 +143,7 @@ Public Class ReaperBridge
     ''' </summary>
     ''' <param name="message">Texte à afficher.</param>
     Public Shared Sub Log(message As String)
+        If Not LoggingEnabled Then Return
         If ReaperAPI.ShowConsoleMsg Is Nothing Then Return
         ReaperAPI.ShowConsoleMsg(message & Environment.NewLine)
     End Sub
@@ -191,6 +201,25 @@ Public Class ReaperBridge
             End Try
         End If
 
+        ' ── macOS + TestWithoutC24 : ouvrir le driver dans une fenêtre Terminal ──
+        If _testWithoutC24 AndAlso RuntimeInformation.IsOSPlatform(OSPlatform.OSX) Then
+            Try
+                Dim q As Func(Of String, String) = Function(t) "'" & t.Replace("'", "'\''") & "'"
+                Dim shellCmd As String = "cd " & q(_dllDirectory) & " && " & q(driverPath)
+                Dim asCmd As String = shellCmd.Replace("\", "\\").Replace("""", "\""")
+                Dim psi As New ProcessStartInfo("osascript") With {.UseShellExecute = False}
+                psi.ArgumentList.Add("-e")
+                psi.ArgumentList.Add("tell application ""Terminal"" to activate")
+                psi.ArgumentList.Add("-e")
+                psi.ArgumentList.Add("tell application ""Terminal"" to do script """ & asCmd & """")
+                Process.Start(psi)
+                _driverInTerminal = True
+            Catch ex As Exception
+                BridgeLog($"LaunchDriver: ouverture Terminal impossible : {ex}")
+            End Try
+            Return
+        End If
+
         Try
             _driverProcess = New Process() With {
                 .StartInfo = New ProcessStartInfo(driverPath) With {
@@ -219,6 +248,14 @@ Public Class ReaperBridge
     ''' Appelé par <see cref="Shutdown"/> avant le déchargement du plugin.
     ''' </summary>
     Private Shared Sub StopDriver()
+        If _driverInTerminal Then
+            ' Driver lancé via Terminal : on l'arrête par son chemin d'exécutable
+            Dim kp As New ProcessStartInfo("pkill") With {.UseShellExecute = False}
+            kp.ArgumentList.Add("-f")
+            kp.ArgumentList.Add(IO.Path.Combine(_dllDirectory, GetDriverFileName()))
+            Process.Start(kp)
+            Return
+        End If
         If _driverProcess Is Nothing Then Return
         If _driverProcess.HasExited Then Return
         _driverProcess.Kill()
