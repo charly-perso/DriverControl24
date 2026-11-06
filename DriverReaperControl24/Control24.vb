@@ -646,20 +646,24 @@ Namespace Control24
                 Clock_Value = value
             End Sub
             ''' <summary>
-            ''' Remplace par des espaces les zéros situés avant le premier chiffre non nul.
-            ''' Les zéros placés après (entre deux chiffres ou en fin de valeur) sont conservés,
-            ''' ex : "00102030" → "  102030". Le dernier digit reste toujours affiché
-            ''' (valeur nulle → "       0").
+            ''' Remplace les zéros de tête dans chaque groupe de digits par des espaces,
+            ''' .
             ''' </summary>
             ''' <param name="value">Chaîne de 8 digits.</param>
-            Private Shared Function TrimLeadingZeros(value As String) As String
+            ''' <param name="groups">Tailles des groupes (somme doit être = 8).</param>
+            Private Shared Function TrimLeadingZerosInGroups(value As String, groups As Integer()) As String
                 Dim result As Char() = value.ToCharArray()
-                For i = 0 To result.Length - 2
-                    If result(i) = "0"c Then
-                        result(i) = " "c
-                    ElseIf result(i) <> " "c Then
-                        Exit For
-                    End If
+                Dim pos As Integer = 0
+                For Each groupSize In groups
+                    ' ── Remplace les zéros de tête ──
+                    For i = pos To pos + groupSize - 1
+                        If result(i) = "0"c Then
+                            result(i) = " "c
+                        Else
+                            Exit For
+                        End If
+                    Next
+                    pos += groupSize
                 Next
                 Return New String(result)
             End Function
@@ -741,8 +745,17 @@ Namespace Control24
                     value = value.PadLeft(8)
                 End If
 
-                ' ── Supprime les zéros avant le premier chiffre non nul (ceux entre deux chiffres restent) ──
-                value = TrimLeadingZeros(value)
+                ' ── Remplace les zéros de tête par des espaces dans chaque groupe ──
+                Select Case _ClockMode
+                    Case Commands.ClockModes.HourMinuteSecondMS
+                        value = TrimLeadingZerosInGroups(value, {1, 2, 2, 3})
+                    Case Commands.ClockModes.HourMinuteSecondFrames
+                        value = TrimLeadingZerosInGroups(value, {2, 2, 2, 2})
+                    Case Commands.ClockModes.FeetFrames
+                        value = TrimLeadingZerosInGroups(value, {6, 2})
+                    Case Commands.ClockModes.BarBeats
+                        value = TrimLeadingZerosInGroups(value, {5, 1, 2})
+                End Select
 
                 Clock_Value = value
             End Sub
