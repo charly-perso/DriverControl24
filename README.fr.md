@@ -86,6 +86,12 @@ Installeurs reconstruits : copiez les `.pkg` obtenus (dossiers `Setup/out`) dans
 
 ---
 
+## Utilisation
+
+Toutes les fonctions du driver (transport, pistes, inserts, automation, molette, pavé numérique…) sont décrites dans le **[manuel d'utilisation](docs/MANUEL-UTILISATEUR.md)**.
+
+---
+
 ## Architecture
 
 ```

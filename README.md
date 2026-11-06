@@ -86,6 +86,12 @@ Rebuilt installers: copy the resulting `.pkg` files from the `Setup/out` folders
 
 ---
 
+## Usage
+
+All the driver's functions are described in the **[user manual](docs/USER-MANUAL.md)** ([version française](docs/MANUEL-UTILISATEUR.md)).
+
+---
+
 ## Architecture
 
 ```
