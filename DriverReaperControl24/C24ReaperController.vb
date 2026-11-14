@@ -4742,21 +4742,25 @@ Public Class C24ReaperController
         _SolosClearSafeHandlers.Clear()
     End Sub
     Sub RefreshDics(ReaperProj As Reaper.ReaperProject)
-        SoloTracks = New Dictionary(Of Integer, Boolean)
-        SoloSafeTracks = New Dictionary(Of Integer, Boolean)
-        Names = New Dictionary(Of Integer, String)
+        ' Appelé depuis plusieurs threads (démarrage + moniteur de projet) : on remplit des dictionnaires
+        ' locaux (indexeur, donc sans exception sur clé dupliquée) puis on les publie d'un seul coup.
+        Dim solos As New Dictionary(Of Integer, Boolean)
+        Dim safes As New Dictionary(Of Integer, Boolean)
+        Dim trackNames As New Dictionary(Of Integer, String)
         If ReaperProj.Tracks IsNot Nothing Then
-            For Each trk In ReaperProj.Tracks
-                SoloTracks.Add(trk.TrackIndex, If(GetC24Solo(trk.Solo) = C24_SoloTypes.Solo, True, False))
-                SoloSafeTracks.Add(trk.TrackIndex, trk.SoloDefeat)
-                Names.Add(trk.TrackIndex, trk.Name)
+            For Each trk In ReaperProj.Tracks.ToList()
+                solos(trk.TrackIndex) = (GetC24Solo(trk.Solo) = C24_SoloTypes.Solo)
+                safes(trk.TrackIndex) = trk.SoloDefeat
+                trackNames(trk.TrackIndex) = trk.Name
             Next
-            Dim master = _ReaperProj.MasterTrack
-            SoloTracks.Add(master.TrackIndex, If(GetC24Solo(master.Solo) = C24_SoloTypes.Solo, True, False))
-            SoloSafeTracks.Add(master.TrackIndex, master.SoloDefeat)
-            Names.Add(master.TrackIndex, master.Name)
+            Dim master = ReaperProj.MasterTrack
+            solos(master.TrackIndex) = (GetC24Solo(master.Solo) = C24_SoloTypes.Solo)
+            safes(master.TrackIndex) = master.SoloDefeat
+            trackNames(master.TrackIndex) = master.Name
         End If
-
+        SoloTracks = solos
+        SoloSafeTracks = safes
+        Names = trackNames
 
     End Sub
 

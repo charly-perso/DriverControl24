@@ -9,7 +9,7 @@ This repository contains:
 - **the driver** (`DriverReaperControl24`): talks to the Control24 over Ethernet and drives REAPER (transport, faders, mute/solo, pan, sends, FX, jog wheel, displays…);
 - **the REAPER plugin** (`ReaperC24Bridge`): loaded by REAPER, it starts the driver and acts as its gateway to the REAPER API;
 - **the configuration app** (`DriverConfig.Web`): a small local web app to change the driver's settings without editing the `.ini` file by hand;
-- the **macOS installers** (`.pkg`).
+- the **installers**: macOS (`.pkg`) and Windows (`.exe`).
 
 License: [GPL v3](LICENSE).
 
@@ -23,7 +23,17 @@ Installers are in the [`Setup`](Setup) folder:
 |---|---|
 | [`Setup/osX64`](Setup/osX64) | macOS Intel (x64) installers. **Available.** |
 | [`Setup/osARM`](Setup/osARM) | Reserved for macOS Apple Silicon (ARM). *Not available yet.* |
-| [`Setup/Win`](Setup/Win) | Windows installer. *Not available yet.* |
+| [`Setup/Win`](Setup/Win) | Windows (x64) installer. **Available.** |
+
+### Windows (x64)
+
+Run **`Control24-win-x64-<version>.exe`** from [`Setup/Win`](Setup/Win). Installation is per user: no administrator rights are needed for the driver itself.
+
+- **Driver and REAPER plugins**: installed into `%APPDATA%\REAPER\UserPlugins` (`reaper_c24bridge.dll`, `reaper_NativeReaperPlugIn.dll`, the `DriverReaperControl24.exe` driver with the .NET runtime included, and `ReaperDriverControl24.ini`, created only if missing: your configuration is never overwritten).
+- **Control24 Config** *(optional component)*: the configuration app, installed in `%LOCALAPPDATA%\Programs\Control24 Config` with a Start menu shortcut.
+- **Npcap**: the driver needs it to talk to the console over Ethernet. If it is missing, the installer launches the official Npcap setup (Windows asks for administrator approval for that step; default options are fine). Check Npcap's license terms before redistributing the installer.
+
+Then start REAPER: the driver starts automatically. The installer is not signed: if SmartScreen warns, click *More info* → *Run anyway*.
 
 ### macOS (Intel x64)
 
@@ -74,6 +84,16 @@ To add FX parameters: add FX in REAPER, then press the **EXT TRANS** button on t
 4. Without a physical console, use `NetworkInterface=TestWithoutC24` (an interactive console window opens; on macOS the plugin opens it in Terminal).
 
 Note: with `VSDebug=False`, the driver is launched by REAPER and locks its files; close it before redeploying from Visual Studio. Also check the output folder of the `DriverReaperControl24` project: it may write directly into REAPER's `UserPlugins` folder.
+
+### Building the Windows installer
+
+Prerequisites: .NET SDK, Visual Studio with *Desktop development with C++*, [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`) and the Npcap installer (`npcap-<version>.exe`) at the repository root.
+
+```powershell
+.\DriverReaperControl24\Setup\build-win-x64.ps1 -Version 1.0.0
+```
+
+Copy the resulting `DriverReaperControl24\Setup\out\Control24-win-x64-<version>.exe` into `Setup/Win`.
 
 ### Building the macOS installers
 
